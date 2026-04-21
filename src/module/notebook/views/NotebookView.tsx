@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { trpc } from "@/trpc/client";
@@ -27,18 +27,7 @@ const STUDIO_TOOLS: { icon: string; label: string }[] = [
 
 export function NotebookView({ id }: { id: string }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { data: session, isPending } = useSession();
-
-  useEffect(() => {
-    if (searchParams.get("onboard") === "1") {
-      setUploadOpen(true);
-      const url = new URL(window.location.href);
-      url.searchParams.delete("onboard");
-      window.history.replaceState({}, "", url.toString());
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const q = trpc.notebook.byId.useQuery(
     { id },
@@ -58,6 +47,18 @@ export function NotebookView({ id }: { id: string }) {
   const [deepOpen, setDeepOpen] = useState(false);
   const [deepQuery, setDeepQuery] = useState<string | undefined>(undefined);
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("onboard") === "1") {
+      setUploadOpen(true);
+      params.delete("onboard");
+      const next = params.toString();
+      const url = `${window.location.pathname}${next ? `?${next}` : ""}`;
+      window.history.replaceState({}, "", url);
+    }
+  }, []);
 
   if (isPending || q.isPending) {
     return (
