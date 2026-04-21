@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ThemeProvider } from "@/lib/theme-provider";
 import TRPCProvider from "@/trpc/provider";
 import "./globals.css";
 
@@ -11,7 +12,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link
           href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap"
@@ -23,7 +24,9 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-200 min-h-screen antialiased">
-        <TRPCProvider>{children}</TRPCProvider>
+        <ThemeProvider>
+          <TRPCProvider>{children}</TRPCProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

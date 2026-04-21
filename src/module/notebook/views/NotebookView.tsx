@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { trpc } from "@/trpc/client";
 import { ChatPanel } from "../components/ChatPanel";
@@ -27,7 +27,19 @@ const STUDIO_TOOLS: { icon: string; label: string }[] = [
 
 export function NotebookView({ id }: { id: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, isPending } = useSession();
+
+  useEffect(() => {
+    if (searchParams.get("onboard") === "1") {
+      setUploadOpen(true);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("onboard");
+      window.history.replaceState({}, "", url.toString());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const q = trpc.notebook.byId.useQuery(
     { id },
     { enabled: !!session?.user, refetchInterval: 4000 },
