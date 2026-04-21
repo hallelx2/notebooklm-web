@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ConstellationBackground } from "../components/ConstellationBackground";
+import { Footer } from "../components/Footer";
 
 const STEPS = [
   {
@@ -241,32 +242,7 @@ export function LandingView() {
           </Link>
         </section>
 
-        {/* Footer */}
-        <footer className="border-t border-white/5">
-          <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-zinc-500">
-            <div className="flex items-center gap-2.5">
-              <span className="w-6 h-6 rounded-md bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center">
-                <span className="material-symbols-outlined text-white text-sm icon-filled">
-                  book_2
-                </span>
-              </span>
-              <span>NotebookLM — open-source research workspace</span>
-            </div>
-            <div className="flex items-center gap-5">
-              <a
-                href="https://github.com/hallelx2/notebooklm-web"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-white"
-              >
-                GitHub
-              </a>
-              <Link href="/auth/sign-in" className="hover:text-white">
-                Sign in
-              </Link>
-            </div>
-          </div>
-        </footer>
+        <Footer />
       </div>
     </div>
   );
