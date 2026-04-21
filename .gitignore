@@ -12,3 +12,5 @@ tsconfig.tsbuildinfo
 drizzle
 .storage
 
+
+.vercel
