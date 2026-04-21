@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Google Sans", "Plus Jakarta Sans", sans-serif;
   --color-background-light: #f0f2f5;
