@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConstellationBackground } from "../components/ConstellationBackground";
 
 const STEPS = [
   {
@@ -44,17 +45,7 @@ const FEATURES = [
 export function LandingView() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 selection:bg-white selection:text-black">
-      {/* subtle grid */}
-      <div
-        className="pointer-events-none fixed inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage:
-            "linear-gradient(#ffffff 1px, transparent 1px), linear-gradient(90deg, #ffffff 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
-      />
-      {/* ambient glow */}
-      <div className="pointer-events-none fixed -top-40 left-1/2 -translate-x-1/2 w-[70rem] h-[40rem] bg-indigo-500/10 blur-[120px] rounded-full" />
+      <ConstellationBackground />
 
       <div className="relative">
         {/* Nav */}

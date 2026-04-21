@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useSession, signOut } from "@/lib/auth-client";
+import { useMemo, useState } from "react";
+import { signOut, useSession } from "@/lib/auth-client";
 import { trpc } from "@/trpc/client";
+import { NotebookCard } from "../components/NotebookCard";
+import { NotebooksHeader } from "../components/NotebooksHeader";
 
 export function NotebooksView() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
-  const [creating, setCreating] = useState(false);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<"recent" | "alpha">("recent");
+  const [view, setView] = useState<"grid" | "list">("grid");
 
   const list = trpc.notebook.list.useQuery(undefined, {
     enabled: !!session?.user,
@@ -20,9 +24,30 @@ export function NotebooksView() {
     },
   });
 
+  const notebooks = useMemo(() => {
+    const items = (list.data ?? []).slice();
+    const q = query.trim().toLowerCase();
+    const filtered = q
+      ? items.filter(
+          (n) =>
+            n.title.toLowerCase().includes(q) ||
+            (n.description ?? "").toLowerCase().includes(q),
+        )
+      : items;
+    if (sort === "alpha") {
+      filtered.sort((a, b) => a.title.localeCompare(b.title));
+    } else {
+      filtered.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+    }
+    return filtered;
+  }, [list.data, query, sort]);
+
   if (isPending) {
     return (
-      <main className="min-h-screen flex items-center justify-center text-gray-500">
+      <main className="min-h-screen bg-[#050505] text-white flex items-center justify-center text-zinc-500">
         Loading...
       </main>
     );
@@ -30,11 +55,11 @@ export function NotebooksView() {
 
   if (!session?.user) {
     return (
-      <main className="min-h-screen flex items-center justify-center flex-col gap-4">
-        <p>Please sign in to view your notebooks.</p>
+      <main className="min-h-screen bg-[#050505] text-white flex items-center justify-center flex-col gap-4">
+        <p className="text-zinc-400">Please sign in to view your notebooks.</p>
         <Link
           href="/auth/sign-in"
-          className="px-6 py-3 rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700"
+          className="px-6 py-3 border border-white text-xs font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors"
         >
           Sign in
         </Link>
@@ -42,30 +67,36 @@ export function NotebooksView() {
     );
   }
 
-  async function onCreate() {
-    setCreating(true);
-    await create.mutateAsync({ title: "Untitled notebook" });
-    setCreating(false);
-  }
-
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-20 bg-white/80 dark:bg-background-dark/80 backdrop-blur-lg border-b border-gray-200 dark:border-border-dark">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
-              <span className="material-symbols-outlined text-white icon-filled">
+    <div className="relative z-10 flex min-h-screen w-full flex-col bg-[#050505] text-white overflow-x-hidden">
+      {/* Background ornaments (voxtar-style hairlines + subtle tone) */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute left-12 top-0 bottom-0 w-[1px] bg-white/5 hidden md:block" />
+        <div className="absolute right-12 top-0 bottom-0 w-[1px] bg-white/5 hidden md:block" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[45rem] h-[45rem] bg-blue-500/10 blur-[120px] rounded-full" />
+      </div>
+
+      {/* Top bar */}
+      <header className="relative z-20 border-b border-white/10">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-10 h-14 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-md bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center">
+              <span className="material-symbols-outlined text-white text-sm icon-filled">
                 book_2
               </span>
-            </div>
-            <span className="text-xl font-bold tracking-tight">NotebookLM</span>
+            </span>
+            <span className="font-medium tracking-tight text-sm">
+              NotebookLM
+            </span>
           </Link>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">{session.user.email}</span>
+          <div className="flex items-center gap-4">
+            <span className="hidden sm:inline text-xs text-zinc-500 font-mono uppercase tracking-wider">
+              {session.user.email}
+            </span>
             <button
               type="button"
               onClick={() => signOut().then(() => router.push("/"))}
-              className="text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white"
+              className="text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
             >
               Sign out
             </button>
@@ -73,44 +104,85 @@ export function NotebooksView() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">My notebooks</h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Create a notebook to add sources and start chatting.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onCreate}
-            disabled={creating || create.isPending}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-          >
-            <span className="material-symbols-outlined">add</span>
-            {creating || create.isPending ? "Creating..." : "New notebook"}
-          </button>
-        </div>
+      <main className="flex-grow flex flex-col relative z-10">
+        <NotebooksHeader
+          count={list.data?.length ?? 0}
+          query={query}
+          setQuery={setQuery}
+          sort={sort}
+          setSort={setSort}
+          view={view}
+          setView={setView}
+          onCreate={() =>
+            create.mutate({ title: "Untitled notebook" })
+          }
+          creating={create.isPending}
+        />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {list.data?.map((n) => (
-            <Link
-              key={n.id}
-              href={`/notebooks/${n.id}`}
-              className="rounded-2xl border border-gray-200 dark:border-border-dark p-6 hover:border-blue-500 transition-colors"
-            >
-              <h3 className="font-semibold mb-1">{n.title}</h3>
-              <p className="text-sm text-gray-500 line-clamp-2">
-                {n.description ?? "No description"}
+        <div className="max-w-[1400px] w-full mx-auto px-6 md:px-10 pb-24">
+          {notebooks.length === 0 ? (
+            <div className="py-32 text-center border border-dashed border-white/10">
+              <span className="material-symbols-outlined text-4xl text-zinc-700 mb-4 block">
+                library_books
+              </span>
+              <p className="text-zinc-400 text-sm mb-6">
+                {query
+                  ? "No notebooks match that search."
+                  : "No notebooks yet. Spin one up to start researching."}
               </p>
-              <p className="text-xs text-gray-400 mt-4">
-                {new Date(n.createdAt).toLocaleDateString()}
-              </p>
-            </Link>
-          ))}
-          {list.data && list.data.length === 0 && (
-            <div className="col-span-full text-gray-500 text-sm">
-              No notebooks yet. Click "New notebook" to create one.
+              <button
+                type="button"
+                onClick={() => create.mutate({ title: "Untitled notebook" })}
+                disabled={create.isPending}
+                className="px-6 py-3 border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-black transition-colors disabled:opacity-60"
+              >
+                <span className="material-symbols-outlined text-[14px] align-middle mr-2">
+                  add
+                </span>
+                New notebook
+              </button>
+            </div>
+          ) : view === "grid" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {notebooks.map((n) => (
+                <NotebookCard
+                  key={n.id}
+                  id={n.id}
+                  title={n.title}
+                  description={n.description}
+                  createdAt={n.createdAt}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="divide-y divide-white/5 border border-white/10">
+              {notebooks.map((n) => (
+                <Link
+                  key={n.id}
+                  href={`/notebooks/${n.id}`}
+                  className="flex items-center gap-6 p-5 hover:bg-white/[0.03] transition-colors group"
+                >
+                  <div className="w-10 h-10 rounded-md bg-gradient-to-tr from-blue-500/20 to-indigo-600/20 border border-white/10 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-blue-300 text-lg">
+                      book_2
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate group-hover:text-blue-300 transition-colors">
+                      {n.title}
+                    </p>
+                    <p className="text-xs text-zinc-500 line-clamp-1">
+                      {n.description ?? "No description"}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 shrink-0">
+                    {new Date(n.createdAt).toLocaleDateString()}
+                  </span>
+                  <span className="material-symbols-outlined text-zinc-600 group-hover:text-blue-300 transition-colors">
+                    arrow_forward
+                  </span>
+                </Link>
+              ))}
             </div>
           )}
         </div>
