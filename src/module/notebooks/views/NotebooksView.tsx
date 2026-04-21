@@ -79,9 +79,9 @@ export function NotebooksView() {
       </div>
 
       <header className="relative z-20 border-b border-slate-200 dark:border-white/10">
-        <div className="max-w-[1400px] mx-auto px-6 md:px-10 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-md bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-10 h-14 flex items-center justify-between gap-2">
+          <Link href="/" className="flex items-center gap-2.5 min-w-0">
+            <span className="w-7 h-7 rounded-md bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-white text-sm icon-filled">
                 book_2
               </span>
@@ -90,15 +90,15 @@ export function NotebooksView() {
               NotebookLM
             </span>
           </Link>
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:inline text-xs text-slate-500 dark:text-zinc-500 font-mono uppercase tracking-wider">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <span className="hidden md:inline text-xs text-slate-500 dark:text-zinc-500 font-mono uppercase tracking-wider truncate max-w-[200px]">
               {session.user.email}
             </span>
             <ThemeToggle />
             <button
               type="button"
               onClick={() => signOut().then(() => router.push("/"))}
-              className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors whitespace-nowrap"
             >
               Sign out
             </button>
@@ -119,7 +119,7 @@ export function NotebooksView() {
           creating={create.isPending}
         />
 
-        <div className="max-w-[1400px] w-full mx-auto px-6 md:px-10 pb-24">
+        <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 md:px-10 pb-20">
           {notebooks.length === 0 ? (
             <div className="py-32 text-center border border-dashed border-slate-300 dark:border-white/10">
               <span className="material-symbols-outlined text-4xl text-slate-400 dark:text-zinc-700 mb-4 block">
@@ -143,7 +143,7 @@ export function NotebooksView() {
               </button>
             </div>
           ) : view === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {notebooks.map((n) => (
                 <NotebookCard
                   key={n.id}

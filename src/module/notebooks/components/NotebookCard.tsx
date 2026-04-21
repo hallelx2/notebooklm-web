@@ -36,7 +36,7 @@ export function NotebookCard({
   return (
     <Link
       href={`/notebooks/${id}`}
-      className="group relative bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 hover:border-blue-500/60 dark:hover:border-blue-500/50 transition-all duration-300 p-6 flex flex-col gap-5 overflow-hidden"
+      className="group relative bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 hover:border-blue-500/60 dark:hover:border-blue-500/50 transition-all duration-300 p-5 sm:p-6 flex flex-col gap-4 sm:gap-5 overflow-hidden"
     >
       <div className="absolute inset-0 bg-gradient-to-b from-transparent to-blue-100/50 dark:to-blue-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
@@ -68,7 +68,7 @@ export function NotebookCard({
         {description ?? "No description yet."}
       </p>
 
-      <div className="flex items-center gap-1 relative z-10 py-2 overflow-hidden">
+      <div className="flex items-center gap-1 relative z-10 py-2 overflow-x-auto no-scrollbar">
         {STEP_LABELS.map((step, i) => {
           const reached = i <= activeStep;
           return (
