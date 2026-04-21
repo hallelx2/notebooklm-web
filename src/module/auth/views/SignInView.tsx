@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signIn } from "@/lib/auth-client";
+import { AuthShell } from "../components/AuthShell";
 
 export function SignInView() {
   const router = useRouter();
@@ -18,50 +20,88 @@ export function SignInView() {
     const res = await signIn.email({ email, password });
     setLoading(false);
     if (res.error) {
-      setErr(res.error.message ?? "Sign in failed");
+      setErr(res.error.message ?? "Invalid email or password.");
       return;
     }
     router.push("/notebooks");
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-8 space-y-4"
-      >
-        <h1 className="text-2xl font-bold">Sign in</h1>
-        <input
-          type="email"
-          required
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-transparent"
-        />
-        <input
-          type="password"
-          required
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-transparent"
-        />
-        {err && <p className="text-sm text-red-600">{err}</p>}
+    <AuthShell
+      title="Welcome back"
+      subtitle="Sign in to your notebooks."
+      altHref="/auth/sign-up"
+      altLabel="Create account"
+    >
+      <form onSubmit={onSubmit} className="space-y-5">
+        <div>
+          <label
+            htmlFor="email"
+            className="block text-sm font-medium text-slate-900 mb-1.5"
+          >
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            required
+            placeholder="you@domain.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none transition-colors text-sm"
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-slate-900"
+            >
+              Password
+            </label>
+            <Link
+              href="/auth/forgot-password"
+              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <input
+            id="password"
+            type="password"
+            required
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none transition-colors text-sm"
+          />
+        </div>
+
+        {err && (
+          <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm">
+            {err}
+          </div>
+        )}
+
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2 rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
+          className="w-full h-12 rounded-xl bg-slate-900 text-white font-medium hover:bg-slate-800 shadow-sm transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>
-        <p className="text-sm text-center text-gray-500">
-          No account?{" "}
-          <a href="/auth/sign-up" className="text-blue-600 hover:underline">
-            Sign up
-          </a>
-        </p>
       </form>
-    </main>
+
+      <p className="mt-10 text-center text-sm text-slate-500">
+        Don't have an account?{" "}
+        <Link
+          href="/auth/sign-up"
+          className="font-semibold text-blue-600 hover:text-blue-700"
+        >
+          Sign up for free
+        </Link>
+      </p>
+    </AuthShell>
   );
 }
