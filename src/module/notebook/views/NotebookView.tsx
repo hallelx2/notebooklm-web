@@ -60,17 +60,18 @@ export function NotebookView({ id }: { id: string }) {
     }
   }, []);
 
-  if (isPending || q.isPending) {
+  useEffect(() => {
+    if (!isPending && !session?.user) {
+      router.replace("/auth/sign-in");
+    }
+  }, [isPending, session, router]);
+
+  if (isPending || !session?.user || q.isPending) {
     return (
       <main className="min-h-screen flex items-center justify-center text-gray-500">
         Loading notebook...
       </main>
     );
-  }
-
-  if (!session?.user) {
-    router.replace("/auth/sign-in");
-    return null;
   }
 
   if (!q.data) {
