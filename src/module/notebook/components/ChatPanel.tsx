@@ -348,8 +348,26 @@ export function ChatPanel({
         })}
 
         {busy && messages.length === 0 && (
-          <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-element-light dark:bg-element-dark">
-            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+          <div className="max-w-[85%] rounded-2xl px-4 py-4 bg-element-light dark:bg-element-dark animate-pulse space-y-2.5">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              <div className="h-3 w-24 bg-gray-200 dark:bg-gray-600 rounded" />
+            </div>
+            <div className="h-3 w-full bg-gray-200 dark:bg-gray-600 rounded" />
+            <div className="h-3 w-5/6 bg-gray-200 dark:bg-gray-600 rounded" />
+            <div className="h-3 w-4/6 bg-gray-200 dark:bg-gray-600 rounded" />
+          </div>
+        )}
+
+        {busy && messages.length > 0 && messages[messages.length - 1].role === "user" && (
+          <div className="max-w-[85%] rounded-2xl px-4 py-4 bg-element-light dark:bg-element-dark space-y-2.5">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              <div className="h-3 w-24 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
+            </div>
+            <div className="h-3 w-full bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
+            <div className="h-3 w-5/6 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
+            <div className="h-3 w-3/6 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
           </div>
         )}
       </div>

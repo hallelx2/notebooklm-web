@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSession } from "@/lib/auth-client";
+import { signOut, useSession } from "@/lib/auth-client";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { trpc } from "@/trpc/client";
 import { ChatPanel } from "../components/ChatPanel";
 import { DeepResearchModal } from "../components/DeepResearchModal";
@@ -34,6 +35,15 @@ export function NotebookView({ id }: { id: string }) {
   const [deepQuery, setDeepQuery] = useState<string | undefined>(undefined);
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
   const [chatPrompt, setChatPrompt] = useState<string | null>(null);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+
+  const analyticsRef = useRef<HTMLDivElement>(null);
+  const settingsRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const noteRef = useRef<HTMLTextAreaElement>(null);
@@ -46,6 +56,64 @@ export function NotebookView({ id }: { id: string }) {
     },
   });
   const utils = trpc.useUtils();
+
+  const updateNotebook = trpc.notebook.update.useMutation({
+    onSuccess: () => {
+      utils.notebook.byId.invalidate({ id });
+      setEditTitle("");
+      setSettingsOpen(false);
+      showToast("Notebook renamed");
+    },
+    onError: (err) => showToast(err.message),
+  });
+
+  const deleteNotebook = trpc.notebook.delete.useMutation({
+    onSuccess: () => {
+      showToast("Notebook deleted");
+      router.push("/notebooks");
+    },
+    onError: (err) => showToast(err.message),
+  });
+
+  function handleRename() {
+    const title = editTitle.trim();
+    if (!title) return;
+    updateNotebook.mutate({ id, title });
+  }
+
+  function handleDeleteNotebook() {
+    if (!confirm("Are you sure you want to delete this notebook? This action cannot be undone.")) return;
+    deleteNotebook.mutate({ id });
+  }
+
+  // Close all dropdowns on click outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        analyticsOpen &&
+        analyticsRef.current &&
+        !analyticsRef.current.contains(e.target as Node)
+      ) {
+        setAnalyticsOpen(false);
+      }
+      if (
+        settingsOpen &&
+        settingsRef.current &&
+        !settingsRef.current.contains(e.target as Node)
+      ) {
+        setSettingsOpen(false);
+      }
+      if (
+        profileOpen &&
+        profileRef.current &&
+        !profileRef.current.contains(e.target as Node)
+      ) {
+        setProfileOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [analyticsOpen, settingsOpen, profileOpen]);
 
   function handleSaveNote() {
     const text = noteText.trim();
@@ -176,14 +244,51 @@ export function NotebookView({ id }: { id: string }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => showToast("Analytics coming soon")}
-            className="hidden sm:block p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-            title="Analytics"
-          >
-            <span className="material-symbols-outlined">trending_up</span>
-          </button>
+          {/* Analytics dropdown */}
+          <div ref={analyticsRef} className="relative hidden sm:block">
+            <button
+              type="button"
+              onClick={() => {
+                setAnalyticsOpen((v) => !v);
+                setSettingsOpen(false);
+                setProfileOpen(false);
+              }}
+              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+              title="Analytics"
+            >
+              <span className="material-symbols-outlined">trending_up</span>
+            </button>
+            {analyticsOpen && (
+              <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-[#1e1f20] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-4 z-50">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notebook Analytics</h3>
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Sources</span>
+                    <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{sources.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Ready</span>
+                    <span className="text-xs font-medium text-emerald-600">{sources.filter(s => s.status === "ready").length}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Processing</span>
+                    <span className="text-xs font-medium text-amber-600">{sources.filter(s => ["pending","parsing","embedding"].includes(s.status)).length}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Failed</span>
+                    <span className="text-xs font-medium text-red-600">{sources.filter(s => s.status === "error").length}</span>
+                  </div>
+                  <div className="border-t border-gray-100 dark:border-gray-700 pt-2 mt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Created</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">{new Date(n.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={() => showToast("Share coming soon")}
@@ -193,18 +298,99 @@ export function NotebookView({ id }: { id: string }) {
             <span className="material-symbols-outlined text-lg">share</span>
             <span className="text-sm">Share</span>
           </button>
-          <button
-            type="button"
-            onClick={() => showToast("Settings coming soon")}
-            className="hidden sm:block p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-            title="Settings"
-          >
-            <span className="material-symbols-outlined">settings</span>
-          </button>
-          <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm ml-2 cursor-pointer">
-            {(session.user.name ?? session.user.email)
-              .slice(0, 2)
-              .toUpperCase()}
+
+          {/* Settings dropdown */}
+          <div ref={settingsRef} className="relative hidden sm:block">
+            <button
+              type="button"
+              onClick={() => {
+                setSettingsOpen((v) => !v);
+                setAnalyticsOpen(false);
+                setProfileOpen(false);
+                if (!settingsOpen) setEditTitle(n.title === "Untitled notebook" ? "" : n.title);
+              }}
+              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+              title="Settings"
+            >
+              <span className="material-symbols-outlined">settings</span>
+            </button>
+            {settingsOpen && (
+              <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-[#1e1f20] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-4 z-50">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Settings</h3>
+
+                {/* Rename */}
+                <div className="mb-3">
+                  <label className="text-xs text-gray-500 mb-1 block">Notebook title</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
+                      className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-element-dark text-gray-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                      placeholder={n.title}
+                    />
+                    <button
+                      onClick={handleRename}
+                      disabled={!editTitle.trim() || updateNotebook.isPending}
+                      className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                      {updateNotebook.isPending ? "..." : "Save"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Divider + Delete */}
+                <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
+                  <button
+                    onClick={handleDeleteNotebook}
+                    disabled={deleteNotebook.isPending}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                    {deleteNotebook.isPending ? "Deleting..." : "Delete notebook"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Profile dropdown */}
+          <div ref={profileRef} className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setProfileOpen((v) => !v);
+                setAnalyticsOpen(false);
+                setSettingsOpen(false);
+              }}
+              className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm ml-2 cursor-pointer hover:ring-2 hover:ring-indigo-400 transition-shadow"
+            >
+              {(session.user.name ?? session.user.email)
+                .slice(0, 2)
+                .toUpperCase()}
+            </button>
+            {profileOpen && (
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#1e1f20] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{session.user.name}</p>
+                  <p className="text-xs text-gray-500">{session.user.email}</p>
+                </div>
+                <div className="p-2">
+                  <div className="flex items-center justify-between px-3 py-2">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Theme</span>
+                    <ThemeToggle />
+                  </div>
+                  <button
+                    onClick={() => signOut().then(() => router.push("/"))}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">logout</span>
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
