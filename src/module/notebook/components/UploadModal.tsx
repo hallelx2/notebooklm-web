@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { trpc } from "@/trpc/client";
 import { showToast } from "./Toast";
 
@@ -261,7 +263,7 @@ export function UploadModal({
           onClose();
         }}
       />
-      <div className="relative w-full max-w-3xl bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="relative w-full max-w-5xl bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-border-dark shrink-0">
           <h2 className="text-xl font-medium text-gray-800 dark:text-gray-200">
             Add & Manage Sources
@@ -400,51 +402,93 @@ export function UploadModal({
             </div>
 
             {(plan.length > 0 || logs.length > 0) && (
-              <div className="grid md:grid-cols-[220px_1fr] gap-4">
-                <div className="rounded-xl border border-gray-200 dark:border-border-dark p-4 space-y-3">
+              <div className="grid md:grid-cols-[260px_1fr] gap-4">
+                {/* Left: Plan + Activity */}
+                <div className="rounded-xl border border-gray-200 dark:border-border-dark bg-gray-50/50 dark:bg-white/[0.02] p-4 space-y-4 max-h-[50vh] overflow-y-auto">
                   {plan.length > 0 && (
                     <div>
-                      <h4 className="text-[10px] uppercase tracking-widest text-gray-500 mb-2">
+                      <h4 className="text-[10px] uppercase tracking-widest font-semibold text-gray-500 mb-3">
                         Plan
                       </h4>
-                      <ol className="space-y-1 list-decimal list-inside text-xs">
-                        {plan.map((p) => (
-                          <li
+                      <div className="space-y-2">
+                        {plan.map((p, i) => (
+                          <div
                             key={p}
-                            className="text-gray-700 dark:text-gray-300"
+                            className="flex gap-2.5 text-xs text-gray-700 dark:text-gray-300"
                           >
-                            {p}
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
-                  {logs.length > 0 && (
-                    <div>
-                      <h4 className="text-[10px] uppercase tracking-widest text-gray-500 mb-2">
-                        Activity
-                      </h4>
-                      <div className="text-[10px] font-mono text-gray-600 dark:text-gray-400 space-y-0.5 max-h-40 overflow-y-auto">
-                        {logs.map((l, i) => (
-                          <div key={`${i}-${l.slice(0, 10)}`}>{l}</div>
+                            <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-bold shrink-0">
+                              {i + 1}
+                            </span>
+                            <span className="leading-relaxed">{p}</span>
+                          </div>
                         ))}
                       </div>
                     </div>
                   )}
+                  {logs.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] uppercase tracking-widest font-semibold text-gray-500 mb-3">
+                        Activity
+                      </h4>
+                      <div className="rounded-lg bg-gray-100/80 dark:bg-black/20 p-3 max-h-52 overflow-y-auto space-y-1.5">
+                        {logs.map((l, i) => {
+                          const isSuccess = l.includes("✓");
+                          const isFail = l.includes("✗");
+                          const isSearch = l.includes("→");
+                          const isStage = !isSuccess && !isFail && !isSearch && !l.startsWith("  ");
+                          return (
+                            <div
+                              key={`${i}-${l.slice(0, 10)}`}
+                              className={`flex items-start gap-1.5 text-[10px] leading-relaxed ${
+                                isStage
+                                  ? "font-medium text-gray-700 dark:text-gray-300"
+                                  : isSuccess
+                                    ? "text-emerald-600 dark:text-emerald-400 pl-2"
+                                    : isFail
+                                      ? "text-red-500 dark:text-red-400 pl-2"
+                                      : isSearch
+                                        ? "text-blue-600 dark:text-blue-400 pl-2"
+                                        : "text-gray-500 dark:text-gray-400 pl-2"
+                              }`}
+                            >
+                              {isStage && (
+                                <span className="material-symbols-outlined text-[11px] text-indigo-500 mt-0.5 shrink-0">
+                                  arrow_right
+                                </span>
+                              )}
+                              <span className="break-all font-mono">{l}</span>
+                            </div>
+                          );
+                        })}
+                        {running && (
+                          <div className="flex items-center gap-1.5 pt-1 border-t border-gray-200/50 dark:border-white/5 mt-1">
+                            <span className="material-symbols-outlined text-xs animate-spin text-indigo-500">progress_activity</span>
+                            <span className="text-[10px] font-medium text-indigo-500">Working...</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="rounded-xl border border-gray-200 dark:border-border-dark p-4">
-                  <h4 className="text-[10px] uppercase tracking-widest text-gray-500 mb-2">
+
+                {/* Right: Report */}
+                <div className="rounded-xl border border-gray-200 dark:border-border-dark p-5 max-h-[50vh] overflow-y-auto">
+                  <h4 className="text-[10px] uppercase tracking-widest font-semibold text-gray-500 mb-3">
                     Report (auto-added to notebook)
                   </h4>
-                  <article className="text-xs leading-relaxed whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-56 overflow-y-auto">
-                    {report || (
-                      <span className="text-gray-400">
-                        {running
-                          ? "Writing…"
-                          : "Run a query to see the report here."}
-                      </span>
-                    )}
-                  </article>
+                  {report ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {report}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">
+                      {running
+                        ? "Report will stream here as the agent writes..."
+                        : "Run a query to see the report here."}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -604,23 +648,32 @@ export function UploadModal({
           </div>
         )}
 
-        <div className="p-4 bg-gray-50 dark:bg-surface-dark border-t border-gray-100 dark:border-border-dark flex items-center justify-between shrink-0">
+        <div className="px-5 py-3 bg-gray-50/80 dark:bg-surface-dark border-t border-gray-100 dark:border-border-dark flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <span className="material-symbols-outlined text-lg">
-              check_circle
-            </span>
+            {tab === "research" && running ? (
+              <span className="material-symbols-outlined text-lg animate-spin text-indigo-500">
+                progress_activity
+              </span>
+            ) : (
+              <span className="material-symbols-outlined text-lg text-emerald-500">
+                check_circle
+              </span>
+            )}
             <span>
               {tab === "files"
                 ? `${pending.filter((p) => p.status === "done").length} of ${pending.length} uploaded`
                 : tab === "research"
-                  ? `${sources.length} sources from research`
+                  ? running
+                    ? "Researching..."
+                    : `${sources.length} sources from research`
                   : "Ready"}
             </span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 rounded-full transition-colors"
+            disabled={tab === "research" && running}
+            className="px-5 py-2 text-sm font-medium rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
           >
             Done
           </button>

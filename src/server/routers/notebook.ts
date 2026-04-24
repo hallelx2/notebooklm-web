@@ -37,4 +37,16 @@ export const notebookRouter = router({
         .returning();
       return row;
     }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      const [row] = await db
+        .select()
+        .from(notebooks)
+        .where(eq(notebooks.id, input.id))
+        .limit(1);
+      if (!row || row.userId !== ctx.user.id) return null;
+      await db.delete(notebooks).where(eq(notebooks.id, input.id));
+      return { id: input.id };
+    }),
 });

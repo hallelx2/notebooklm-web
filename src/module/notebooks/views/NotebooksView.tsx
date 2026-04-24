@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { signOut, useSession } from "@/lib/auth-client";
 import { trpc } from "@/trpc/client";
@@ -16,6 +16,8 @@ export function NotebooksView() {
   const [sort, setSort] = useState<"recent" | "alpha">("recent");
   const [view, setView] = useState<"grid" | "list">("grid");
 
+  const utils = trpc.useUtils();
+
   const list = trpc.notebook.list.useQuery(undefined, {
     enabled: !!session?.user,
   });
@@ -24,6 +26,30 @@ export function NotebooksView() {
       if (row) router.push(`/notebooks/${row.id}?onboard=1`);
     },
   });
+  const deleteMut = trpc.notebook.delete.useMutation({
+    onSuccess: () => {
+      utils.notebook.list.invalidate();
+    },
+  });
+
+  // List-view dropdown state
+  const [listMenuOpenId, setListMenuOpenId] = useState<string | null>(null);
+  const listMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!listMenuOpenId) return;
+    function handleClick(e: MouseEvent) {
+      if (listMenuRef.current && !listMenuRef.current.contains(e.target as Node)) {
+        setListMenuOpenId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [listMenuOpenId]);
+
+  function handleDelete(id: string) {
+    deleteMut.mutate({ id });
+  }
 
   const notebooks = useMemo(() => {
     const items = (list.data ?? []).slice();
@@ -151,23 +177,27 @@ export function NotebooksView() {
                   title={n.title}
                   description={n.description}
                   createdAt={n.createdAt}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>
           ) : (
             <div className="divide-y divide-slate-200 dark:divide-white/5 border border-slate-200 dark:border-white/10">
               {notebooks.map((n) => (
-                <Link
+                <div
                   key={n.id}
-                  href={`/notebooks/${n.id}`}
-                  className="flex items-center gap-6 p-5 hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group"
+                  className="flex items-center gap-6 p-5 hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group relative"
                 >
-                  <div className="w-10 h-10 rounded-md bg-gradient-to-tr from-blue-500/20 to-indigo-600/20 border border-slate-200 dark:border-white/10 flex items-center justify-center">
+                  <Link
+                    href={`/notebooks/${n.id}`}
+                    className="absolute inset-0 z-0"
+                  />
+                  <div className="w-10 h-10 rounded-md bg-gradient-to-tr from-blue-500/20 to-indigo-600/20 border border-slate-200 dark:border-white/10 flex items-center justify-center relative z-10">
                     <span className="material-symbols-outlined text-blue-600 dark:text-blue-300 text-lg">
                       book_2
                     </span>
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 relative z-10">
                     <p className="font-semibold truncate group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
                       {n.title}
                     </p>
@@ -175,13 +205,52 @@ export function NotebooksView() {
                       {n.description ?? "No description"}
                     </p>
                   </div>
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 dark:text-zinc-500 shrink-0">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 dark:text-zinc-500 shrink-0 relative z-10">
                     {new Date(n.createdAt).toLocaleDateString()}
                   </span>
-                  <span className="material-symbols-outlined text-slate-400 dark:text-zinc-600 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
+
+                  {/* 3-dot menu for list view */}
+                  <div ref={listMenuOpenId === n.id ? listMenuRef : undefined} className="relative z-20">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setListMenuOpenId(listMenuOpenId === n.id ? null : n.id);
+                      }}
+                      className="p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+                      title="More options"
+                    >
+                      <span className="material-symbols-outlined text-[18px] text-slate-500 dark:text-zinc-400">
+                        more_vert
+                      </span>
+                    </button>
+
+                    {listMenuOpenId === n.id && (
+                      <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setListMenuOpenId(null);
+                            handleDelete(n.id);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">
+                            delete
+                          </span>
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <span className="material-symbols-outlined text-slate-400 dark:text-zinc-600 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors relative z-10">
                     arrow_forward
                   </span>
-                </Link>
+                </div>
               ))}
             </div>
           )}
