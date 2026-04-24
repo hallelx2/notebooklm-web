@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { generateObject, streamText } from "ai";
 import { z } from "zod";
 import { db } from "@/db";
-import { deepResearchRuns, notebooks } from "@/db/schema";
+import { deepResearchRuns, notebooks, sources } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { parseLink } from "@/lib/ingest/parse";
 import { webSearch } from "@/lib/search";
@@ -192,6 +192,36 @@ export async function POST(req: Request) {
             updatedAt: new Date(),
           })
           .where(eq(deepResearchRuns.id, run.id));
+
+        // Save the research report as a notebook source so it's available for chat
+        if (report) {
+          try {
+            const [reportSource] = await db
+              .insert(sources)
+              .values({
+                notebookId: body.notebookId,
+                kind: "text",
+                title: `Research: ${body.query.slice(0, 80)}`,
+                content: report.slice(0, 20000),
+                status: "pending",
+              })
+              .returning();
+
+            send("source-created", { sourceId: reportSource.id, title: reportSource.title });
+
+            // Run embedding in background (don't block the SSE stream)
+            const { ingestText } = await import("@/lib/ingest/text");
+            ingestText({
+              sourceId: reportSource.id,
+              notebookId: body.notebookId,
+              text: report,
+            }).catch((err) => {
+              console.error("Failed to embed research report:", err);
+            });
+          } catch (err) {
+            console.error("Failed to save research report as source:", err);
+          }
+        }
 
         send("done", { runId: run.id, report, sources: sourcesForClient });
       } catch (err) {
