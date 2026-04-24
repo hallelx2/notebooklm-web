@@ -19,6 +19,7 @@ export function SourcesPanel({
   selectedSourceIds,
   setSelectedSourceIds,
 }: Props) {
+  const [expandedSourceId, setExpandedSourceId] = useState<string | null>(null);
   const [searchMode, setSearchMode] = useState<"local" | "web">("local");
   const [searchType, setSearchType] = useState<"fast" | "deep">("fast");
   const [query, setQuery] = useState("");
@@ -308,78 +309,116 @@ export function SourcesPanel({
             </div>
           )}
           {localFiltered.map((s) => (
-            <div
-              key={s.id}
-              className={`group flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                s.status === "error"
-                  ? "bg-red-50/50 dark:bg-red-500/5 border border-red-200/50 dark:border-red-500/10"
-                  : ""
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={selectedSourceIds.includes(s.id)}
-                onChange={() => toggleSelected(s.id)}
-                className="shrink-0"
-                disabled={s.status === "error"}
-              />
-              <span
-                className={`material-symbols-outlined text-lg ${
-                  s.status === "ready"
-                    ? "text-blue-500"
-                    : s.status === "error"
-                      ? "text-red-500"
-                      : "text-gray-400 animate-pulse"
-                }`}
-              >
-                {s.status === "error"
-                  ? "error"
-                  : s.kind === "link"
-                    ? "link"
-                    : s.kind === "note"
-                      ? "edit_note"
-                      : s.kind === "text"
-                        ? "text_snippet"
-                        : "description"}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{s.title}</p>
-                <p className={`text-[10px] capitalize ${
+            <div key={s.id}>
+              <div
+                className={`group flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer ${
                   s.status === "error"
-                    ? "text-red-500 dark:text-red-400"
-                    : "text-gray-500"
-                }`}>
-                  {s.status}
-                  {s.error ? ` — ${s.error.slice(0, 60)}` : ""}
-                </p>
-              </div>
-              {s.status === "error" && (
+                    ? "bg-red-50/50 dark:bg-red-500/5 border border-red-200/50 dark:border-red-500/10"
+                    : ""
+                } ${expandedSourceId === s.id ? "bg-gray-50 dark:bg-gray-800" : ""}`}
+                onClick={() => setExpandedSourceId(expandedSourceId === s.id ? null : s.id)}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedSourceIds.includes(s.id)}
+                  onChange={(e) => { e.stopPropagation(); toggleSelected(s.id); }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="shrink-0"
+                  disabled={s.status === "error"}
+                />
+                <span
+                  className={`material-symbols-outlined text-lg ${
+                    s.status === "ready"
+                      ? "text-blue-500"
+                      : s.status === "error"
+                        ? "text-red-500"
+                        : "text-gray-400 animate-pulse"
+                  }`}
+                >
+                  {s.status === "error"
+                    ? "error"
+                    : s.kind === "link"
+                      ? "link"
+                      : s.kind === "note"
+                        ? "edit_note"
+                        : s.kind === "text"
+                          ? "text_snippet"
+                          : "description"}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{s.title}</p>
+                  <p className={`text-[10px] capitalize ${
+                    s.status === "error"
+                      ? "text-red-500 dark:text-red-400"
+                      : "text-gray-500"
+                  }`}>
+                    {s.status}
+                    {s.error ? ` — ${s.error.slice(0, 60)}` : ""}
+                  </p>
+                </div>
+                <span className={`material-symbols-outlined text-sm text-gray-400 transition-transform ${expandedSourceId === s.id ? "rotate-180" : ""}`}>
+                  expand_more
+                </span>
+                {s.status === "error" && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); retry.mutate({ id: s.id }); }}
+                    disabled={retry.isPending}
+                    className="p-1 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                    title="Retry"
+                  >
+                    <span className="material-symbols-outlined text-base">
+                      refresh
+                    </span>
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => retry.mutate({ id: s.id })}
-                  disabled={retry.isPending}
-                  className="p-1 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                  title="Retry"
+                  onClick={(e) => { e.stopPropagation(); del.mutate({ id: s.id }); }}
+                  className={`p-1 transition-opacity ${
+                    s.status === "error"
+                      ? "opacity-100 text-red-400 hover:text-red-600"
+                      : "opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500"
+                  }`}
+                  title="Delete"
                 >
                   <span className="material-symbols-outlined text-base">
-                    refresh
+                    {s.status === "error" ? "close" : "delete"}
                   </span>
                 </button>
+              </div>
+
+              {/* Expanded content */}
+              {expandedSourceId === s.id && s.content && (
+                <div className="ml-8 mr-2 mb-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 max-h-[40vh] overflow-y-auto">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Source Content</span>
+                    {s.uri && (
+                      <a href={s.uri} target="_blank" rel="noreferrer" className="text-[10px] text-blue-500 hover:underline flex items-center gap-0.5">
+                        <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                        Open
+                      </a>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                    {s.content.slice(0, 5000)}
+                    {s.content.length > 5000 && (
+                      <span className="text-gray-400 italic"> ... ({s.content.length.toLocaleString()} chars total)</span>
+                    )}
+                  </div>
+                </div>
               )}
-              <button
-                type="button"
-                onClick={() => del.mutate({ id: s.id })}
-                className={`p-1 transition-opacity ${
-                  s.status === "error"
-                    ? "opacity-100 text-red-400 hover:text-red-600"
-                    : "opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500"
-                }`}
-                title="Delete"
-              >
-                <span className="material-symbols-outlined text-base">
-                  {s.status === "error" ? "close" : "delete"}
-                </span>
-              </button>
+
+              {/* No content message for errored/pending sources */}
+              {expandedSourceId === s.id && !s.content && (
+                <div className="ml-8 mr-2 mb-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                  <p className="text-xs text-gray-400 italic">
+                    {s.status === "error" ? "Content not available (source failed to process)" :
+                     s.status === "pending" || s.status === "parsing" || s.status === "embedding" ? "Content is still being processed..." :
+                     "No content available"}
+                  </p>
+                </div>
+              )}
             </div>
           ))}
         </div>

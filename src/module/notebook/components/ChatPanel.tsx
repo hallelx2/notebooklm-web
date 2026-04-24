@@ -14,6 +14,11 @@ const STARTER_QUESTIONS = [
   "Create a study plan",
 ];
 
+/** Convert [^N] and [N] citation markers into inline code so ReactMarkdown can style them */
+function preprocessMarkdown(text: string): string {
+  return text.replace(/\[\^?(\d{1,2})\]/g, '`[$1]`');
+}
+
 type Props = {
   notebookId: string;
   sourceIds: string[];
@@ -266,10 +271,34 @@ export function ChatPanel({
             <div key={m.id} className="max-w-[85%] group/msg">
               <div className="rounded-2xl px-4 py-3 text-sm leading-relaxed bg-element-light dark:bg-element-dark text-gray-800 dark:text-gray-200">
                 <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5 prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800 prose-pre:rounded-lg prose-code:text-blue-600 dark:prose-code:text-blue-400">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {text}
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      code: ({ children, className }) => {
+                        const raw = String(children);
+                        const cite = raw.match(/^\[(\d{1,2})\]$/);
+                        if (cite && !className) {
+                          return (
+                            <span
+                              className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold cursor-help mx-0.5 align-middle hover:bg-indigo-700 transition-colors"
+                              title={`Source ${cite[1]}`}
+                            >
+                              {cite[1]}
+                            </span>
+                          );
+                        }
+                        return <code className={className}>{children}</code>;
+                      },
+                    }}
+                  >
+                    {preprocessMarkdown(text)}
                   </ReactMarkdown>
                 </div>
+                {status === "streaming" &&
+                  m.id === messages[messages.length - 1]?.id &&
+                  m.role === "assistant" && (
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse ml-1 align-middle" />
+                  )}
               </div>
               {/* Action buttons — appear on hover */}
               {text && (
@@ -318,11 +347,9 @@ export function ChatPanel({
           );
         })}
 
-        {busy && (
-          <div className="bg-element-light dark:bg-element-dark text-gray-500 rounded-2xl px-4 py-3 text-sm max-w-[30%] typing-indicator">
-            <span>.</span>
-            <span>.</span>
-            <span>.</span>
+        {busy && messages.length === 0 && (
+          <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-element-light dark:bg-element-dark">
+            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
           </div>
         )}
       </div>
