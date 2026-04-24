@@ -114,8 +114,8 @@ export function LandingView() {
                   <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
                   <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
                 </div>
-                <div className="grid grid-cols-[180px_1fr_180px] min-h-[320px] text-left text-xs">
-                  <div className="border-r border-white/5 p-4 space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-[180px_1fr_180px] min-h-[320px] text-left text-xs">
+                  <div className="md:border-r border-b md:border-b-0 border-white/5 p-4 space-y-2">
                     <p className="text-zinc-500 uppercase tracking-wider text-[10px]">
                       Sources
                     </p>
@@ -146,7 +146,7 @@ export function LandingView() {
                       <sup className="text-blue-400">[2]</sup>…
                     </div>
                   </div>
-                  <div className="border-l border-white/5 p-4 space-y-2">
+                  <div className="md:border-l border-t md:border-t-0 border-white/5 p-4 space-y-2">
                     <p className="text-zinc-500 uppercase tracking-wider text-[10px]">
                       Studio
                     </p>

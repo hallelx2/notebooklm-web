@@ -26,6 +26,7 @@ export function NotebookView({ id }: { id: string }) {
     { enabled: !!session?.user, refetchInterval: 2500 },
   );
 
+  const [mobileTab, setMobileTab] = useState<"sources" | "chat" | "studio">("chat");
   const [sourcesWidth, setSourcesWidth] = useState(320);
   const [studioWidth, setStudioWidth] = useState(320);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -85,9 +86,54 @@ export function NotebookView({ id }: { id: string }) {
 
   if (isPending || !session?.user || q.isPending) {
     return (
-      <main className="min-h-screen flex items-center justify-center text-gray-500">
-        Loading notebook...
-      </main>
+      <div className="h-screen flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
+        {/* Skeleton header */}
+        <div className="h-16 flex items-center px-4 gap-4 shrink-0 animate-pulse">
+          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full" />
+          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full" />
+          <div className="h-5 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
+        </div>
+        {/* Skeleton panels */}
+        <div className="flex-1 flex px-3 pb-3 gap-2 overflow-hidden">
+          {/* Sources skeleton */}
+          <div className="w-[320px] shrink-0 bg-surface-light dark:bg-surface-dark rounded-2xl p-4 animate-pulse space-y-3">
+            <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-full" />
+            <div className="h-20 w-full bg-gray-200 dark:bg-gray-700 rounded-xl" />
+            <div className="space-y-2 mt-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded" />
+                  <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded" />
+                  <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Chat skeleton */}
+          <div className="flex-1 bg-surface-light dark:bg-surface-dark rounded-2xl p-4 animate-pulse space-y-4">
+            <div className="h-5 w-12 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="flex-1 flex items-center justify-center">
+              <div className="w-64 space-y-3">
+                <div className="h-8 w-full bg-gray-200 dark:bg-gray-700 rounded-xl mx-auto" />
+                <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mx-auto" />
+                <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-700 rounded mx-auto" />
+              </div>
+            </div>
+            <div className="h-14 w-full bg-gray-200 dark:bg-gray-700 rounded-3xl" />
+          </div>
+          {/* Studio skeleton */}
+          <div className="w-[320px] shrink-0 bg-surface-light dark:bg-surface-dark rounded-2xl p-4 animate-pulse space-y-3">
+            <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-32 w-full bg-gray-200 dark:bg-gray-700 rounded-2xl" />
+            <div className="grid grid-cols-2 gap-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-14 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -123,7 +169,7 @@ export function NotebookView({ id }: { id: string }) {
             {n.title === "Untitled notebook" ? (
               <span className="inline-block w-40 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
             ) : (
-              <span className="text-lg font-medium text-gray-700 dark:text-gray-200">
+              <span className="text-lg font-medium text-gray-700 dark:text-gray-200 truncate max-w-[150px] sm:max-w-none">
                 {n.title}
               </span>
             )}
@@ -133,7 +179,7 @@ export function NotebookView({ id }: { id: string }) {
           <button
             type="button"
             onClick={() => showToast("Analytics coming soon")}
-            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+            className="hidden sm:block p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
             title="Analytics"
           >
             <span className="material-symbols-outlined">trending_up</span>
@@ -150,7 +196,7 @@ export function NotebookView({ id }: { id: string }) {
           <button
             type="button"
             onClick={() => showToast("Settings coming soon")}
-            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+            className="hidden sm:block p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
             title="Settings"
           >
             <span className="material-symbols-outlined">settings</span>
@@ -163,7 +209,8 @@ export function NotebookView({ id }: { id: string }) {
         </div>
       </header>
 
-      <main className="flex-1 flex px-3 pb-3 overflow-hidden">
+      {/* Desktop layout: 3-panel with resize handles */}
+      <main className="flex-1 hidden md:flex px-3 pb-3 overflow-hidden">
         <aside
           className="panel-resizable bg-surface-light dark:bg-surface-dark rounded-2xl flex flex-col border border-border-light dark:border-transparent shadow-sm shrink-0"
           style={{ width: sourcesWidth }}
@@ -214,8 +261,73 @@ export function NotebookView({ id }: { id: string }) {
         </aside>
       </main>
 
+      {/* Mobile layout: tab-based single panel */}
+      <main className="flex-1 flex flex-col md:hidden overflow-hidden">
+        <div className="flex-1 overflow-hidden">
+          {mobileTab === "sources" && (
+            <div className="h-full bg-surface-light dark:bg-surface-dark flex flex-col overflow-hidden">
+              <SourcesPanel
+                notebookId={id}
+                onOpenUpload={() => setUploadOpen(true)}
+                onOpenDeepResearch={(q) => {
+                  setDeepQuery(q);
+                  setDeepOpen(true);
+                }}
+                selectedSourceIds={selectedSourceIds}
+                setSelectedSourceIds={setSelectedSourceIds}
+              />
+            </div>
+          )}
+          {mobileTab === "chat" && (
+            <ChatPanel
+              notebookId={id}
+              sourceIds={selectedSourceIds}
+              sourceCount={sources.length}
+              notebookTitle={n.title}
+              notebookDescription={n.description}
+              onOpenUpload={() => setUploadOpen(true)}
+              externalPrompt={chatPrompt}
+              onExternalPromptConsumed={() => setChatPrompt(null)}
+            />
+          )}
+          {mobileTab === "studio" && (
+            <div className="h-full bg-surface-light dark:bg-surface-dark flex flex-col overflow-hidden">
+              <StudioPanel
+                notebookId={id}
+                onMindmapNodeClick={handleMindmapNodeClick}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Bottom tab bar */}
+        <div className="shrink-0 flex border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+          {(
+            [
+              { id: "sources" as const, icon: "description", label: "Sources" },
+              { id: "chat" as const, icon: "chat", label: "Chat" },
+              { id: "studio" as const, icon: "auto_awesome", label: "Studio" },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setMobileTab(tab.id)}
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium transition-colors ${
+                mobileTab === tab.id
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-gray-500 dark:text-gray-400"
+              }`}
+            >
+              <span className="material-symbols-outlined text-xl">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </main>
+
       {/* Add Note floating button + modal */}
-      <div className="fixed bottom-6 left-0 right-0 flex justify-center pointer-events-none z-40">
+      <div className="fixed bottom-6 left-0 right-0 hidden md:flex justify-center pointer-events-none z-40">
         <button
           type="button"
           onClick={() => {

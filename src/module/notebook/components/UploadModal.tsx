@@ -253,7 +253,7 @@ export function UploadModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4">
       <button
         type="button"
         aria-label="Close"
@@ -263,7 +263,7 @@ export function UploadModal({
           onClose();
         }}
       />
-      <div className="relative w-full max-w-5xl bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="relative w-full max-w-5xl bg-surface-light dark:bg-surface-dark sm:rounded-2xl rounded-none shadow-2xl flex flex-col max-h-full sm:max-h-[92vh] h-full sm:h-auto overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-border-dark shrink-0">
           <h2 className="text-xl font-medium text-gray-800 dark:text-gray-200">
             Add & Manage Sources
@@ -279,7 +279,7 @@ export function UploadModal({
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
-        <div className="flex px-6 pt-2 border-b border-gray-100 dark:border-border-dark shrink-0 gap-8 overflow-x-auto">
+        <div className="flex px-4 sm:px-6 pt-2 border-b border-gray-100 dark:border-border-dark shrink-0 gap-4 sm:gap-8 overflow-x-auto">
           {(
             [
               { id: "research", icon: "science", label: "Research" },
