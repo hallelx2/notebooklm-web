@@ -45,6 +45,13 @@ export function SourcesPanel({
   const del = trpc.source.delete.useMutation({
     onSuccess: () => utils.source.list.invalidate({ notebookId }),
   });
+  const retry = trpc.source.retry.useMutation({
+    onSuccess: () => {
+      utils.source.list.invalidate({ notebookId });
+      showToast("Retrying source...");
+    },
+    onError: (e) => showToast(e.message),
+  });
   const searchWeb = trpc.search.web.useMutation({
     onSuccess: (r) => setResults(r),
     onError: (e) => showToast(e.message),
@@ -65,19 +72,14 @@ export function SourcesPanel({
   }
 
   async function addAll() {
-    for (const r of results) {
-      try {
-        await addFromUrl.mutateAsync({
-          notebookId,
-          url: r.url,
-          title: r.title,
-        });
-      } catch (err) {
-        console.warn("addFromUrl failed", r.url, err);
-      }
-    }
+    const settled = await Promise.allSettled(
+      results.map((r) =>
+        addFromUrl.mutateAsync({ notebookId, url: r.url, title: r.title }),
+      ),
+    );
+    const succeeded = settled.filter((r) => r.status === "fulfilled").length;
     utils.source.list.invalidate({ notebookId });
-    showToast(`Added ${results.length} sources`);
+    showToast(`Added ${succeeded} of ${results.length} sources`);
   }
 
   function toggleSelected(id: string) {
@@ -294,13 +296,18 @@ export function SourcesPanel({
           {localFiltered.map((s) => (
             <div
               key={s.id}
-              className="group flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+              className={`group flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                s.status === "error"
+                  ? "bg-red-50/50 dark:bg-red-500/5 border border-red-200/50 dark:border-red-500/10"
+                  : ""
+              }`}
             >
               <input
                 type="checkbox"
                 checked={selectedSourceIds.includes(s.id)}
                 onChange={() => toggleSelected(s.id)}
                 className="shrink-0"
+                disabled={s.status === "error"}
               />
               <span
                 className={`material-symbols-outlined text-lg ${
@@ -311,23 +318,52 @@ export function SourcesPanel({
                       : "text-gray-400 animate-pulse"
                 }`}
               >
-                {s.kind === "link" ? "link" : "description"}
+                {s.status === "error"
+                  ? "error"
+                  : s.kind === "link"
+                    ? "link"
+                    : s.kind === "note"
+                      ? "edit_note"
+                      : s.kind === "text"
+                        ? "text_snippet"
+                        : "description"}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{s.title}</p>
-                <p className="text-[10px] text-gray-500 capitalize">
+                <p className={`text-[10px] capitalize ${
+                  s.status === "error"
+                    ? "text-red-500 dark:text-red-400"
+                    : "text-gray-500"
+                }`}>
                   {s.status}
                   {s.error ? ` — ${s.error.slice(0, 60)}` : ""}
                 </p>
               </div>
+              {s.status === "error" && (
+                <button
+                  type="button"
+                  onClick={() => retry.mutate({ id: s.id })}
+                  disabled={retry.isPending}
+                  className="p-1 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                  title="Retry"
+                >
+                  <span className="material-symbols-outlined text-base">
+                    refresh
+                  </span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => del.mutate({ id: s.id })}
-                className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-opacity"
+                className={`p-1 transition-opacity ${
+                  s.status === "error"
+                    ? "opacity-100 text-red-400 hover:text-red-600"
+                    : "opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500"
+                }`}
                 title="Delete"
               >
                 <span className="material-symbols-outlined text-base">
-                  delete
+                  {s.status === "error" ? "close" : "delete"}
                 </span>
               </button>
             </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   id: string;
@@ -8,6 +9,7 @@ type Props = {
   description: string | null;
   createdAt: Date | string;
   sourceCount?: number;
+  onDelete?: (id: string) => void;
 };
 
 const STEP_LABELS = ["SOURCES", "EMBED", "CHAT", "STUDIO"];
@@ -31,8 +33,23 @@ export function NotebookCard({
   description,
   createdAt,
   sourceCount = 0,
+  onDelete,
 }: Props) {
   const activeStep = sourceCount > 0 ? 2 : 0;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [menuOpen]);
+
   return (
     <Link
       href={`/notebooks/${id}`}
@@ -56,11 +73,52 @@ export function NotebookCard({
           </div>
         </div>
 
-        <div className="px-2.5 py-1 rounded-sm flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
-            Active
-          </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="px-2.5 py-1 rounded-sm flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+              Active
+            </span>
+          </div>
+
+          {onDelete && (
+            <div ref={menuRef} className="relative">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setMenuOpen((prev) => !prev);
+                }}
+                className="p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+                title="More options"
+              >
+                <span className="material-symbols-outlined text-[18px] text-slate-500 dark:text-zinc-400">
+                  more_vert
+                </span>
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      onDelete(id);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      delete
+                    </span>
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

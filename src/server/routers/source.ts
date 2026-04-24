@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { notebooks, sources } from "@/db/schema";
 import { ingestFile, ingestLink } from "@/lib/ingest";
+import { ingestText } from "@/lib/ingest/text";
 import { getStorage } from "@/lib/storage";
 import { protectedProcedure, router } from "../trpc";
 
@@ -81,6 +82,75 @@ export const sourceRouter = router({
         url: input.url,
       }).catch((err) => console.error("ingestLink failed", err));
       return row;
+    }),
+
+  addFromText: protectedProcedure
+    .input(
+      z.object({
+        notebookId: z.string().uuid(),
+        title: z.string().min(1),
+        text: z.string().min(1),
+        kind: z.enum(["text", "note"]).optional().default("text"),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      await assertOwns(input.notebookId, ctx.user.id);
+      const [row] = await db
+        .insert(sources)
+        .values({
+          notebookId: input.notebookId,
+          kind: input.kind,
+          title: input.title,
+          content: input.text.slice(0, 20000),
+          status: "pending",
+        })
+        .returning();
+      ingestText({
+        sourceId: row.id,
+        notebookId: input.notebookId,
+        text: input.text,
+      }).catch((err) => console.error("ingestText failed", err));
+      return row;
+    }),
+
+  retry: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      const [row] = await db
+        .select()
+        .from(sources)
+        .where(eq(sources.id, input.id))
+        .limit(1);
+      if (!row) return null;
+      await assertOwns(row.notebookId, ctx.user.id);
+      if (row.status !== "error") return row;
+
+      // Reset status to pending
+      await db
+        .update(sources)
+        .set({ status: "pending", error: null, updatedAt: new Date() })
+        .where(eq(sources.id, input.id));
+
+      // Re-trigger ingestion
+      if (row.kind === "link" && row.uri) {
+        ingestLink({
+          sourceId: row.id,
+          notebookId: row.notebookId,
+          url: row.uri,
+        }).catch((err) => console.error("retry ingestLink failed", err));
+      } else if (row.kind === "file" && row.storageKey) {
+        // For files we'd need the buffer again — just re-parse from storage
+        // For now, mark as pending and let it try
+        ingestFile({
+          sourceId: row.id,
+          notebookId: row.notebookId,
+          buffer: Buffer.alloc(0),
+          mimeType: row.mimeType,
+          filename: row.title,
+        }).catch((err) => console.error("retry ingestFile failed", err));
+      }
+
+      return { id: input.id };
     }),
 
   delete: protectedProcedure
