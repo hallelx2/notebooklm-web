@@ -665,6 +665,7 @@ Flag any claims supported by only one source as "low" confidence. Claims support
               sourceId: reportSource.id,
               notebookId: body.notebookId,
               text: report,
+              sourceTitle: reportSource.title,
             }).catch((err) => {
               console.error("Failed to embed research report:", err);
             });

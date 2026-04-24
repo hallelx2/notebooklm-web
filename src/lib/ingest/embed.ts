@@ -63,3 +63,20 @@ export async function embedQuery(text: string): Promise<number[]> {
   const [vec] = await embedChunks([text]);
   return vec;
 }
+
+/**
+ * Build a contextual string for embedding.
+ * Prepends source title and section heading so the embedding
+ * captures WHAT the chunk is about, not just the raw text.
+ */
+export function buildEmbeddingContext(
+  chunkContent: string,
+  sourceTitle?: string,
+  sectionHeading?: string,
+): string {
+  const parts: string[] = [];
+  if (sourceTitle) parts.push(`Source: ${sourceTitle}`);
+  if (sectionHeading) parts.push(`Section: ${sectionHeading}`);
+  parts.push(chunkContent);
+  return parts.join("\n");
+}

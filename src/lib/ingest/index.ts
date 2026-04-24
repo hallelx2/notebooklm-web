@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { sourceChunks, sources } from "@/db/schema";
 import { maybeAutoTitleNotebook } from "./autotitle";
 import { chunkText } from "./chunk";
-import { embedChunks } from "./embed";
+import { embedChunks, buildEmbeddingContext } from "./embed";
 import { parseByMime, parseLink } from "./parse";
 
 async function setStatus(
@@ -22,18 +22,33 @@ async function insertChunks(params: {
   sourceId: string;
   notebookId: string;
   text: string;
+  sourceTitle?: string;
+  sourceUrl?: string;
 }) {
-  const chunks = chunkText(params.text);
+  const chunks = chunkText(params.text, params.sourceTitle);
   if (chunks.length === 0) return 0;
-  const embeddings = await embedChunks(chunks.map((c) => c.content));
+
+  // Build contextual embedding strings
+  const embeddingTexts = chunks.map((c) =>
+    buildEmbeddingContext(c.content, params.sourceTitle, c.heading),
+  );
+  const embeddings = await embedChunks(embeddingTexts);
+
   const rows = chunks.map((c, i) => ({
     sourceId: params.sourceId,
     notebookId: params.notebookId,
     ordinal: c.ordinal,
     content: c.content,
     tokenCount: c.tokenCount,
+    metadata: {
+      sourceTitle: params.sourceTitle ?? null,
+      sourceUrl: params.sourceUrl ?? null,
+      heading: c.heading ?? null,
+      position: `${c.ordinal + 1}/${chunks.length}`,
+    },
     embedding: embeddings[i],
   }));
+
   // chunked insert to avoid oversized statements
   const BATCH = 50;
   for (let i = 0; i < rows.length; i += BATCH) {
@@ -61,6 +76,7 @@ export async function ingestFile(params: {
       sourceId: params.sourceId,
       notebookId: params.notebookId,
       text: parsed.text,
+      sourceTitle: params.filename,
     });
     await db
       .update(sources)
@@ -94,6 +110,8 @@ export async function ingestLink(params: {
       sourceId: params.sourceId,
       notebookId: params.notebookId,
       text: parsed.text,
+      sourceTitle: parsed.title ?? params.url,
+      sourceUrl: params.url,
     });
     await db
       .update(sources)

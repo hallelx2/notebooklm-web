@@ -58,7 +58,7 @@ export async function POST(req: Request) {
         notebookId: body.notebookId,
         query,
         sourceIds: body.sourceIds,
-        topK: 8,
+        topK: 12,
       })
     : [];
 

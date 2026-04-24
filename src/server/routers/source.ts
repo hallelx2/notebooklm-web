@@ -109,6 +109,7 @@ export const sourceRouter = router({
         sourceId: row.id,
         notebookId: input.notebookId,
         text: input.text,
+        sourceTitle: input.title,
       }).catch((err) => console.error("ingestText failed", err));
       return row;
     }),
