@@ -279,7 +279,21 @@ export function SourcesPanel({
         )}
 
         <div className="flex flex-col gap-2 mt-2">
-          {localFiltered.length === 0 && (
+          {list.isPending && (
+            <div className="space-y-2 animate-pulse">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-2 p-2">
+                  <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded" />
+                  <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded" />
+                  <div className="flex-1 space-y-1">
+                    <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded" />
+                    <div className="h-2.5 w-1/3 bg-gray-200 dark:bg-gray-700 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {!list.isPending && localFiltered.length === 0 && (
             <div className="mt-8 flex flex-col items-center justify-center text-center px-4 opacity-60">
               <span className="material-symbols-outlined text-4xl mb-3 text-gray-400">
                 description

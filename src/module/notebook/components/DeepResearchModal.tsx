@@ -214,7 +214,7 @@ export function DeepResearchModal({
   const running = stage !== "idle" && stage !== "done" && stage !== "error";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4">
       <button
         type="button"
         aria-label="Close"
@@ -224,7 +224,7 @@ export function DeepResearchModal({
           onClose();
         }}
       />
-      <div className="relative w-full max-w-6xl bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden border border-gray-200/50 dark:border-gray-700/50">
+      <div className="relative w-full max-w-6xl bg-surface-light dark:bg-surface-dark sm:rounded-2xl rounded-none shadow-2xl flex flex-col max-h-full sm:max-h-[92vh] h-full sm:h-auto overflow-hidden border border-gray-200/50 dark:border-gray-700/50">
         {/* Header with gradient accent */}
         <div className="relative shrink-0">
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500" />
@@ -258,8 +258,8 @@ export function DeepResearchModal({
         </div>
 
         {/* Search bar area */}
-        <div className="px-6 py-4 border-y border-gray-100 dark:border-gray-800 shrink-0 bg-gray-50/50 dark:bg-gray-900/30">
-          <div className="flex gap-3 items-center">
+        <div className="px-4 sm:px-6 py-4 border-y border-gray-100 dark:border-gray-800 shrink-0 bg-gray-50/50 dark:bg-gray-900/30">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
             <div className="flex-1 relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">
                 search
@@ -275,35 +275,36 @@ export function DeepResearchModal({
                 }}
               />
             </div>
-            {/* Mode pill toggle */}
-            <div className="flex p-1 bg-gray-200/70 dark:bg-gray-700 rounded-lg shrink-0">
-              <button
-                type="button"
-                onClick={() => setMode("fast")}
-                disabled={running}
-                className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
-                  mode === "fast"
-                    ? "bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
-              >
-                <span className="material-symbols-outlined text-xs align-middle mr-1">bolt</span>
-                Fast
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("deep")}
-                disabled={running}
-                className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
-                  mode === "deep"
-                    ? "bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
-              >
-                <span className="material-symbols-outlined text-xs align-middle mr-1">science</span>
-                Deep
-              </button>
-            </div>
+            {/* Mode pill toggle + action button */}
+            <div className="flex gap-3 items-center">
+              <div className="flex p-1 bg-gray-200/70 dark:bg-gray-700 rounded-lg shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMode("fast")}
+                  disabled={running}
+                  className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                    mode === "fast"
+                      ? "bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-xs align-middle mr-1">bolt</span>
+                  Fast
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("deep")}
+                  disabled={running}
+                  className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                    mode === "deep"
+                      ? "bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-xs align-middle mr-1">science</span>
+                  Deep
+                </button>
+              </div>
             <button
               type="button"
               onClick={() => (running ? abortRef.current?.abort() : run())}
@@ -325,6 +326,7 @@ export function DeepResearchModal({
                 </span>
               )}
             </button>
+            </div>
           </div>
 
           {/* Status indicator */}
@@ -364,9 +366,9 @@ export function DeepResearchModal({
         </div>
 
         {/* Three-column layout */}
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_300px] gap-0 flex-1 min-h-0">
+        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_300px] gap-0 flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
           {/* Left: Plan + Activity */}
-          <div className="border-r border-gray-100 dark:border-gray-800 overflow-y-auto p-4 space-y-5 bg-gray-50/30 dark:bg-gray-900/20">
+          <div className="md:border-r border-b md:border-b-0 border-gray-100 dark:border-gray-800 overflow-y-auto p-4 space-y-5 bg-gray-50/30 dark:bg-gray-900/20">
             {plan.length > 0 && (
               <div>
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-1.5">
@@ -461,7 +463,7 @@ export function DeepResearchModal({
           </div>
 
           {/* Right: Sources */}
-          <div className="border-l border-gray-100 dark:border-gray-800 overflow-y-auto p-4 bg-gray-50/30 dark:bg-gray-900/20">
+          <div className="md:border-l border-t md:border-t-0 border-gray-100 dark:border-gray-800 overflow-y-auto p-4 bg-gray-50/30 dark:bg-gray-900/20">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-sm">link</span>

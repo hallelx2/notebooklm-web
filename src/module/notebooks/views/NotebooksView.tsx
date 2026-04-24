@@ -74,9 +74,65 @@ export function NotebooksView() {
 
   if (isPending) {
     return (
-      <main className="min-h-screen bg-white dark:bg-[#050505] text-slate-900 dark:text-white flex items-center justify-center text-slate-500 dark:text-zinc-500">
-        Loading...
-      </main>
+      <div className="relative z-10 flex min-h-screen w-full flex-col bg-white dark:bg-[#050505] text-slate-900 dark:text-white overflow-x-hidden">
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <div className="absolute left-12 top-0 bottom-0 w-[1px] bg-slate-200 dark:bg-white/5 hidden md:block" />
+          <div className="absolute right-12 top-0 bottom-0 w-[1px] bg-slate-200 dark:bg-white/5 hidden md:block" />
+          <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[45rem] h-[45rem] bg-blue-400/15 dark:bg-blue-500/10 blur-[120px] rounded-full" />
+        </div>
+
+        <header className="relative z-20 border-b border-slate-200 dark:border-white/10">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-10 h-14 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-7 h-7 rounded-md bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-white text-sm icon-filled">
+                  book_2
+                </span>
+              </span>
+              <span className="font-medium tracking-tight text-sm">
+                NotebookLM
+              </span>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 animate-pulse">
+              <div className="hidden md:inline h-3 w-32 bg-slate-200 dark:bg-white/10 rounded" />
+              <div className="w-8 h-8 bg-slate-200 dark:bg-white/10 rounded-full" />
+              <div className="w-14 h-4 bg-slate-200 dark:bg-white/10 rounded" />
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-grow flex flex-col relative z-10">
+          <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 md:px-10 py-10">
+            <div className="flex items-center justify-between mb-8 animate-pulse">
+              <div className="space-y-2">
+                <div className="h-8 w-48 bg-slate-200 dark:bg-white/10 rounded" />
+                <div className="h-3 w-28 bg-slate-200 dark:bg-white/10 rounded" />
+              </div>
+              <div className="h-10 w-36 bg-slate-200 dark:bg-white/10 rounded" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 p-5 sm:p-6 flex flex-col gap-4 animate-pulse">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1 space-y-2">
+                      <div className="h-6 w-3/4 bg-slate-200 dark:bg-white/10 rounded" />
+                      <div className="h-3 w-1/3 bg-slate-200 dark:bg-white/10 rounded" />
+                    </div>
+                    <div className="w-16 h-6 bg-slate-200 dark:bg-white/10 rounded-sm" />
+                  </div>
+                  <div className="h-3 w-full bg-slate-200 dark:bg-white/10 rounded" />
+                  <div className="h-3 w-2/3 bg-slate-200 dark:bg-white/10 rounded" />
+                  <div className="flex gap-1">
+                    {Array.from({ length: 4 }).map((_, j) => (
+                      <div key={j} className="h-7 w-16 bg-slate-200 dark:bg-white/10 rounded-sm" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
     );
   }
 
