@@ -2,11 +2,27 @@
 
 import { useChat, type UIMessage } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { trpc } from "@/trpc/client";
 import { showToast } from "./Toast";
+
+/* ── Citation types ─────────────────────────────────────────── */
+type CitationEntry = {
+  title: string;
+  snippet: string;
+  sourceId: string;
+};
+type CitationLookup = Record<number, CitationEntry>;
+type CitationsMap = Map<string, CitationLookup>;
 
 const STARTER_QUESTIONS = [
   "Summarize the key points",
@@ -28,6 +44,131 @@ function preprocessMarkdown(text: string): string {
     },
   );
   return expanded;
+}
+
+/* ── AssistantMessage with clickable citation popovers ─────── */
+function AssistantMessage({
+  messageId,
+  text,
+  citationsMap,
+  isStreaming,
+  children,
+}: {
+  messageId: string;
+  text: string;
+  citationsMap: CitationsMap;
+  isStreaming: boolean;
+  children?: ReactNode;
+}) {
+  const [popover, setPopover] = useState<{
+    n: number;
+    title: string;
+    snippet: string;
+    rect: DOMRect;
+  } | null>(null);
+
+  // Close popover on outside click
+  useEffect(() => {
+    if (!popover) return;
+    function close() {
+      setPopover(null);
+    }
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [popover]);
+
+  // Close popover on scroll (the fixed popover would drift)
+  useEffect(() => {
+    if (!popover) return;
+    function close() {
+      setPopover(null);
+    }
+    window.addEventListener("scroll", close, true);
+    return () => window.removeEventListener("scroll", close, true);
+  }, [popover]);
+
+  function handleCitationClick(n: number, event: React.MouseEvent) {
+    event.stopPropagation();
+    const lookup = citationsMap.get(messageId);
+    if (!lookup?.[n]) return;
+    const rect = (event.target as HTMLElement).getBoundingClientRect();
+    setPopover({ n, title: lookup[n].title, snippet: lookup[n].snippet, rect });
+  }
+
+  return (
+    <div className="relative">
+      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5 prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800 prose-pre:rounded-lg prose-code:text-blue-600 dark:prose-code:text-blue-400">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            code: ({ children: codeChildren, className }) => {
+              const raw = String(codeChildren);
+              const cite = raw.match(/^\[(\d{1,2})\]$/);
+              if (cite && !className) {
+                const n = parseInt(cite[1]);
+                const lookup = citationsMap.get(messageId);
+                const hasCitation = !!lookup?.[n];
+                return (
+                  <span
+                    onClick={(e) => handleCitationClick(n, e)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className={`inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold mx-0.5 align-middle hover:bg-indigo-700 hover:scale-110 transition-all ${
+                      hasCitation ? "cursor-pointer" : "cursor-help"
+                    }`}
+                    title={
+                      hasCitation
+                        ? `Source ${n} — click to view`
+                        : `Source ${n}`
+                    }
+                  >
+                    {n}
+                  </span>
+                );
+              }
+              return <code className={className}>{codeChildren}</code>;
+            },
+          }}
+        >
+          {preprocessMarkdown(text)}
+        </ReactMarkdown>
+      </div>
+
+      {isStreaming && (
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse ml-1 align-middle" />
+      )}
+
+      {/* Citation popover */}
+      {popover && (
+        <div
+          className="fixed z-[60] w-80 bg-white dark:bg-[#1e1f20] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+          style={{
+            top: popover.rect.bottom + 8,
+            left: Math.min(popover.rect.left, window.innerWidth - 340),
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div className="p-3 bg-indigo-50 dark:bg-indigo-500/10 border-b border-indigo-100 dark:border-indigo-500/20">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold shrink-0">
+                {popover.n}
+              </span>
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
+                {popover.title}
+              </span>
+            </div>
+          </div>
+          <div className="p-3 max-h-48 overflow-y-auto">
+            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+              {popover.snippet}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Pass through action buttons */}
+      {children}
+    </div>
+  );
 }
 
 type Props = {
@@ -70,6 +211,31 @@ export function ChatPanel({
     }));
   }, [historyQ.data]);
 
+  // ─── Build citation lookup: messageId → { [n]: CitationEntry } ──
+  const citationsMap = useMemo<CitationsMap>(() => {
+    const map: CitationsMap = new Map();
+    if (!historyQ.data) return map;
+    for (const msg of historyQ.data) {
+      if (msg.citations && Array.isArray(msg.citations)) {
+        const lookup: CitationLookup = {};
+        for (const c of msg.citations as {
+          n: number;
+          title: string;
+          snippet: string;
+          sourceId: string;
+        }[]) {
+          lookup[c.n] = {
+            title: c.title,
+            snippet: c.snippet,
+            sourceId: c.sourceId,
+          };
+        }
+        map.set(msg.id, lookup);
+      }
+    }
+    return map;
+  }, [historyQ.data]);
+
   // ─── Chat transport + hook ─────────────────────────────────
   const transport = useMemo(
     () =>
@@ -93,6 +259,15 @@ export function ChatPanel({
       setMessages(initialMessages);
     }
   }, [initialMessages, setMessages]);
+
+  // After streaming finishes, refetch messages to get fresh citations
+  const prevStatus = useRef(status);
+  useEffect(() => {
+    if (prevStatus.current === "streaming" && status === "ready") {
+      utils.message.list.invalidate({ notebookId });
+    }
+    prevStatus.current = status;
+  }, [status, utils.message.list, notebookId]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -277,39 +452,20 @@ export function ChatPanel({
             );
           }
 
-          // Assistant message with action buttons
+          // Assistant message with clickable citation popovers
+          const isStreamingThis =
+            status === "streaming" &&
+            m.id === messages[messages.length - 1]?.id;
+
           return (
             <div key={m.id} className="max-w-[85%] group/msg">
               <div className="rounded-2xl px-4 py-3 text-sm leading-relaxed bg-element-light dark:bg-element-dark text-gray-800 dark:text-gray-200">
-                <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5 prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800 prose-pre:rounded-lg prose-code:text-blue-600 dark:prose-code:text-blue-400">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      code: ({ children, className }) => {
-                        const raw = String(children);
-                        const cite = raw.match(/^\[(\d{1,2})\]$/);
-                        if (cite && !className) {
-                          return (
-                            <span
-                              className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold cursor-help mx-0.5 align-middle hover:bg-indigo-700 transition-colors"
-                              title={`Source ${cite[1]}`}
-                            >
-                              {cite[1]}
-                            </span>
-                          );
-                        }
-                        return <code className={className}>{children}</code>;
-                      },
-                    }}
-                  >
-                    {preprocessMarkdown(text)}
-                  </ReactMarkdown>
-                </div>
-                {status === "streaming" &&
-                  m.id === messages[messages.length - 1]?.id &&
-                  m.role === "assistant" && (
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse ml-1 align-middle" />
-                  )}
+                <AssistantMessage
+                  messageId={m.id}
+                  text={text}
+                  citationsMap={citationsMap}
+                  isStreaming={isStreamingThis}
+                />
               </div>
               {/* Action buttons — appear on hover */}
               {text && (
