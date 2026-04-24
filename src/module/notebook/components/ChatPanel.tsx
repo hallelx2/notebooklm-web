@@ -14,9 +14,20 @@ const STARTER_QUESTIONS = [
   "Create a study plan",
 ];
 
-/** Convert [^N] and [N] citation markers into inline code so ReactMarkdown can style them */
+/**
+ * Convert citation markers into inline code so ReactMarkdown renders them as badges.
+ * Handles: [^1], [1], [^1, ^6], [1, 2, 5], [^1, ^2, ^5] etc.
+ */
 function preprocessMarkdown(text: string): string {
-  return text.replace(/\[\^?(\d{1,2})\]/g, '`[$1]`');
+  // First, expand grouped citations like [^1, ^6] or [1, 2, 5] into individual badges
+  const expanded = text.replace(
+    /\[(\^?\d{1,2}(?:\s*,\s*\^?\d{1,2})*)\]/g,
+    (_, inner: string) => {
+      const nums = inner.split(",").map((s) => s.trim().replace(/^\^/, ""));
+      return nums.map((n) => `\`[${n}]\``).join(" ");
+    },
+  );
+  return expanded;
 }
 
 type Props = {
