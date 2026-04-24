@@ -1,5 +1,6 @@
 "use client";
 
+import type { ServerUser } from "@/lib/auth-server";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,17 +15,24 @@ import { StudioPanel } from "../components/StudioPanel";
 import { showToast, Toast } from "../components/Toast";
 import { UploadModal } from "../components/UploadModal";
 
-export function NotebookView({ id }: { id: string }) {
+export function NotebookView({ id, user }: { id: string; user: ServerUser }) {
   const router = useRouter();
-  const { data: session, isPending } = useSession();
+  const { data: clientSession } = useSession();
+
+  // Real-time sign-out detection
+  useEffect(() => {
+    if (clientSession !== undefined && clientSession !== null && !clientSession.user) {
+      router.replace("/auth/sign-in");
+    }
+  }, [clientSession, router]);
 
   const q = trpc.notebook.byId.useQuery(
     { id },
-    { enabled: !!session?.user, refetchInterval: 4000 },
+    { enabled: true, refetchInterval: 4000 },
   );
   const sourcesQ = trpc.source.list.useQuery(
     { notebookId: id },
-    { enabled: !!session?.user, refetchInterval: 2500 },
+    { enabled: true, refetchInterval: 2500 },
   );
 
   const [mobileTab, setMobileTab] = useState<"sources" | "chat" | "studio">("chat");
@@ -146,13 +154,7 @@ export function NotebookView({ id }: { id: string }) {
     }
   }, []);
 
-  useEffect(() => {
-    if (!isPending && !session?.user) {
-      router.replace("/auth/sign-in");
-    }
-  }, [isPending, session, router]);
-
-  if (isPending || !session?.user || q.isPending) {
+  if (q.isPending) {
     return (
       <div className="h-screen flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
         {/* Skeleton header */}
@@ -366,15 +368,15 @@ export function NotebookView({ id }: { id: string }) {
               }}
               className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm ml-2 cursor-pointer hover:ring-2 hover:ring-indigo-400 transition-shadow"
             >
-              {(session.user.name ?? session.user.email)
+              {(user.name ?? user.email)
                 .slice(0, 2)
                 .toUpperCase()}
             </button>
             {profileOpen && (
               <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#1e1f20] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
                 <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{session.user.name}</p>
-                  <p className="text-xs text-gray-500">{session.user.email}</p>
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{user.name}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
                 <div className="p-2">
                   <div className="flex items-center justify-between px-3 py-2">
