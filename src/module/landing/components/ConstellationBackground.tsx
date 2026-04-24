@@ -1,174 +1,432 @@
-// Deterministic scatter of points on a 100x100 viewBox — no RNG at render time,
-// so SSR and CSR match and we avoid hydration drift.
-const POINTS: { x: number; y: number; r: number }[] = [
-  { x: 4, y: 11, r: 0.15 }, { x: 9, y: 24, r: 0.22 }, { x: 12, y: 6, r: 0.12 },
-  { x: 18, y: 38, r: 0.28 }, { x: 22, y: 16, r: 0.14 }, { x: 25, y: 62, r: 0.18 },
-  { x: 28, y: 47, r: 0.3 }, { x: 31, y: 8, r: 0.12 }, { x: 33, y: 78, r: 0.2 },
-  { x: 37, y: 30, r: 0.18 }, { x: 39, y: 52, r: 0.3 }, { x: 42, y: 19, r: 0.15 },
-  { x: 44, y: 84, r: 0.15 }, { x: 47, y: 66, r: 0.22 }, { x: 51, y: 35, r: 0.35 },
-  { x: 54, y: 11, r: 0.14 }, { x: 57, y: 72, r: 0.25 }, { x: 60, y: 49, r: 0.3 },
-  { x: 62, y: 23, r: 0.17 }, { x: 65, y: 88, r: 0.15 }, { x: 67, y: 58, r: 0.2 },
-  { x: 70, y: 14, r: 0.22 }, { x: 72, y: 40, r: 0.28 }, { x: 76, y: 69, r: 0.17 },
-  { x: 78, y: 28, r: 0.2 }, { x: 81, y: 54, r: 0.25 }, { x: 83, y: 82, r: 0.14 },
-  { x: 86, y: 18, r: 0.15 }, { x: 88, y: 43, r: 0.18 }, { x: 92, y: 63, r: 0.2 },
-  { x: 95, y: 31, r: 0.14 }, { x: 97, y: 12, r: 0.12 }, { x: 14, y: 72, r: 0.14 },
-  { x: 8, y: 54, r: 0.18 }, { x: 20, y: 90, r: 0.13 }, { x: 58, y: 94, r: 0.17 },
-  { x: 90, y: 93, r: 0.14 }, { x: 3, y: 82, r: 0.12 }, { x: 48, y: 8, r: 0.14 },
-  { x: 74, y: 4, r: 0.13 }, { x: 15, y: 46, r: 0.16 }, { x: 80, y: 92, r: 0.12 },
-  { x: 2, y: 40, r: 0.14 }, { x: 68, y: 36, r: 0.18 }, { x: 45, y: 42, r: 0.15 },
-  { x: 35, y: 88, r: 0.15 },
+"use client";
+
+import { useEffect, useRef, useCallback } from "react";
+import { useTheme } from "next-themes";
+
+// Cluster colors for dark and light themes
+const CLUSTER_COLORS_DARK = [
+  "rgba(123,143,239,",
+  "rgba(192,132,252,",
+  "rgba(45,212,191,",
+  "rgba(96,165,250,",
+  "rgba(251,113,133,",
+];
+const CLUSTER_COLORS_LIGHT = [
+  "rgba(79,91,213,",
+  "rgba(147,51,234,",
+  "rgba(13,148,136,",
+  "rgba(37,99,235,",
+  "rgba(225,29,72,",
 ];
 
-// Highlighted "retrieved" points — brighter, with connecting similarity edges.
-const HILITE = [6, 10, 14, 17, 22, 25, 28, 43];
+interface Node {
+  x: number;
+  y: number;
+  r: number;
+  vx: number;
+  vy: number;
+  cluster: number;
+  retrieved: boolean;
+  retrieveAlpha: number;
+  baseAlpha: number;
+}
 
-// Similarity edges between a handful of highlighted points.
-const EDGES: [number, number][] = [
-  [6, 10], [10, 14], [14, 17], [17, 22], [22, 28], [43, 25], [10, 43], [28, 25],
-];
+interface QueryNode {
+  x: number;
+  y: number;
+  alpha: number;
+}
+
+interface QueryEdge {
+  node: Node;
+  progress: number;
+  delay: number;
+}
+
+interface Particle {
+  fx: number;
+  fy: number;
+  tx: number;
+  ty: number;
+  t: number;
+  speed: number;
+  alpha: number;
+}
+
+// Seeded random for deterministic cluster generation (avoids hydration mismatch)
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function buildClusters() {
+  const rng = seededRandom(42);
+  const clusters: { cx: number; cy: number; nodes: Node[]; color: number }[] =
+    [];
+  for (let c = 0; c < 5; c++) {
+    const cx = 0.15 + rng() * 0.7;
+    const cy = 0.15 + rng() * 0.7;
+    const nodes: Node[] = [];
+    const count = 12 + Math.floor(rng() * 8);
+    for (let i = 0; i < count; i++) {
+      const angle = rng() * Math.PI * 2;
+      const dist = rng() * 0.08 + 0.01;
+      nodes.push({
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        r: 1 + rng() * 1.5,
+        vx: (rng() - 0.5) * 0.00003,
+        vy: (rng() - 0.5) * 0.00003,
+        cluster: c,
+        retrieved: false,
+        retrieveAlpha: 0,
+        baseAlpha: 0.08 + rng() * 0.12,
+      });
+    }
+    clusters.push({ cx, cy, nodes, color: c });
+  }
+  return clusters;
+}
+
+const CLUSTERS = buildClusters();
+const ALL_NODES = CLUSTERS.flatMap((c) => c.nodes);
 
 export function ConstellationBackground() {
-  return (
-    <div className="pointer-events-none fixed inset-0 overflow-hidden">
-      {/* Base wash */}
-      <div className="absolute inset-0 bg-[#0a0a0a]" />
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mouseRef = useRef({ x: 0, y: 0 });
+  const { resolvedTheme } = useTheme();
 
-      {/* Soft conic blobs (feel: refractive, not flat) */}
-      <div
-        className="absolute -top-40 right-[-10rem] w-[55rem] h-[55rem] rounded-full opacity-60 blur-[140px]"
-        style={{
-          background:
-            "conic-gradient(from 180deg at 50% 50%, #3b82f6 0deg, #8b5cf6 120deg, transparent 240deg)",
-        }}
-      />
-      <div
-        className="absolute -bottom-40 left-[-10rem] w-[45rem] h-[45rem] rounded-full opacity-40 blur-[140px]"
-        style={{
-          background:
-            "radial-gradient(closest-side, rgba(14,165,233,0.35), transparent 70%)",
-        }}
-      />
+  const isDarkRef = useRef(true);
 
-      {/* Film-grain noise */}
-      <svg className="absolute inset-0 w-full h-full" aria-hidden="true">
-        <filter id="nlm-noise">
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.9"
-            numOctaves="2"
-            stitchTiles="stitch"
-          />
-          <feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0" />
-        </filter>
-        <rect width="100%" height="100%" filter="url(#nlm-noise)" opacity="0.045" />
-      </svg>
+  useEffect(() => {
+    isDarkRef.current = resolvedTheme !== "light";
+  }, [resolvedTheme]);
 
-      {/* Embedding-space constellation */}
-      <svg
-        className="absolute inset-0 w-full h-full"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <defs>
-          <radialGradient id="nlm-point-hi" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#e0e7ff" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
-          </radialGradient>
-          <linearGradient id="nlm-edge" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="rgba(255,255,255,0)" />
-            <stop offset="50%" stopColor="rgba(167,139,250,0.55)" />
-            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-          </linearGradient>
-        </defs>
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-        {/* similarity edges */}
-        <g>
-          {EDGES.map(([a, b]) => {
-            const p1 = POINTS[a];
-            const p2 = POINTS[b];
-            return (
-              <line
-                key={`${a}-${b}`}
-                x1={p1.x}
-                y1={p1.y}
-                x2={p2.x}
-                y2={p2.y}
-                stroke="url(#nlm-edge)"
-                strokeWidth={0.05}
-                className="nlm-edge"
-              />
-            );
-          })}
-        </g>
+    let W = (canvas.width = window.innerWidth);
+    let H = (canvas.height = window.innerHeight);
 
-        {/* dots */}
-        <g className="nlm-drift">
-          {POINTS.map((p, i) => {
-            const hi = HILITE.includes(i);
-            if (hi) {
-              return (
-                <g key={i}>
-                  <circle cx={p.x} cy={p.y} r={p.r * 3.5} fill="url(#nlm-point-hi)" />
-                  <circle
-                    cx={p.x}
-                    cy={p.y}
-                    r={p.r}
-                    fill="#e0e7ff"
-                    className="nlm-pulse"
-                    style={{ animationDelay: `${(i * 157) % 4000}ms` }}
-                  />
-                </g>
-              );
+    const queryState = {
+      active: false,
+      node: null as QueryNode | null,
+      edges: [] as QueryEdge[],
+      timer: 0,
+    };
+    const particles: Particle[] = [];
+    const QUERY_INTERVAL = 6000;
+    const QUERY_DURATION = 3000;
+
+    let lastTime = 0;
+    let animId: number;
+
+    function resize() {
+      W = canvas!.width = window.innerWidth;
+      H = canvas!.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+
+    function onMouseMove(e: MouseEvent) {
+      mouseRef.current.x = e.clientX;
+      mouseRef.current.y = e.clientY;
+    }
+    window.addEventListener("mousemove", onMouseMove);
+
+    function triggerQuery() {
+      const rng = Math.random;
+      queryState.node = {
+        x: 0.3 + rng() * 0.4,
+        y: 0.3 + rng() * 0.4,
+        alpha: 0,
+      };
+      const scored = ALL_NODES.map((n, i) => ({
+        idx: i,
+        node: n,
+        dist: Math.hypot(n.x - queryState.node!.x, n.y - queryState.node!.y),
+      })).sort((a, b) => a.dist - b.dist);
+
+      ALL_NODES.forEach((n) => {
+        n.retrieved = false;
+        n.retrieveAlpha = 0;
+      });
+      queryState.edges = [];
+      for (let i = 0; i < Math.min(6, scored.length); i++) {
+        scored[i].node.retrieved = true;
+        queryState.edges.push({
+          node: scored[i].node,
+          progress: 0,
+          delay: i * 0.15,
+        });
+      }
+      queryState.active = true;
+      queryState.timer = 0;
+    }
+
+    function spawnParticle(from: QueryNode, to: Node) {
+      particles.push({
+        fx: from.x,
+        fy: from.y,
+        tx: to.x,
+        ty: to.y,
+        t: 0,
+        speed: 0.008 + Math.random() * 0.006,
+        alpha: 0.6 + Math.random() * 0.3,
+      });
+    }
+
+    function frame(time: number) {
+      const dt = Math.min(time - lastTime, 50);
+      lastTime = time;
+      ctx!.clearRect(0, 0, W, H);
+
+      const isDark = isDarkRef.current;
+      const clusterColors = isDark
+        ? CLUSTER_COLORS_DARK
+        : CLUSTER_COLORS_LIGHT;
+      const baseNodeAlpha = isDark ? 1 : 0.7;
+      const baseEdgeAlpha = isDark ? 0.04 : 0.03;
+
+      // Update query cycle
+      queryState.timer += dt;
+      if (!queryState.active && queryState.timer > QUERY_INTERVAL)
+        triggerQuery();
+      if (queryState.active && queryState.timer > QUERY_DURATION) {
+        queryState.active = false;
+        queryState.timer = 0;
+        queryState.node = null;
+        ALL_NODES.forEach((n) => {
+          n.retrieved = false;
+        });
+        queryState.edges = [];
+      }
+
+      // Draw intra-cluster edges
+      for (const cluster of CLUSTERS) {
+        const col = clusterColors[cluster.color];
+        for (let i = 0; i < cluster.nodes.length; i++) {
+          for (let j = i + 1; j < cluster.nodes.length; j++) {
+            const a = cluster.nodes[i],
+              b = cluster.nodes[j];
+            const d = Math.hypot(a.x - b.x, a.y - b.y);
+            if (d < 0.06) {
+              const alpha = baseEdgeAlpha * (1 - d / 0.06);
+              ctx!.strokeStyle = col + alpha + ")";
+              ctx!.lineWidth = 0.5;
+              ctx!.beginPath();
+              ctx!.moveTo(a.x * W, a.y * H);
+              ctx!.lineTo(b.x * W, b.y * H);
+              ctx!.stroke();
             }
-            return (
-              <circle
-                key={i}
-                cx={p.x}
-                cy={p.y}
-                r={p.r}
-                fill="white"
-                opacity={0.12}
-              />
-            );
-          })}
-        </g>
-      </svg>
+          }
+        }
+      }
 
-      {/* Top + bottom vignette to keep text readable */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse at 50% 35%, transparent 0%, rgba(10,10,10,0.75) 85%)",
-        }}
+      // Draw query edges
+      if (queryState.active && queryState.node) {
+        queryState.node.alpha = Math.min(
+          1,
+          queryState.node.alpha + dt * 0.004
+        );
+        for (const edge of queryState.edges) {
+          const elapsed = queryState.timer / 1000 - edge.delay;
+          if (elapsed < 0) continue;
+          edge.progress = Math.min(1, elapsed * 1.5);
+          const n = edge.node;
+          const col = clusterColors[n.cluster];
+
+          const ex =
+            queryState.node.x +
+            (n.x - queryState.node.x) * edge.progress;
+          const ey =
+            queryState.node.y +
+            (n.y - queryState.node.y) * edge.progress;
+          ctx!.strokeStyle = col + 0.25 * edge.progress + ")";
+          ctx!.lineWidth = 1;
+          ctx!.beginPath();
+          ctx!.moveTo(queryState.node.x * W, queryState.node.y * H);
+          ctx!.lineTo(ex * W, ey * H);
+          ctx!.stroke();
+
+          if (edge.progress > 0.3 && Math.random() < 0.03) {
+            spawnParticle(queryState.node, n);
+          }
+          n.retrieveAlpha = Math.min(1, n.retrieveAlpha + dt * 0.003);
+        }
+
+        // Query node (pulsing)
+        const qPulse = 0.5 + 0.5 * Math.sin(time * 0.005);
+        const qr = 4 + qPulse * 3;
+        const qn = queryState.node;
+        const grad = ctx!.createRadialGradient(
+          qn.x * W,
+          qn.y * H,
+          0,
+          qn.x * W,
+          qn.y * H,
+          qr * 3
+        );
+        grad.addColorStop(
+          0,
+          isDark
+            ? "rgba(123,143,239," + 0.4 * qn.alpha + ")"
+            : "rgba(79,91,213," + 0.3 * qn.alpha + ")"
+        );
+        grad.addColorStop(1, "transparent");
+        ctx!.fillStyle = grad;
+        ctx!.beginPath();
+        ctx!.arc(qn.x * W, qn.y * H, qr * 3, 0, Math.PI * 2);
+        ctx!.fill();
+        ctx!.fillStyle = isDark
+          ? "rgba(200,210,255," + 0.9 * qn.alpha + ")"
+          : "rgba(79,91,213," + 0.7 * qn.alpha + ")";
+        ctx!.beginPath();
+        ctx!.arc(qn.x * W, qn.y * H, qr * 0.5, 0, Math.PI * 2);
+        ctx!.fill();
+      }
+
+      // Draw & update nodes
+      const mx = mouseRef.current.x;
+      const my = mouseRef.current.y;
+      for (const n of ALL_NODES) {
+        n.x += n.vx * dt;
+        n.y += n.vy * dt;
+        if (n.x < 0.05 || n.x > 0.95) n.vx *= -1;
+        if (n.y < 0.05 || n.y > 0.95) n.vy *= -1;
+
+        const mdist = Math.hypot(n.x * W - mx, n.y * H - my);
+        const mGlow = Math.max(0, 1 - mdist / 200);
+
+        const col = clusterColors[n.cluster];
+        const alpha =
+          (n.baseAlpha + mGlow * 0.3 + n.retrieveAlpha * 0.5) *
+          baseNodeAlpha;
+
+        if (n.retrieved || mGlow > 0.1) {
+          const glowR = n.r * 4;
+          const haloGrad = ctx!.createRadialGradient(
+            n.x * W,
+            n.y * H,
+            0,
+            n.x * W,
+            n.y * H,
+            glowR
+          );
+          haloGrad.addColorStop(0, col + alpha * 0.4 + ")");
+          haloGrad.addColorStop(1, "transparent");
+          ctx!.fillStyle = haloGrad;
+          ctx!.beginPath();
+          ctx!.arc(n.x * W, n.y * H, glowR, 0, Math.PI * 2);
+          ctx!.fill();
+        }
+
+        ctx!.fillStyle = col + alpha + ")";
+        ctx!.beginPath();
+        ctx!.arc(
+          n.x * W,
+          n.y * H,
+          n.r * (n.retrieved ? 1.8 : 1),
+          0,
+          Math.PI * 2
+        );
+        ctx!.fill();
+      }
+
+      // Draw & update data particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.t += p.speed;
+        if (p.t >= 1) {
+          particles.splice(i, 1);
+          continue;
+        }
+        const px = p.fx + (p.tx - p.fx) * p.t;
+        const py = p.fy + (p.ty - p.fy) * p.t;
+        const pa = p.alpha * Math.sin(p.t * Math.PI);
+        ctx!.fillStyle = isDark
+          ? "rgba(200,210,255," + pa + ")"
+          : "rgba(79,91,213," + pa * 0.6 + ")";
+        ctx!.beginPath();
+        ctx!.arc(px * W, py * H, 1.5, 0, Math.PI * 2);
+        ctx!.fill();
+      }
+
+      animId = requestAnimationFrame(frame);
+    }
+
+    animId = requestAnimationFrame(frame);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMouseMove);
+    };
+  }, []);
+
+  useEffect(() => {
+    const cleanup = draw();
+    return cleanup;
+  }, [draw]);
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-0">
+      {/* Canvas embedding space */}
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 w-full h-full"
+        style={{ zIndex: 0 }}
       />
 
-      <style>{`
-        .nlm-drift {
-          transform-origin: 50% 50%;
-          animation: nlmDrift 60s ease-in-out infinite alternate;
-        }
-        @keyframes nlmDrift {
-          0% { transform: translate3d(0, 0, 0); }
-          100% { transform: translate3d(-1.2%, -0.6%, 0); }
-        }
-        .nlm-pulse {
-          animation: nlmPulse 3.6s ease-in-out infinite;
-          transform-origin: center;
-        }
-        @keyframes nlmPulse {
-          0%, 100% { opacity: 0.85; transform: scale(1); }
-          50% { opacity: 0.35; transform: scale(1.5); }
-        }
-        .nlm-edge {
-          stroke-dasharray: 2 6;
-          animation: nlmEdge 18s linear infinite;
-        }
-        @keyframes nlmEdge {
-          to { stroke-dashoffset: -80; }
-        }
-      `}</style>
+      {/* Mesh gradient orbs */}
+      <div className="fixed inset-0 z-0 overflow-hidden transition-opacity duration-300">
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: "50vw",
+            height: "50vw",
+            top: "-18vw",
+            right: "-12vw",
+            background: "rgba(123,143,239,0.04)",
+            filter: "blur(140px)",
+            animation: "drift 25s ease-in-out infinite alternate",
+          }}
+        />
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: "40vw",
+            height: "40vw",
+            bottom: "-10vw",
+            left: "-8vw",
+            background: "rgba(192,132,252,0.025)",
+            filter: "blur(140px)",
+            animation: "drift 30s ease-in-out infinite alternate",
+            animationDelay: "-10s",
+          }}
+        />
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: "25vw",
+            height: "25vw",
+            top: "45%",
+            left: "35%",
+            background: "rgba(45,212,191,0.02)",
+            filter: "blur(140px)",
+            animation: "drift 25s ease-in-out infinite alternate",
+            animationDelay: "-18s",
+          }}
+        />
+      </div>
+
+      {/* Dot grid */}
+      <div className="landing-dotgrid" />
     </div>
   );
 }
