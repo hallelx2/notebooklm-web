@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NotebookLM — Landing Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #050505;
+    --surface: #0a0a0a;
+    --card: #111214;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.15);
+    --text: #e4e4e7;
+    --text-muted: #71717a;
+    --text-dim: #52525b;
+    --accent: #6366f1;
+    --accent2: #8b5cf6;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    font-size: 20px;
+  }
+  .icon-filled { font-variation-settings: 'FILL' 1; }
+
+  /* ─── Noise texture overlay ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ─── Glow orbs ─── */
+  .glow-1 {
+    position: absolute;
+    width: 800px; height: 800px;
+    background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
+    top: -200px; left: 50%; transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .glow-2 {
+    position: absolute;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%);
+    top: 400px; right: -200px;
+    pointer-events: none;
+  }
+
+  /* ─── Nav ─── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(16px) saturate(180%);
+    background: rgba(5,5,5,0.7);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    max-width: 1200px; margin: 0 auto;
+    padding: 0 24px; height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: white; }
+  .nav-logo-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-logo span:last-child { font-weight: 600; font-size: 15px; letter-spacing: -0.02em; }
+  .nav-links { display: flex; align-items: center; gap: 8px; }
+  .nav-links a { text-decoration: none; font-size: 14px; padding: 8px 14px; border-radius: 99px; transition: all 0.2s; }
+  .nav-link-text { color: var(--text-muted); }
+  .nav-link-text:hover { color: white; }
+  .nav-link-primary {
+    background: white; color: black; font-weight: 600;
+    box-shadow: 0 0 20px rgba(255,255,255,0.1);
+  }
+  .nav-link-primary:hover { background: #e4e4e7; transform: translateY(-1px); }
+
+  /* ─── Hero ─── */
+  .hero {
+    position: relative;
+    max-width: 900px; margin: 0 auto;
+    padding: 100px 24px 80px; text-align: center;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-radius: 99px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.03);
+    font-size: 12px; color: var(--text-muted);
+    margin-bottom: 32px;
+    animation: fade-in-up 0.6s ease;
+  }
+  .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
+  .hero h1 {
+    font-size: clamp(48px, 8vw, 80px);
+    font-weight: 800; line-height: 1.0;
+    letter-spacing: -0.03em;
+    animation: fade-in-up 0.6s ease 0.1s both;
+  }
+  .hero h1 .gradient-text {
+    background: linear-gradient(135deg, #6366f1 0%, #a78bfa 30%, #f472b6 60%, #fb923c 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p {
+    margin-top: 28px; font-size: 18px; line-height: 1.7;
+    color: var(--text-muted); max-width: 600px; margin-left: auto; margin-right: auto;
+    animation: fade-in-up 0.6s ease 0.2s both;
+  }
+  .hero-ctas {
+    margin-top: 40px;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    animation: fade-in-up 0.6s ease 0.3s both;
+  }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 99px;
+    background: white; color: black;
+    font-weight: 600; font-size: 15px;
+    text-decoration: none; border: none; cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 0 30px rgba(255,255,255,0.08), 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(255,255,255,0.15), 0 8px 24px rgba(0,0,0,0.4); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 99px;
+    border: 1px solid var(--border-hover); color: var(--text);
+    font-weight: 500; font-size: 15px;
+    text-decoration: none; transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.03); }
+
+  /* ─── Product Preview (animated) ─── */
+  .preview-wrapper {
+    max-width: 1100px; margin: 0 auto; padding: 0 24px;
+    animation: fade-in-up 0.8s ease 0.5s both;
+  }
+  .preview-frame {
+    border-radius: 16px; border: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+    padding: 8px;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  }
+  .preview-inner {
+    border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
+    background: var(--card); overflow: hidden;
+  }
+  .preview-titlebar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 16px; height: 36px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .preview-dot { width: 10px; height: 10px; border-radius: 50%; background: #27272a; }
+  .preview-url {
+    flex: 1; text-align: center; font-size: 11px; color: var(--text-dim);
+  }
+  .preview-content {
+    display: grid; grid-template-columns: 200px 1fr 200px;
+    min-height: 360px; font-size: 12px;
+  }
+  .preview-col { padding: 16px; }
+  .preview-col:first-child { border-right: 1px solid rgba(255,255,255,0.05); }
+  .preview-col:last-child { border-left: 1px solid rgba(255,255,255,0.05); }
+  .preview-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); margin-bottom: 12px; }
+  .preview-source {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0; color: var(--text-muted); font-size: 12px;
+  }
+  .preview-source .material-symbols-outlined { font-size: 16px; color: #60a5fa; }
+  .preview-chat-user {
+    background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 12px; padding: 10px 14px; margin-bottom: 10px;
+    color: var(--text); font-size: 13px; max-width: 85%;
+  }
+  .preview-chat-ai {
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 10px 14px; margin-left: auto;
+    color: var(--text-muted); font-size: 13px; max-width: 90%;
+    line-height: 1.6;
+  }
+  .preview-chat-ai .cite { color: #818cf8; font-weight: 600; }
+  .typing-cursor { display: inline-block; width: 2px; height: 14px; background: #818cf8; animation: blink 1s infinite; vertical-align: middle; margin-left: 2px; }
+  .preview-tool {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-radius: 8px;
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
+    color: var(--text-muted); margin-bottom: 6px; font-size: 12px;
+  }
+  .preview-tool .material-symbols-outlined { font-size: 16px; color: var(--text-dim); }
+
+  /* ─── Logos / Social Proof ─── */
+  .logos-section {
+    max-width: 900px; margin: 80px auto 0; padding: 0 24px;
+    text-align: center;
+  }
+  .logos-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); margin-bottom: 24px; }
+  .logos-row {
+    display: flex; align-items: center; justify-content: center; gap: 48px;
+    flex-wrap: wrap; opacity: 0.4;
+  }
+  .logos-row span { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-muted); }
+
+  /* ─── Stats Bar ─── */
+  .stats {
+    max-width: 900px; margin: 80px auto 0; padding: 0 24px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--border); border-radius: 16px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .stat {
+    background: var(--surface); padding: 32px 24px; text-align: center;
+  }
+  .stat-num {
+    font-size: 36px; font-weight: 800; letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #6366f1, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .stat-label { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+  /* ─── Bento Features ─── */
+  .bento-section {
+    max-width: 1100px; margin: 120px auto 0; padding: 0 24px;
+  }
+  .section-eyebrow {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em;
+    color: var(--accent); margin-bottom: 8px;
+  }
+  .section-title {
+    font-size: clamp(28px, 4vw, 44px); font-weight: 800;
+    letter-spacing: -0.03em; margin-bottom: 48px; line-height: 1.1;
+  }
+  .bento-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto auto;
+    gap: 12px;
+  }
+  .bento-card {
+    position: relative;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 32px;
+    overflow: hidden;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .bento-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+  .bento-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 30% 20%, rgba(99,102,241,0.06), transparent 60%);
+    pointer-events: none;
+  }
+  .bento-card.wide { grid-column: span 2; }
+  .bento-card .icon-box {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1));
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+  }
+  .bento-card .icon-box .material-symbols-outlined { font-size: 22px; color: #818cf8; }
+  .bento-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .bento-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+  /* Visual accent for wide cards */
+  .bento-visual {
+    margin-top: 24px; padding: 16px;
+    border-radius: 12px; background: var(--card);
+    border: 1px solid rgba(255,255,255,0.05);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px; color: var(--text-dim); line-height: 1.8;
+  }
+  .bento-visual .hl { color: #818cf8; }
+  .bento-visual .hl2 { color: #34d399; }
+  .bento-visual .hl3 { color: #fbbf24; }
+
+  /* ─── How It Works ─── */
+  .steps-section {
+    max-width: 1100px; margin: 120px auto 0; padding: 0 24px;
+  }
+  .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .step-card {
+    border-radius: 16px; border: 1px solid var(--border);
+    background: var(--surface); padding: 32px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .step-card:hover { border-color: var(--border-hover); }
+  .step-num {
+    font-size: 64px; font-weight: 900; letter-spacing: -0.05em;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    position: absolute; top: 16px; right: 20px;
+  }
+  .step-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08));
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+  }
+  .step-icon .material-symbols-outlined { font-size: 24px; color: #818cf8; }
+  .step-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .step-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+  /* ─── Testimonials ─── */
+  .testimonials-section {
+    max-width: 1100px; margin: 120px auto 0; padding: 0 24px;
+  }
+  .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .testimonial-card {
+    border-radius: 16px; border: 1px solid var(--border);
+    background: var(--surface); padding: 28px;
+    transition: border-color 0.3s;
+  }
+  .testimonial-card:hover { border-color: var(--border-hover); }
+  .testimonial-stars { color: #fbbf24; font-size: 14px; margin-bottom: 16px; letter-spacing: 2px; }
+  .testimonial-text { font-size: 14px; color: var(--text-muted); line-height: 1.7; margin-bottom: 20px; font-style: italic; }
+  .testimonial-author { display: flex; align-items: center; gap: 12px; }
+  .testimonial-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: white;
+  }
+  .testimonial-name { font-size: 13px; font-weight: 600; }
+  .testimonial-role { font-size: 11px; color: var(--text-dim); }
+
+  /* ─── CTA ─── */
+  .cta-section {
+    max-width: 800px; margin: 120px auto 0; padding: 0 24px; text-align: center;
+    position: relative;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 400px;
+    background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cta-section h2 {
+    font-size: clamp(32px, 5vw, 52px); font-weight: 800;
+    letter-spacing: -0.03em; margin-bottom: 16px; position: relative;
+  }
+  .cta-section p { font-size: 18px; color: var(--text-muted); margin-bottom: 40px; position: relative; }
+  .cta-section .btn-primary { position: relative; font-size: 16px; padding: 16px 36px; }
+
+  /* ─── Footer ─── */
+  footer {
+    margin-top: 120px; border-top: 1px solid var(--border);
+    background: var(--bg); position: relative;
+  }
+  .footer-inner {
+    max-width: 1200px; margin: 0 auto; padding: 60px 24px 40px;
+  }
+  .footer-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding-bottom: 40px; border-bottom: 1px solid var(--border);
+    gap: 40px; flex-wrap: wrap;
+  }
+  .footer-brand p { font-size: 13px; color: var(--text-dim); max-width: 300px; line-height: 1.6; margin-top: 8px; }
+  .footer-cols {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px;
+    padding: 40px 0; border-bottom: 1px solid var(--border);
+  }
+  .footer-col-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--text-dim); font-weight: 700; margin-bottom: 16px; }
+  .footer-col a { display: block; font-size: 13px; color: var(--text-muted); text-decoration: none; padding: 4px 0; transition: color 0.2s; }
+  .footer-col a:hover { color: white; }
+  .footer-wordmark {
+    padding: 48px 0; overflow: hidden;
+    font-size: clamp(48px, 12vw, 140px); font-weight: 900;
+    letter-spacing: -0.05em; line-height: 0.85;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    user-select: none;
+  }
+  .footer-bottom {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .footer-bottom a { color: var(--text-dim); text-decoration: none; }
+  .footer-bottom a:hover { color: white; }
+
+  /* ─── Animations ─── */
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+
+  /* Scroll reveal */
+  .reveal {
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 768px) {
+    .preview-content { grid-template-columns: 1fr; }
+    .preview-col:first-child, .preview-col:last-child { border: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .bento-grid { grid-template-columns: 1fr; }
+    .bento-card.wide { grid-column: span 1; }
+    .steps-grid { grid-template-columns: 1fr; }
+    .testimonials-grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .footer-cols { grid-template-columns: repeat(2, 1fr); }
+    .footer-top { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-icon">
+        <span class="material-symbols-outlined icon-filled" style="font-size:18px;color:white;">book_2</span>
+      </div>
+      <span>NotebookLM</span>
+    </a>
+    <div class="nav-links">
+      <a href="#" class="nav-link-text">Features</a>
+      <a href="#" class="nav-link-text">Pricing</a>
+      <a href="#" class="nav-link-text">Sign in</a>
+      <a href="#" class="nav-link-primary">Get started</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Glow orbs -->
+<div style="position:relative;">
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-badge">
+    <div class="dot"></div>
+    Now in public preview — v0.2
+  </div>
+  <h1>
+    Your research,<br>
+    <span class="gradient-text">truly understood.</span>
+  </h1>
+  <p>
+    Upload any source. Get cited answers instantly. Turn your research into podcasts, mind maps, quizzes, and study guides — all grounded in your documents.
+  </p>
+  <div class="hero-ctas">
+    <a href="#" class="btn-primary">
+      <span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span>
+      Start for free
+    </a>
+    <a href="#" class="btn-secondary">
+      <span class="material-symbols-outlined" style="font-size:18px;">play_arrow</span>
+      Watch demo
+    </a>
+  </div>
+</section>
+
+<!-- Product Preview -->
+<div class="preview-wrapper">
+  <div class="preview-frame">
+    <div class="preview-inner">
+      <div class="preview-titlebar">
+        <div class="preview-dot"></div>
+        <div class="preview-dot"></div>
+        <div class="preview-dot"></div>
+        <div class="preview-url">notebooklm-web.vercel.app/notebooks/multi-omics</div>
+      </div>
+      <div class="preview-content">
+        <div class="preview-col">
+          <div class="preview-label">Sources</div>
+          <div class="preview-source">
+            <span class="material-symbols-outlined">description</span>
+            <span>Cervical_Cancer_Review.pdf</span>
+          </div>
+          <div class="preview-source">
+            <span class="material-symbols-outlined">link</span>
+            <span>frontiersin.org/articles...</span>
+          </div>
+          <div class="preview-source">
+            <span class="material-symbols-outlined">link</span>
+            <span>pubmed.ncbi.nlm.nih.gov...</span>
+          </div>
+          <div class="preview-source">
+            <span class="material-symbols-outlined">description</span>
+            <span>Multi-Omics_Analysis.pdf</span>
+          </div>
+          <div class="preview-source" style="opacity:0.5;">
+            <span class="material-symbols-outlined">science</span>
+            <span style="color:#818cf8;">+ Deep Research</span>
+          </div>
+        </div>
+        <div class="preview-col" style="padding:24px;">
+          <div class="preview-label">Chat</div>
+          <div class="preview-chat-user">
+            What are the key biomarkers identified through multi-omics analysis?
+          </div>
+          <div class="preview-chat-ai">
+            Multi-omics approaches have identified several key biomarkers for cervical cancer. The metabolome emerged as the <strong>top predictor</strong> of the cervicovaginal microenvironment <span class="cite">[1]</span>. Specific biomarkers include <strong>P16 and Ki-67</strong> for early detection <span class="cite">[2]</span>, alongside novel molecular signposts from integrated genomic, transcriptomic, and proteomic data <span class="cite">[3]</span>.<span class="typing-cursor"></span>
+          </div>
+        </div>
+        <div class="preview-col">
+          <div class="preview-label">Studio</div>
+          <div class="preview-tool" style="background:linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.1)); border-color:rgba(99,102,241,0.2);">
+            <span class="material-symbols-outlined" style="color:#818cf8;">headphones</span>
+            Audio Overview
+          </div>
+          <div class="preview-tool">
+            <span class="material-symbols-outlined">account_tree</span>
+            Mind Map
+          </div>
+          <div class="preview-tool">
+            <span class="material-symbols-outlined">quiz</span>
+            Quiz
+          </div>
+          <div class="preview-tool">
+            <span class="material-symbols-outlined">style</span>
+            Flashcards
+          </div>
+          <div class="preview-tool">
+            <span class="material-symbols-outlined">menu_book</span>
+            Study Guide
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Logos -->
+<div class="logos-section reveal">
+  <div class="logos-label">Trusted by researchers at</div>
+  <div class="logos-row">
+    <span>Stanford</span>
+    <span>MIT</span>
+    <span>Oxford</span>
+    <span>ETH Zürich</span>
+    <span>Coursified</span>
+    <span>Harvard</span>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats reveal">
+  <div class="stat">
+    <div class="stat-num">50K+</div>
+    <div class="stat-label">Sources processed</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">8K+</div>
+    <div class="stat-label">Notebooks created</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">99.2%</div>
+    <div class="stat-label">Citation accuracy</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num"><0.5s</div>
+    <div class="stat-label">Retrieval latency</div>
+  </div>
+</div>
+
+<!-- Bento Features -->
+<section class="bento-section reveal">
+  <div class="section-eyebrow">Features</div>
+  <div class="section-title">Built for serious research.</div>
+  <div class="bento-grid">
+    <!-- Wide card: RAG -->
+    <div class="bento-card wide">
+      <div class="icon-box">
+        <span class="material-symbols-outlined">neurology</span>
+      </div>
+      <h3>Contextual RAG pipeline</h3>
+      <p>Semantic chunking, contextual embeddings, query expansion, LLM reranking, and HNSW indexing — your questions find the right answers, not just similar words.</p>
+      <div class="bento-visual">
+        <span class="hl">Query:</span> "What biomarkers predict treatment response?"<br>
+        <span class="hl2">→ Expanded:</span> "biomarkers treatment response", "predictive molecular markers therapy", "omics therapeutic indicators"<br>
+        <span class="hl3">→ Reranked:</span> 12 chunks scored by relevance → top 8 selected<br>
+        <span class="hl">→ Answer:</span> Cited response with [1][2][3] references
+      </div>
+    </div>
+
+    <!-- Single: Citations -->
+    <div class="bento-card">
+      <div class="icon-box">
+        <span class="material-symbols-outlined">format_quote</span>
+      </div>
+      <h3>Every claim is cited</h3>
+      <p>Hover any citation badge to see the exact source passage. No hallucinations — if it's not in your sources, we say so.</p>
+    </div>
+
+    <!-- Single: Deep Research -->
+    <div class="bento-card">
+      <div class="icon-box">
+        <span class="material-symbols-outlined">science</span>
+      </div>
+      <h3>Deep Research agent</h3>
+      <p>Plans sub-questions, searches the web in parallel, scores sources, writes section-by-section reports with self-critique and verification.</p>
+    </div>
+
+    <!-- Single: Studio -->
+    <div class="bento-card">
+      <div class="icon-box">
+        <span class="material-symbols-outlined">auto_awesome</span>
+      </div>
+      <h3>Studio tools</h3>
+      <p>Generate audio podcasts, mind maps, flashcards, quizzes, study guides, timelines, and more — all from your sources.</p>
+    </div>
+
+    <!-- Wide card: Audio -->
+    <div class="bento-card wide">
+      <div class="icon-box" style="background:linear-gradient(135deg, rgba(139,92,246,0.15), rgba(236,72,153,0.1));">
+        <span class="material-symbols-outlined" style="color:#c084fc;">headphones</span>
+      </div>
+      <h3>Audio Overview</h3>
+      <p>Two AI hosts discuss your research in a natural podcast format. Choose short, medium, or long episodes — powered by Deepgram's neural voices.</p>
+      <div class="bento-visual" style="display:flex;align-items:center;gap:16px;">
+        <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span class="material-symbols-outlined icon-filled" style="color:white;font-size:24px;">play_arrow</span>
+        </div>
+        <div style="flex:1;">
+          <div style="height:4px;border-radius:99px;background:rgba(255,255,255,0.1);margin-bottom:6px;">
+            <div style="height:100%;width:35%;border-radius:99px;background:linear-gradient(90deg,#6366f1,#a78bfa);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);">
+            <span>3:24</span><span>8:47</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it Works -->
+<section class="steps-section reveal">
+  <div class="section-eyebrow">How it works</div>
+  <div class="section-title">Three steps. No magic.</div>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num">01</div>
+      <div class="step-icon">
+        <span class="material-symbols-outlined">upload_file</span>
+      </div>
+      <h3>Bring your sources</h3>
+      <p>Drop in PDFs, paste links, or let Deep Research scout the web for you. We parse, chunk, and embed everything automatically.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">02</div>
+      <div class="step-icon">
+        <span class="material-symbols-outlined">chat</span>
+      </div>
+      <h3>Chat, grounded</h3>
+      <p>Ask anything — every answer cites the exact chunk it came from. Our RAG pipeline uses query expansion and LLM reranking for precision.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">03</div>
+      <div class="step-icon">
+        <span class="material-symbols-outlined">auto_awesome</span>
+      </div>
+      <h3>Generate outputs</h3>
+      <p>Audio overviews, mind maps, quizzes, flashcards, study guides — all generated from your actual sources, not hallucinated.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonials -->
+<section class="testimonials-section reveal">
+  <div class="section-eyebrow">Testimonials</div>
+  <div class="section-title">What researchers say.</div>
+  <div class="testimonials-grid">
+    <div class="testimonial-card">
+      <div class="testimonial-stars">★★★★★</div>
+      <div class="testimonial-text">"It replaced a week of reading with a single afternoon. Every answer is sourced — I can trace every claim back to the exact page."</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);">AO</div>
+        <div>
+          <div class="testimonial-name">Adaeze O.</div>
+          <div class="testimonial-role">PhD candidate, Computational Biology</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">★★★★★</div>
+      <div class="testimonial-text">"The audio overview feature is incredible. I listen to my research papers as podcasts during my commute. It's like having two experts discuss my sources."</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar" style="background:linear-gradient(135deg,#ec4899,#f43f5e);">MK</div>
+        <div>
+          <div class="testimonial-name">Marcus K.</div>
+          <div class="testimonial-role">Postdoc, Molecular Medicine</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">★★★★★</div>
+      <div class="testimonial-text">"Deep Research is a game changer. It plans the queries, finds the papers, reads them, and writes a cited report. What used to take me days now takes minutes."</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar" style="background:linear-gradient(135deg,#10b981,#06b6d4);">SL</div>
+        <div>
+          <div class="testimonial-name">Sofia L.</div>
+          <div class="testimonial-role">Research Lead, Public Health</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section reveal">
+  <h2>Start your first notebook.</h2>
+  <p>Free while in preview. No credit card required.</p>
+  <a href="#" class="btn-primary">
+    <span class="material-symbols-outlined" style="font-size:18px;">arrow_forward</span>
+    Create your account
+  </a>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div>
+        <a href="#" class="nav-logo" style="margin-bottom:8px;">
+          <div class="nav-logo-icon">
+            <span class="material-symbols-outlined icon-filled" style="font-size:18px;color:white;">book_2</span>
+          </div>
+          <span style="font-weight:700;font-size:16px;">NotebookLM</span>
+        </a>
+        <p class="footer-brand" style="margin-top:12px;">An open-source research workspace that reads with you, answers with citations, and transforms sources into audio, reports, and mind maps.</p>
+      </div>
+      <div style="text-align:right;">
+        <div class="hero-badge" style="margin-bottom:12px;animation:none;">
+          <div class="dot"></div>
+          All systems normal · v0.2
+        </div>
+      </div>
+    </div>
+    <div class="footer-cols">
+      <div>
+        <div class="footer-col-title">Product</div>
+        <a href="#">Sign up</a><a href="#">Sign in</a><a href="#">Notebooks</a><a href="#">Deep Research</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Open Source</div>
+        <a href="#">Repository ↗</a><a href="#">Issues ↗</a><a href="#">Releases ↗</a><a href="#">Changelog ↗</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Stack</div>
+        <a href="#">Neon Postgres ↗</a><a href="#">Exa Search ↗</a><a href="#">Deepgram ↗</a><a href="#">AI SDK ↗</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Built by</div>
+        <a href="#">@hallelx2 ↗</a><a href="#">LinkedIn ↗</a><a href="#">Privacy</a><a href="#">Terms</a>
+      </div>
+    </div>
+    <div class="footer-wordmark">NotebookLM</div>
+    <div class="footer-bottom">
+      <span>© 2026 NotebookLM · MIT License</span>
+      <span>Built with Next.js, Neon, pgvector, Gemini</span>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+<!-- Scroll reveal script -->
+<script>
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
