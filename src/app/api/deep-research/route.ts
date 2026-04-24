@@ -339,7 +339,9 @@ Return a concise bullet-point summary of the most important information. Include
         send("sources", { sources: sourcesForClient });
 
         /* ============================================================
-         * IMPROVEMENT 5 -- Section-by-Section Writing
+         * IMPROVEMENT 5 -- Report Writing
+         * Deep: Section-by-section with outline
+         * Fast: Single-pass streamed report
          * ============================================================ */
         send("stage", { stage: "synthesize", message: "Writing report..." });
 
@@ -351,49 +353,51 @@ Return a concise bullet-point summary of the most important information. Include
           )
           .join("\n\n---\n\n");
 
-        // Generate outline
-        const { object: outline } = await generateObject({
-          model: google("gemini-2.5-flash"),
-          schema: z.object({
-            title: z.string(),
-            sections: z.array(
-              z.object({
-                heading: z.string(),
-                keyPoints: z.array(z.string()),
-              }),
-            ),
-          }),
-          prompt: `Create an outline for a research report on: "${body.query}"
+        let report = "";
+
+        if (isDeep) {
+          // ── Deep: outline → section-by-section writing ──────────
+          const { object: outline } = await generateObject({
+            model: google("gemini-2.5-flash"),
+            schema: z.object({
+              title: z.string(),
+              sections: z.array(
+                z.object({
+                  heading: z.string(),
+                  keyPoints: z.array(z.string()),
+                }),
+              ),
+            }),
+            prompt: `Create an outline for a research report on: "${body.query}"
 
 Sub-questions covered: ${subqueries.join("; ")}
 
 The report should have 4-7 sections including an introduction and conclusion.
 Each section should have 2-4 key points to address.`,
-        });
-
-        send("outline", {
-          title: outline.title,
-          sections: outline.sections.map((s) => s.heading),
-        });
-
-        // Write each section via streaming
-        let report = `# ${outline.title}\n\n`;
-        send("report-delta", `# ${outline.title}\n\n`);
-
-        for (const [i, section] of outline.sections.entries()) {
-          send("stage", {
-            stage: "writing-section",
-            message: `Writing: ${section.heading}`,
-            section: i + 1,
-            total: outline.sections.length,
           });
 
-          const isIntro = i === 0;
-          const isConclusion = i === outline.sections.length - 1;
+          send("outline", {
+            title: outline.title,
+            sections: outline.sections.map((s) => s.heading),
+          });
 
-          const sectionResult = streamText({
-            model: google("gemini-2.5-flash"),
-            prompt: `You are writing section "${section.heading}" of a research report on "${body.query}".
+          report = `# ${outline.title}\n\n`;
+          send("report-delta", `# ${outline.title}\n\n`);
+
+          for (const [i, section] of outline.sections.entries()) {
+            send("stage", {
+              stage: "writing-section",
+              message: `Writing: ${section.heading}`,
+              section: i + 1,
+              total: outline.sections.length,
+            });
+
+            const isIntro = i === 0;
+            const isConclusion = i === outline.sections.length - 1;
+
+            const sectionResult = streamText({
+              model: google("gemini-2.5-flash"),
+              prompt: `You are writing section "${section.heading}" of a research report on "${body.query}".
 
 Key points to cover: ${section.keyPoints.join("; ")}
 
@@ -406,18 +410,36 @@ ${isIntro ? "This is the introduction -- provide context and state the importanc
 ${isConclusion ? "This is the conclusion -- summarize key takeaways as bullet points." : ""}
 
 Do NOT include the section heading -- it will be added automatically. Start directly with the content.`,
+            });
+
+            const heading = `## ${section.heading}\n\n`;
+            report += heading;
+            send("report-delta", heading);
+
+            for await (const chunk of sectionResult.textStream) {
+              report += chunk;
+              send("report-delta", chunk);
+            }
+            report += "\n\n";
+            send("report-delta", "\n\n");
+          }
+        } else {
+          // ── Fast: single-pass streamed report ───────────────────
+          const fastResult = streamText({
+            model: google("gemini-2.5-flash"),
+            system:
+              "You write thorough, well-structured research reports grounded strictly in the provided sources. Use inline citations like [1], [2] that refer to the numbered SOURCES list. Use clear section headings (## markdown). Do not invent facts; if sources disagree, note the disagreement. End with a 'Key takeaways' bullet list.",
+            prompt: `Research question: ${body.query}\n\nSub-questions to cover:\n${subqueries
+              .map((s, i) => `${i + 1}. ${s}`)
+              .join(
+                "\n",
+              )}\n\nSOURCES:\n${sourcesBlock}\n\nWrite a concise report (500–800 words) answering the research question, with clear sections and inline [n] citations.`,
           });
 
-          const heading = `## ${section.heading}\n\n`;
-          report += heading;
-          send("report-delta", heading);
-
-          for await (const chunk of sectionResult.textStream) {
+          for await (const chunk of fastResult.textStream) {
             report += chunk;
             send("report-delta", chunk);
           }
-          report += "\n\n";
-          send("report-delta", "\n\n");
         }
 
         /* ============================================================
