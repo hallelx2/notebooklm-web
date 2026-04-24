@@ -37,6 +37,31 @@ export const notebookRouter = router({
         .returning();
       return row;
     }),
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        title: z.string().min(1).optional(),
+        description: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const [row] = await db
+        .select()
+        .from(notebooks)
+        .where(eq(notebooks.id, input.id))
+        .limit(1);
+      if (!row || row.userId !== ctx.user.id) return null;
+      const updates: Record<string, unknown> = { updatedAt: new Date() };
+      if (input.title !== undefined) updates.title = input.title;
+      if (input.description !== undefined) updates.description = input.description;
+      const [updated] = await db
+        .update(notebooks)
+        .set(updates)
+        .where(eq(notebooks.id, input.id))
+        .returning();
+      return updated;
+    }),
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
