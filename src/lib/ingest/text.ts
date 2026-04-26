@@ -3,13 +3,19 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { sourceChunks, sources } from "@/db/schema";
 import { chunkText } from "./chunk";
-import { embedChunks, buildEmbeddingContext } from "./embed";
+import {
+  buildEmbeddingContext,
+  embedTexts,
+  persistChunkEmbeddings,
+} from "./embed";
 
 /**
- * Ingest raw text content as a source (for notes, chat-to-source, deep research reports).
- * Chunks + embeds the text and marks the source as "ready".
+ * Ingest raw text content as a source (for notes, chat-to-source, deep
+ * research reports). Chunks + embeds the text using the user's configured
+ * embedding model and marks the source as "ready".
  */
 export async function ingestText(params: {
+  userId: string;
   sourceId: string;
   notebookId: string;
   text: string;
@@ -23,11 +29,11 @@ export async function ingestText(params: {
 
     const chunks = chunkText(params.text, params.sourceTitle);
     if (chunks.length > 0) {
-      // Build contextual embedding strings
       const embeddingTexts = chunks.map((c) =>
         buildEmbeddingContext(c.content, params.sourceTitle, c.heading),
       );
-      const embeddings = await embedChunks(embeddingTexts);
+      const embedded = await embedTexts(params.userId, embeddingTexts);
+
       const rows = chunks.map((c, i) => ({
         sourceId: params.sourceId,
         notebookId: params.notebookId,
@@ -40,12 +46,23 @@ export async function ingestText(params: {
           heading: c.heading ?? null,
           position: `${c.ordinal + 1}/${chunks.length}`,
         },
-        embedding: embeddings[i],
+        embedding: embedded.dim === 768 ? embedded.vectors[i] : null,
+        embeddingDim: embedded.dim,
+        embeddingModel: embedded.model,
+        embeddingProvider: embedded.provider,
       }));
+
       const BATCH = 50;
+      const insertedIds: string[] = [];
       for (let i = 0; i < rows.length; i += BATCH) {
-        await db.insert(sourceChunks).values(rows.slice(i, i + BATCH));
+        const inserted = await db
+          .insert(sourceChunks)
+          .values(rows.slice(i, i + BATCH))
+          .returning({ id: sourceChunks.id });
+        for (const r of inserted) insertedIds.push(r.id);
       }
+
+      await persistChunkEmbeddings({ chunkIds: insertedIds, embedded });
     }
 
     await db

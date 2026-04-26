@@ -1,11 +1,11 @@
 import "server-only";
-import { and, eq, sql } from "drizzle-orm";
-import { google } from "@ai-sdk/google";
 import { generateObject } from "ai";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { sourceChunks, sources } from "@/db/schema";
-import { embedQuery } from "./ingest/embed";
+import { getChatModel } from "@/lib/ai/factory";
+import { embeddingTableForDim, embedQueryFor } from "./ingest/embed";
 
 export type RetrievedChunk = {
   chunkId: string;
@@ -17,10 +17,11 @@ export type RetrievedChunk = {
 
 /* ---------- Query Expansion ---------- */
 
-async function expandQuery(query: string): Promise<string[]> {
+async function expandQuery(userId: string, query: string): Promise<string[]> {
   try {
+    const model = await getChatModel(userId);
     const { object } = await generateObject({
-      model: google("gemini-2.5-flash"),
+      model,
       schema: z.object({
         queries: z.array(z.string()).min(1).max(4),
       }),
@@ -37,6 +38,7 @@ Original: ${query}`,
 /* ---------- LLM Reranking ---------- */
 
 async function rerankChunks(
+  userId: string,
   query: string,
   chunks: {
     chunkId: string;
@@ -50,8 +52,9 @@ async function rerankChunks(
   if (chunks.length <= topK) return chunks;
 
   try {
+    const model = await getChatModel(userId);
     const { object } = await generateObject({
-      model: google("gemini-2.5-flash"),
+      model,
       schema: z.object({
         ranked: z.array(
           z.object({
@@ -69,7 +72,6 @@ ${chunks.map((c, i) => `[${i}] (${c.sourceTitle}): ${c.content.slice(0, 300)}`).
 Return relevance scores for ALL chunks. 10 = directly answers the question, 0 = completely irrelevant.`,
     });
 
-    // Sort by relevance score
     const scoreMap = new Map(object.ranked.map((r) => [r.index, r.relevance]));
     const sorted = [...chunks]
       .map((c, i) => ({ ...c, llmScore: scoreMap.get(i) ?? 5 }))
@@ -77,7 +79,6 @@ Return relevance scores for ALL chunks. 10 = directly answers the question, 0 = 
 
     return sorted.slice(0, topK);
   } catch {
-    // Fallback to vector similarity ordering
     return chunks.slice(0, topK);
   }
 }
@@ -85,25 +86,25 @@ Return relevance scores for ALL chunks. 10 = directly answers the question, 0 = 
 /* ---------- Hybrid Retrieval ---------- */
 
 export async function retrieveForQuery(params: {
+  userId: string;
   notebookId: string;
   query: string;
   topK?: number;
   sourceIds?: string[];
 }): Promise<RetrievedChunk[]> {
-  const topK = params.topK ?? 12; // fetch more, then rerank
+  const topK = params.topK ?? 12;
 
-  // Step 1: Expand query
-  const expandedQueries = await expandQuery(params.query);
+  // Step 1: Expand query (using the user's chat model).
+  const expandedQueries = await expandQuery(params.userId, params.query);
 
-  // Step 2: Vector search with primary query embedding
-  const queryVecs = await Promise.all(
-    expandedQueries.map((q) => embedQuery(q)),
-  );
+  // Step 2: Embed the primary query using the user's CURRENT embedding model.
+  // The dim/model tells us which chunk_embeddings_<dim> table to query.
+  const embedded = await embedQueryFor(params.userId, expandedQueries[0]);
+  const queryVecJson = JSON.stringify(embedded.vector);
+  const embTable = embeddingTableForDim(embedded.dim);
 
-  // Use the primary query vector for the main search
-  const primaryVec = queryVecs[0];
-  const distance = sql<number>`${sourceChunks.embedding} <=> ${JSON.stringify(primaryVec)}::vector`;
-
+  // Step 3a: Vector search through the per-dim embedding table, restricted
+  // to chunks embedded with the user's currently-active model.
   const baseWhere =
     params.sourceIds && params.sourceIds.length > 0
       ? and(
@@ -112,8 +113,9 @@ export async function retrieveForQuery(params: {
         )
       : eq(sourceChunks.notebookId, params.notebookId);
 
-  // Vector search
-  const vectorResults = await db
+  const distance = sql<number>`${embTable.embedding} <=> ${queryVecJson}::vector`;
+
+  const newResults = await db
     .select({
       chunkId: sourceChunks.id,
       sourceId: sourceChunks.sourceId,
@@ -122,18 +124,48 @@ export async function retrieveForQuery(params: {
       similarity: sql<number>`1 - (${distance})`,
       sourceTitle: sources.title,
     })
-    .from(sourceChunks)
+    .from(embTable)
+    .innerJoin(sourceChunks, eq(sourceChunks.id, embTable.chunkId))
     .leftJoin(sources, eq(sources.id, sourceChunks.sourceId))
-    .where(baseWhere)
+    .where(and(baseWhere, eq(embTable.model, embedded.model)))
     .orderBy(distance)
-    .limit(topK * 2); // fetch extra for deduplication
+    .limit(topK * 2);
 
-  // Step 3: Keyword boost -- search for additional results matching keywords
+  // Step 3b: Legacy fallback (dual-write window). For chunks that have not
+  // yet been migrated -- `embedding_dim IS NULL` and `embedding` populated --
+  // query the legacy 768-dim column. Only safe when the user's current model
+  // is also 768-dim, since otherwise the vectors live in different spaces.
+  let legacyResults: typeof newResults = [];
+  if (embedded.dim === 768) {
+    const legacyDistance = sql<number>`${sourceChunks.embedding} <=> ${queryVecJson}::vector`;
+    legacyResults = await db
+      .select({
+        chunkId: sourceChunks.id,
+        sourceId: sourceChunks.sourceId,
+        content: sourceChunks.content,
+        metadata: sourceChunks.metadata,
+        similarity: sql<number>`1 - (${legacyDistance})`,
+        sourceTitle: sources.title,
+      })
+      .from(sourceChunks)
+      .leftJoin(sources, eq(sources.id, sourceChunks.sourceId))
+      .where(
+        and(
+          baseWhere,
+          isNotNull(sourceChunks.embedding),
+          isNull(sourceChunks.embeddingDim),
+        ),
+      )
+      .orderBy(legacyDistance)
+      .limit(topK * 2);
+  }
+
+  // Step 4: Keyword boost -- additional results matching keywords.
   const keywords = params.query
     .toLowerCase()
     .split(/\s+/)
     .filter((w) => w.length > 3);
-  let keywordResults: typeof vectorResults = [];
+  let keywordResults: typeof newResults = [];
   if (keywords.length > 0) {
     const keywordPattern = keywords.slice(0, 5).join("|");
     try {
@@ -143,7 +175,7 @@ export async function retrieveForQuery(params: {
           sourceId: sourceChunks.sourceId,
           content: sourceChunks.content,
           metadata: sourceChunks.metadata,
-          similarity: sql<number>`0.5`, // baseline score for keyword matches
+          similarity: sql<number>`0.5`,
           sourceTitle: sources.title,
         })
         .from(sourceChunks)
@@ -157,21 +189,20 @@ export async function retrieveForQuery(params: {
     }
   }
 
-  // Step 4: Merge and deduplicate
+  // Step 5: Merge and deduplicate (vector wins over keyword on collision).
   const seen = new Set<string>();
-  const merged: (typeof vectorResults)[number][] = [];
-  for (const r of [...vectorResults, ...keywordResults]) {
+  const merged: (typeof newResults)[number][] = [];
+  for (const r of [...newResults, ...legacyResults, ...keywordResults]) {
     if (!seen.has(r.chunkId)) {
       seen.add(r.chunkId);
       merged.push(r);
     }
   }
 
-  // Step 5: Filter by minimum similarity threshold
+  // Step 6: Filter by minimum similarity threshold.
   const MIN_SIMILARITY = 0.3;
   const filtered = merged.filter((r) => r.similarity >= MIN_SIMILARITY);
 
-  // Take top candidates for reranking
   const candidates = filtered.slice(0, topK * 2).map((r) => ({
     chunkId: r.chunkId,
     sourceId: r.sourceId,
@@ -180,8 +211,13 @@ export async function retrieveForQuery(params: {
     similarity: r.similarity,
   }));
 
-  // Step 6: LLM reranking
-  const reranked = await rerankChunks(params.query, candidates, topK);
+  // Step 7: LLM reranking.
+  const reranked = await rerankChunks(
+    params.userId,
+    params.query,
+    candidates,
+    topK,
+  );
 
   return reranked.map((r) => ({
     chunkId: r.chunkId,
