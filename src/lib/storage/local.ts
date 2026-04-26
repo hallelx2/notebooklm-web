@@ -2,9 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { StorageProvider, UploadInput, UploadResult } from "./types";
 
-const ROOT = path.resolve(
-  process.env.LOCAL_STORAGE_DIR ?? "./.storage",
-);
+const ROOT = path.resolve(process.env.LOCAL_STORAGE_DIR ?? "./.storage");
 
 async function ensureDir(p: string) {
   await fs.mkdir(p, { recursive: true });

@@ -79,11 +79,7 @@ export function chunkText(text: string, sourceTitle?: string): Chunk[] {
   return chunks;
 }
 
-function makeChunk(
-  text: string,
-  ordinal: number,
-  heading?: string,
-): Chunk {
+function makeChunk(text: string, ordinal: number, heading?: string): Chunk {
   const content = text.trim();
   return {
     ordinal,

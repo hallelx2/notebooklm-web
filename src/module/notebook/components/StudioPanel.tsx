@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { trpc } from "@/trpc/client";
-import { StudioOutputView } from "./StudioOutputView";
 import { AudioOverviewModal } from "./AudioOverviewModal";
 import { QuizConfigModal } from "./QuizConfigModal";
+import { StudioOutputView } from "./StudioOutputView";
 
 type StudioOutput = {
   id: string;
@@ -109,8 +109,7 @@ const KIND_BADGE_COLORS: Record<string, string> = {
   "briefing-doc":
     "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
   faq: "bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  timeline:
-    "bg-cyan-100 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
+  timeline: "bg-cyan-100 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
   "mind-map":
     "bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400",
   flashcards:
@@ -303,7 +302,9 @@ export function StudioPanel({
               const isGenerating = generatingKind === tool.kind;
               const colorParts = tool.color.split(" ");
               // Extract the bg class for the icon container
-              const iconBg = colorParts.filter((c) => c.startsWith("bg-")).join(" ");
+              const iconBg = colorParts
+                .filter((c) => c.startsWith("bg-"))
+                .join(" ");
               const iconText = colorParts
                 .filter((c) => c.startsWith("text-"))
                 .join(" ");
