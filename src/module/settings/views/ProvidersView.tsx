@@ -134,12 +134,10 @@ function ProviderCard({
         onClick={onToggle}
         className="w-full p-4 flex items-center gap-3 text-left"
       >
-        {/* biome-ignore lint/performance/noImgElement: SVG logos don't benefit from next/image optimization */}
-        <img
-          src={provider.logo}
-          alt=""
-          className="w-10 h-10 rounded-lg flex-shrink-0"
-        />
+        <div className="w-10 h-10 rounded-lg bg-white ring-1 ring-border-light dark:ring-border-dark flex items-center justify-center flex-shrink-0 p-1.5">
+          {/* biome-ignore lint/performance/noImgElement: SVG logos don't benefit from next/image optimization */}
+          <img src={provider.logo} alt="" className="w-full h-full" />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
