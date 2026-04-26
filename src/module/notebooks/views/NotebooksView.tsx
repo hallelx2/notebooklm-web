@@ -8,6 +8,10 @@ import { signOut, useSession } from "@/lib/auth-client";
 import type { ServerUser } from "@/lib/auth-server";
 import { trpc } from "@/trpc/client";
 import { NotebookCard } from "../components/NotebookCard";
+import {
+  NotebookGridSkeleton,
+  NotebookListSkeleton,
+} from "../components/NotebookSkeleton";
 import { NotebooksHeader } from "../components/NotebooksHeader";
 
 export function NotebooksView({ user }: { user: ServerUser }) {
@@ -147,7 +151,23 @@ export function NotebooksView({ user }: { user: ServerUser }) {
         />
 
         <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 md:px-10 pb-20">
-          {notebooks.length === 0 ? (
+          {list.isPending ? (
+            // Initial load: render skeletons matching the chosen view so the
+            // grid/list lays out immediately at its final dimensions.
+            <div>
+              <div className="flex items-center gap-2 mb-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+                <span className="material-symbols-outlined text-[14px] animate-spin">
+                  progress_activity
+                </span>
+                Loading notebooks
+              </div>
+              {view === "grid" ? (
+                <NotebookGridSkeleton />
+              ) : (
+                <NotebookListSkeleton />
+              )}
+            </div>
+          ) : notebooks.length === 0 ? (
             <div className="py-32 text-center border border-dashed border-slate-300 dark:border-white/10">
               <span className="material-symbols-outlined text-4xl text-slate-400 dark:text-zinc-700 mb-4 block">
                 library_books
