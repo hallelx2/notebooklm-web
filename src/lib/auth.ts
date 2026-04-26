@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db";
+import { userAiConfig } from "../db/schema";
 
 const trustedOrigins = ["http://localhost:3000"];
 if (process.env.BETTER_AUTH_URL) {
@@ -35,4 +36,26 @@ export const auth = betterAuth({
         },
       }
     : {}),
+  /**
+   * Insert an empty user_ai_config row whenever a new user is created so
+   * the settings page and the onboarding gate have something to read.
+   * `onboardedAt` stays null until the user finishes setup.
+   */
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          try {
+            await db
+              .insert(userAiConfig)
+              .values({ userId: user.id })
+              .onConflictDoNothing();
+          } catch (err) {
+            // Don't block signup if the row insert fails.
+            console.error("user_ai_config insert hook failed", err);
+          }
+        },
+      },
+    },
+  },
 });
