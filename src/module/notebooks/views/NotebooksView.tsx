@@ -1,11 +1,11 @@
 "use client";
 
-import type { ServerUser } from "@/lib/auth-server";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { signOut, useSession } from "@/lib/auth-client";
+import type { ServerUser } from "@/lib/auth-server";
 import { trpc } from "@/trpc/client";
 import { NotebookCard } from "../components/NotebookCard";
 import { NotebooksHeader } from "../components/NotebooksHeader";
@@ -16,7 +16,11 @@ export function NotebooksView({ user }: { user: ServerUser }) {
 
   // Real-time sign-out detection
   useEffect(() => {
-    if (clientSession !== undefined && clientSession !== null && !clientSession.user) {
+    if (
+      clientSession !== undefined &&
+      clientSession !== null &&
+      !clientSession.user
+    ) {
       router.replace("/auth/sign-in");
     }
   }, [clientSession, router]);
@@ -47,7 +51,10 @@ export function NotebooksView({ user }: { user: ServerUser }) {
   useEffect(() => {
     if (!listMenuOpenId) return;
     function handleClick(e: MouseEvent) {
-      if (listMenuRef.current && !listMenuRef.current.contains(e.target as Node)) {
+      if (
+        listMenuRef.current &&
+        !listMenuRef.current.contains(e.target as Node)
+      ) {
         setListMenuOpenId(null);
       }
     }
@@ -104,6 +111,16 @@ export function NotebooksView({ user }: { user: ServerUser }) {
             <span className="hidden md:inline text-xs text-slate-500 dark:text-zinc-500 font-mono uppercase tracking-wider truncate max-w-[200px]">
               {user.email}
             </span>
+            <Link
+              href="/settings"
+              title="Settings"
+              aria-label="Settings"
+              className="text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                settings
+              </span>
+            </Link>
             <ThemeToggle />
             <button
               type="button"
@@ -194,13 +211,18 @@ export function NotebooksView({ user }: { user: ServerUser }) {
                   </span>
 
                   {/* 3-dot menu for list view */}
-                  <div ref={listMenuOpenId === n.id ? listMenuRef : undefined} className="relative z-20">
+                  <div
+                    ref={listMenuOpenId === n.id ? listMenuRef : undefined}
+                    className="relative z-20"
+                  >
                     <button
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setListMenuOpenId(listMenuOpenId === n.id ? null : n.id);
+                        setListMenuOpenId(
+                          listMenuOpenId === n.id ? null : n.id,
+                        );
                       }}
                       className="p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
                       title="More options"
