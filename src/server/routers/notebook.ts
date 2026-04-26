@@ -54,7 +54,8 @@ export const notebookRouter = router({
       if (!row || row.userId !== ctx.user.id) return null;
       const updates: Record<string, unknown> = { updatedAt: new Date() };
       if (input.title !== undefined) updates.title = input.title;
-      if (input.description !== undefined) updates.description = input.description;
+      if (input.description !== undefined)
+        updates.description = input.description;
       const [updated] = await db
         .update(notebooks)
         .set(updates)

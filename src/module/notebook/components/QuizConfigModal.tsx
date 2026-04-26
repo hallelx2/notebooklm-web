@@ -98,7 +98,8 @@ export function QuizConfigModal({ open, onClose, notebookId }: Props) {
           {generate.isError && (
             <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
               <span className="material-symbols-outlined text-lg">error</span>
-              {generate.error?.message || "An error occurred during generation."}
+              {generate.error?.message ||
+                "An error occurred during generation."}
             </div>
           )}
 

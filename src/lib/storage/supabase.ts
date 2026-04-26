@@ -67,9 +67,6 @@ export const supabaseProvider: StorageProvider = {
   },
   async delete(key) {
     const cfg = requireConfig();
-    await call(
-      "DELETE",
-      `object/${cfg.bucket}/${encodeURIComponent(key)}`,
-    );
+    await call("DELETE", `object/${cfg.bucket}/${encodeURIComponent(key)}`);
   },
 };

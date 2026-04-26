@@ -1,5 +1,5 @@
-import { db } from "./index";
 import { sql } from "drizzle-orm";
+import { db } from "./index";
 
 export async function createHNSWIndex() {
   await db.execute(sql`

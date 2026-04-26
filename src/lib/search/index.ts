@@ -56,7 +56,5 @@ export async function webSearch(
       );
     }
   }
-  throw new Error(
-    `All search providers failed — ${errors.join(" | ")}`,
-  );
+  throw new Error(`All search providers failed — ${errors.join(" | ")}`);
 }

@@ -59,7 +59,8 @@ export async function parseLink(url: string): Promise<Parsed> {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (compatible; NotebookLM/1.0; +https://notebooklm-web.vercel.app)",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
       signal: controller.signal,
       redirect: "follow",
