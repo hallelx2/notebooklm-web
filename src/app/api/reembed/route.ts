@@ -2,7 +2,11 @@ import { auth } from "@/lib/auth";
 import { reembedAllUserSources } from "@/lib/ingest/reembed";
 
 export const runtime = "nodejs";
-export const maxDuration = 600;
+// 300 is the Hobby-plan ceiling; Pro/Enterprise can raise this to 900.
+// For very large notebooks the streaming endpoint may hit this limit -- the
+// client is resilient (the stream just ends; user can hit Re-embed again
+// to resume from where it left off, since each source is atomic).
+export const maxDuration = 300;
 
 /**
  * Streaming NDJSON endpoint. Re-embeds every source the user owns using
