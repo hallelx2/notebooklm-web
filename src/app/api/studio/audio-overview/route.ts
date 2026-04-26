@@ -1,9 +1,9 @@
-import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { notebooks, sources, studioOutputs } from "@/db/schema";
+import { getChatModel, NoAiConfigError } from "@/lib/ai/factory";
 import { auth } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -29,10 +29,7 @@ const VOICE_MAP: Record<string, string> = {
 type Segment = { speaker: "Alex" | "Sam"; text: string };
 
 /** Convert a single segment to MP3 via Deepgram TTS */
-async function ttsSegment(
-  segment: Segment,
-  apiKey: string,
-): Promise<Buffer> {
+async function ttsSegment(segment: Segment, apiKey: string): Promise<Buffer> {
   const voice = VOICE_MAP[segment.speaker] ?? "aura-asteria-en";
   const res = await fetch(
     `https://api.deepgram.com/v1/speak?model=${voice}&encoding=mp3`,
@@ -47,9 +44,7 @@ async function ttsSegment(
   );
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(
-      `Deepgram TTS ${res.status}: ${body || res.statusText}`,
-    );
+    throw new Error(`Deepgram TTS ${res.status}: ${body || res.statusText}`);
   }
   return Buffer.from(await res.arrayBuffer());
 }
@@ -81,6 +76,19 @@ export async function POST(req: Request) {
       JSON.stringify({ error: "DEEPGRAM_API_KEY is not configured" }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
+  }
+
+  let chatModel: Awaited<ReturnType<typeof getChatModel>>;
+  try {
+    chatModel = await getChatModel(session.user.id);
+  } catch (err) {
+    if (err instanceof NoAiConfigError) {
+      return Response.json(
+        { error: "NO_AI_CONFIG", role: err.role },
+        { status: 412 },
+      );
+    }
+    throw err;
   }
 
   /* ── 4. Create studio output row ─────────────────────────────────── */
@@ -137,7 +145,7 @@ export async function POST(req: Request) {
 
         const lengthGuide = LENGTH_GUIDE[body.length];
         const result = streamText({
-          model: google("gemini-2.5-flash"),
+          model: chatModel,
           prompt: `Generate a podcast-style conversation between two hosts discussing the source material.
 
 Host A ("Alex") is the main explainer who presents key ideas clearly.
