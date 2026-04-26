@@ -1,9 +1,9 @@
+import { generateText } from "ai";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { google } from "@ai-sdk/google";
-import { generateText } from "ai";
 import { db } from "@/db";
 import { notebooks, sources, studioOutputs } from "@/db/schema";
+import { getChatModel, NoAiConfigError } from "@/lib/ai/factory";
 import { protectedProcedure, router } from "../trpc";
 
 async function assertOwnsNotebook(notebookId: string, userId: string) {
@@ -102,8 +102,7 @@ Example format:
     }
     default:
       return (
-        base +
-        "Generate a helpful summary and analysis of the source material."
+        base + "Generate a helpful summary and analysis of the source material."
       );
   }
 }
@@ -157,6 +156,18 @@ export const studioRouter = router({
         .returning();
 
       try {
+        let chatModel: Awaited<ReturnType<typeof getChatModel>>;
+        try {
+          chatModel = await getChatModel(ctx.user.id);
+        } catch (err) {
+          if (err instanceof NoAiConfigError) {
+            throw new Error(
+              "Configure a chat provider in Settings before generating studio outputs.",
+            );
+          }
+          throw err;
+        }
+
         const readySources = await db
           .select({ content: sources.content })
           .from(sources)
@@ -187,7 +198,7 @@ export const studioRouter = router({
         });
 
         const { text: generatedText } = await generateText({
-          model: google("gemini-2.5-flash"),
+          model: chatModel,
           prompt,
         });
 

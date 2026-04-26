@@ -1,9 +1,9 @@
-import { google } from "@ai-sdk/google";
 import { generateObject, generateText, streamText } from "ai";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { deepResearchRuns, notebooks, sources } from "@/db/schema";
+import { getChatModel, NoAiConfigError } from "@/lib/ai/factory";
 import { auth } from "@/lib/auth";
 import { parseLink } from "@/lib/ingest/parse";
 import { webSearch } from "@/lib/search";
@@ -51,6 +51,20 @@ export async function POST(req: Request) {
     )
     .limit(1);
   if (!nb) return new Response("Notebook not found", { status: 404 });
+
+  // Resolve the user's chat model once. All 9 LLM calls below share it.
+  let chatModel: Awaited<ReturnType<typeof getChatModel>>;
+  try {
+    chatModel = await getChatModel(session.user.id);
+  } catch (err) {
+    if (err instanceof NoAiConfigError) {
+      return Response.json(
+        { error: "NO_AI_CONFIG", role: err.role },
+        { status: 412 },
+      );
+    }
+    throw err;
+  }
 
   const [run] = await db
     .insert(deepResearchRuns)
@@ -113,7 +127,7 @@ export async function POST(req: Request) {
 
         const numSub = isDeep ? 5 : 3;
         const { object: plan } = await generateObject({
-          model: google("gemini-2.5-flash"),
+          model: chatModel,
           schema: z.object({
             subqueries: z.array(z.string().min(3)).min(2).max(8),
           }),
@@ -190,7 +204,7 @@ User question: ${body.query}`,
             });
 
             const { object: scored } = await generateObject({
-              model: google("gemini-2.5-flash"),
+              model: chatModel,
               schema: z.object({
                 ranked: z.array(
                   z.object({
@@ -205,10 +219,7 @@ Consider: domain authority, title relevance, snippet quality.
 
 Sources:
 ${capped
-  .map(
-    (r, i) =>
-      `${i + 1}. ${r.title} (${r.url})\n   Snippet: ${r.snippet}`,
-  )
+  .map((r, i) => `${i + 1}. ${r.title} (${r.url})\n   Snippet: ${r.snippet}`)
   .join("\n\n")}
 
 Return ALL sources ranked by relevance.`,
@@ -304,7 +315,7 @@ Return ALL sources ranked by relevance.`,
             const summaries = await Promise.allSettled(
               fetched.map(async (f) => {
                 const { text } = await generateText({
-                  model: google("gemini-2.5-flash"),
+                  model: chatModel,
                   prompt: `Extract the key facts, findings, and arguments from this text that are relevant to: "${body.query}"
 
 Source: ${f.title}
@@ -358,7 +369,7 @@ Return a concise bullet-point summary of the most important information. Include
         if (isDeep) {
           // ── Deep: outline → section-by-section writing ──────────
           const { object: outline } = await generateObject({
-            model: google("gemini-2.5-flash"),
+            model: chatModel,
             schema: z.object({
               title: z.string(),
               sections: z.array(
@@ -396,7 +407,7 @@ Each section should have 2-4 key points to address.`,
             const isConclusion = i === outline.sections.length - 1;
 
             const sectionResult = streamText({
-              model: google("gemini-2.5-flash"),
+              model: chatModel,
               prompt: `You are writing section "${section.heading}" of a research report on "${body.query}".
 
 Key points to cover: ${section.keyPoints.join("; ")}
@@ -426,7 +437,7 @@ Do NOT include the section heading -- it will be added automatically. Start dire
         } else {
           // ── Fast: single-pass streamed report ───────────────────
           const fastResult = streamText({
-            model: google("gemini-2.5-flash"),
+            model: chatModel,
             system:
               "You write thorough, well-structured research reports grounded strictly in the provided sources. Use inline citations like [1], [2] that refer to the numbered SOURCES list. Use clear section headings (## markdown). Do not invent facts; if sources disagree, note the disagreement. End with a 'Key takeaways' bullet list.",
             prompt: `Research question: ${body.query}\n\nSub-questions to cover:\n${subqueries
@@ -453,7 +464,7 @@ Do NOT include the section heading -- it will be added automatically. Start dire
             });
 
             const { object: gaps } = await generateObject({
-              model: google("gemini-2.5-flash"),
+              model: chatModel,
               schema: z.object({
                 gaps: z.array(
                   z.object({
@@ -542,7 +553,7 @@ Return 0-3 specific gaps that need additional research. If the report is compreh
                   .join("\n\n---\n\n");
 
                 const augmentResult = streamText({
-                  model: google("gemini-2.5-flash"),
+                  model: chatModel,
                   prompt: `You previously wrote this research report:
 
 ${report}
@@ -586,7 +597,7 @@ Write ADDITIONAL sections or paragraphs to address the gaps. Use citations [NEW-
             });
 
             const { object: verification } = await generateObject({
-              model: google("gemini-2.5-flash"),
+              model: chatModel,
               schema: z.object({
                 verifiedClaims: z.array(
                   z.object({
@@ -662,6 +673,7 @@ Flag any claims supported by only one source as "low" confidence. Claims support
             // Run embedding in background (don't block the SSE stream)
             const { ingestText } = await import("@/lib/ingest/text");
             ingestText({
+              userId: session.user.id,
               sourceId: reportSource.id,
               notebookId: body.notebookId,
               text: report,

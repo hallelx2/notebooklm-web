@@ -1,5 +1,5 @@
-import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
+import { getChatModel, NoAiConfigError } from "@/lib/ai/factory";
 import { auth } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -8,6 +8,19 @@ export const maxDuration = 30;
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session?.user) return new Response("Unauthorized", { status: 401 });
+
+  let chatModel: Awaited<ReturnType<typeof getChatModel>>;
+  try {
+    chatModel = await getChatModel(session.user.id);
+  } catch (err) {
+    if (err instanceof NoAiConfigError) {
+      return Response.json(
+        { error: "NO_AI_CONFIG", role: err.role },
+        { status: 412 },
+      );
+    }
+    throw err;
+  }
 
   const { questions, answers } = await req.json();
 
@@ -27,7 +40,7 @@ export async function POST(req: Request) {
   const total = results.length;
 
   const { text } = await generateText({
-    model: google("gemini-2.5-flash"),
+    model: chatModel,
     prompt: `You are a study coach reviewing a student's quiz results. They scored ${correct}/${total}.
 
 Here are the results:

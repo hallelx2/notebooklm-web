@@ -49,6 +49,7 @@ export const sourceRouter = router({
         })
         .returning();
       ingestLink({
+        userId: ctx.user.id,
         sourceId: row.id,
         notebookId: input.notebookId,
         url: input.url,
@@ -77,6 +78,7 @@ export const sourceRouter = router({
         })
         .returning();
       ingestLink({
+        userId: ctx.user.id,
         sourceId: row.id,
         notebookId: input.notebookId,
         url: input.url,
@@ -106,6 +108,7 @@ export const sourceRouter = router({
         })
         .returning();
       ingestText({
+        userId: ctx.user.id,
         sourceId: row.id,
         notebookId: input.notebookId,
         text: input.text,
@@ -135,6 +138,7 @@ export const sourceRouter = router({
       // Re-trigger ingestion
       if (row.kind === "link" && row.uri) {
         ingestLink({
+          userId: ctx.user.id,
           sourceId: row.id,
           notebookId: row.notebookId,
           url: row.uri,
@@ -143,6 +147,7 @@ export const sourceRouter = router({
         // For files we'd need the buffer again — just re-parse from storage
         // For now, mark as pending and let it try
         ingestFile({
+          userId: ctx.user.id,
           sourceId: row.id,
           notebookId: row.notebookId,
           buffer: Buffer.alloc(0),
@@ -202,6 +207,7 @@ export async function createSourceForUpload(params: {
     })
     .returning();
   ingestFile({
+    userId: params.userId,
     sourceId: row.id,
     notebookId: params.notebookId,
     buffer: Buffer.alloc(0), // set by upload route

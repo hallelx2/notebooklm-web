@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { notebooks, sources } from "@/db/schema";
-import { ingestFile } from "@/lib/ingest";
 import { auth } from "@/lib/auth";
+import { ingestFile } from "@/lib/ingest";
 import { getStorage } from "@/lib/storage";
 
 export const runtime = "nodejs";
@@ -53,6 +53,7 @@ export async function POST(req: Request) {
     .returning();
 
   ingestFile({
+    userId: session.user.id,
     sourceId: row.id,
     notebookId,
     buffer,

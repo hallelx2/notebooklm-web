@@ -1,11 +1,11 @@
-import { google } from "@ai-sdk/google";
-import { and, eq } from "drizzle-orm";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { messages, notebooks } from "@/db/schema";
+import { getChatModel, NoAiConfigError } from "@/lib/ai/factory";
 import { auth } from "@/lib/auth";
-import { retrieveForQuery, type RetrievedChunk } from "@/lib/retrieve";
+import { type RetrievedChunk, retrieveForQuery } from "@/lib/retrieve";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -42,10 +42,21 @@ export async function POST(req: Request) {
     .limit(1);
   if (!nb) return new Response("Notebook not found", { status: 404 });
 
+  let model: Awaited<ReturnType<typeof getChatModel>>;
+  try {
+    model = await getChatModel(session.user.id);
+  } catch (err) {
+    if (err instanceof NoAiConfigError) {
+      return Response.json(
+        { error: "NO_AI_CONFIG", role: err.role },
+        { status: 412 },
+      );
+    }
+    throw err;
+  }
+
   const uiMessages = body.messages as UIMessage[];
-  const lastUser = [...uiMessages]
-    .reverse()
-    .find((m) => m.role === "user");
+  const lastUser = [...uiMessages].reverse().find((m) => m.role === "user");
   const query = lastUser
     ? (lastUser.parts ?? [])
         .filter((p): p is { type: "text"; text: string } => p.type === "text")
@@ -53,14 +64,26 @@ export async function POST(req: Request) {
         .join("\n")
     : "";
 
-  const retrieved = query
-    ? await retrieveForQuery({
+  let retrieved: RetrievedChunk[] = [];
+  if (query) {
+    try {
+      retrieved = await retrieveForQuery({
+        userId: session.user.id,
         notebookId: body.notebookId,
         query,
         sourceIds: body.sourceIds,
         topK: 12,
-      })
-    : [];
+      });
+    } catch (err) {
+      if (err instanceof NoAiConfigError) {
+        return Response.json(
+          { error: "NO_AI_CONFIG", role: err.role },
+          { status: 412 },
+        );
+      }
+      throw err;
+    }
+  }
 
   await db.insert(messages).values({
     notebookId: body.notebookId,
@@ -77,7 +100,7 @@ SOURCES:
 ${retrieved.length ? formatSources(retrieved) : "(no sources yet)"}`;
 
   const result = streamText({
-    model: google("gemini-2.5-flash"),
+    model,
     system: systemPrompt,
     messages: await convertToModelMessages(uiMessages),
     onFinish: async ({ text }) => {
