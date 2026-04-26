@@ -1,19 +1,10 @@
 "use client";
 
 import type { inferRouterOutputs } from "@trpc/server";
-import {
-  AlertCircle,
-  Check,
-  ExternalLink,
-  Loader2,
-  Plus,
-  Trash2,
-  X,
-  Zap,
-} from "lucide-react";
 import { useState } from "react";
 import type { AppRouter } from "@/server";
 import { trpc } from "@/trpc/client";
+import { SettingsSection } from "../components/SettingsSection";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type ProviderCatalog = RouterOutputs["provider"]["catalog"][number];
@@ -23,64 +14,55 @@ export function ProvidersView() {
   const catalogQ = trpc.provider.catalog.useQuery();
   const listQ = trpc.provider.list.useQuery();
   const [editing, setEditing] = useState<string | null>(null);
-
   const utils = trpc.useUtils();
-
-  if (catalogQ.isLoading || listQ.isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20 text-gray-500">
-        <Loader2 className="w-5 h-5 animate-spin" />
-      </div>
-    );
-  }
 
   const catalog = catalogQ.data ?? [];
   const credentials = listQ.data ?? [];
   const credentialByProvider = new Map(credentials.map((c) => [c.provider, c]));
 
   return (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          Providers
-        </h2>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Connect your own API keys. Keys are encrypted at rest with the
-          deployer's{" "}
-          <code className="px-1 rounded bg-element-light dark:bg-element-dark text-xs">
-            ENCRYPTION_KEY
-          </code>{" "}
-          and never leave the server in plaintext.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {catalog.map((p) => {
-          const saved = credentialByProvider.get(p.id);
-          const isOpen = editing === p.id;
-          return (
-            <ProviderCard
-              key={p.id}
-              provider={p}
-              saved={saved}
-              isOpen={isOpen}
-              onToggle={() => setEditing(isOpen ? null : p.id)}
-              onClose={() => setEditing(null)}
-              onChange={() => {
-                utils.provider.list.invalidate();
-                utils.aiConfig.get.invalidate();
-              }}
-            />
-          );
-        })}
-      </div>
-    </div>
+    <SettingsSection
+      tagline={`Settings · Providers · ${catalog.length} available`}
+      title="AI Providers"
+      description="Bring your own keys. Saved keys are encrypted at rest with the deployer's ENCRYPTION_KEY and never leave the server in plaintext."
+    >
+      {catalogQ.isLoading || listQ.isLoading ? (
+        <Loading />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {catalog.map((p) => {
+            const saved = credentialByProvider.get(p.id);
+            const isOpen = editing === p.id;
+            return (
+              <ProviderCard
+                key={p.id}
+                provider={p}
+                saved={saved}
+                isOpen={isOpen}
+                onToggle={() => setEditing(isOpen ? null : p.id)}
+                onClose={() => setEditing(null)}
+                onChange={() => {
+                  utils.provider.list.invalidate();
+                  utils.aiConfig.get.invalidate();
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
+    </SettingsSection>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Provider card -- expands to a form when clicked                    */
-/* ------------------------------------------------------------------ */
+
+function Loading() {
+  return (
+    <div className="py-20 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+      Loading…
+    </div>
+  );
+}
 
 function ProviderCard({
   provider,
@@ -102,31 +84,33 @@ function ProviderCard({
     if (!saved) return null;
     if (status === "ok")
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-          <Check className="w-3 h-3" />
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+          <span className="material-symbols-outlined text-[12px]">
+            check_circle
+          </span>
           Connected
         </span>
       );
     if (status === "invalid")
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-700 dark:text-red-400">
-          <AlertCircle className="w-3 h-3" />
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-red-700 dark:text-red-400">
+          <span className="material-symbols-outlined text-[12px]">error</span>
           Invalid
         </span>
       );
     return (
-      <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
-        Saved · not tested
+      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+        Saved · untested
       </span>
     );
   })();
 
   return (
     <div
-      className={`rounded-xl border bg-surface-light dark:bg-surface-dark transition-all ${
+      className={`border bg-white dark:bg-[#0a0a0a] transition-colors ${
         isOpen
-          ? "border-indigo-400 dark:border-indigo-500 shadow-lg col-span-full"
-          : "border-border-light dark:border-border-dark hover:border-indigo-300 dark:hover:border-indigo-600"
+          ? "border-slate-900 dark:border-white col-span-full"
+          : "border-slate-200 hover:border-slate-400 dark:border-white/10 dark:hover:border-white/30"
       }`}
     >
       <button
@@ -134,27 +118,29 @@ function ProviderCard({
         onClick={onToggle}
         className="w-full p-4 flex items-center gap-3 text-left"
       >
-        <div className="w-10 h-10 rounded-lg bg-white ring-1 ring-border-light dark:ring-border-dark flex items-center justify-center flex-shrink-0 p-1.5">
-          {/* biome-ignore lint/performance/noImgElement: SVG logos don't benefit from next/image optimization */}
+        <div className="w-10 h-10 bg-white border border-slate-200 dark:border-white/10 flex items-center justify-center flex-shrink-0 p-1.5">
+          {/* biome-ignore lint/performance/noImgElement: SVG logo, next/image overhead unwarranted */}
           <img src={provider.logo} alt="" className="w-full h-full" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+            <h3 className="font-medium text-slate-900 dark:text-white truncate">
               {provider.label}
             </h3>
             {provider.selfHostedOnly ? (
-              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 flex-shrink-0">
+              <span className="text-[9px] uppercase tracking-widest font-bold px-1.5 py-0.5 border border-amber-500/40 text-amber-700 dark:text-amber-400 flex-shrink-0">
                 Self-hosted
               </span>
             ) : null}
           </div>
-          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+          <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
             {saved ? (
               statusBadge
             ) : (
               <span className="inline-flex items-center gap-1">
-                <Plus className="w-3 h-3" />
+                <span className="material-symbols-outlined text-[12px]">
+                  add
+                </span>
                 Add credentials
               </span>
             )}
@@ -173,8 +159,6 @@ function ProviderCard({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Credential form                                                     */
 /* ------------------------------------------------------------------ */
 
 function CredentialForm({
@@ -206,8 +190,6 @@ function CredentialForm({
     provider.baseUrlRequired || provider.authType !== "api_key";
   const showOrg = provider.id === "openai";
 
-  // Pick a sensible default model for the test:
-  // first chat-capable model, or first embed-capable for embed-only providers.
   const testKind: "chat" | "embed" = provider.models.some((m) =>
     m.capabilities.includes("chat"),
   )
@@ -236,15 +218,13 @@ function CredentialForm({
     if (!testModel) {
       setTestResult({
         kind: "error",
-        error:
-          "No model available to test against -- add a model in the registry.",
+        error: "No model registered for this provider yet.",
       });
       return;
     }
     try {
       const result = await test.mutateAsync({
         credentialId: saved?.id,
-        // For draft credentials (key entered but not saved):
         provider: !saved ? provider.id : undefined,
         apiKey: !saved ? apiKey.trim() || undefined : undefined,
         baseUrl: !saved ? baseUrl.trim() || undefined : undefined,
@@ -275,52 +255,34 @@ function CredentialForm({
   }
 
   return (
-    <div className="p-4 border-t border-border-light dark:border-border-dark space-y-3">
+    <div className="p-5 border-t border-slate-200 dark:border-white/10 space-y-4 bg-slate-50/50 dark:bg-white/[0.02]">
       {showApiKeyInput ? (
-        <div>
-          <label
-            htmlFor={`apiKey-${provider.id}`}
-            className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
-          >
-            API Key
-            {provider.apiKeyDocsUrl ? (
-              <a
-                href={provider.apiKeyDocsUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="ml-2 text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-0.5 text-[11px]"
-              >
-                Get a key <ExternalLink className="w-3 h-3" />
-              </a>
-            ) : null}
-          </label>
+        <Field
+          label="API Key"
+          docsUrl={provider.apiKeyDocsUrl ?? undefined}
+          docsLabel="Get a key"
+        >
           <input
-            id={`apiKey-${provider.id}`}
             type="password"
             autoComplete="off"
             spellCheck={false}
             placeholder={
               saved?.hasKey
-                ? "•••••••••••••••• (saved -- enter a new key to replace)"
+                ? "•••••••••••••••• — enter a new key to replace"
                 : "Paste your API key"
             }
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg bg-element-light dark:bg-element-dark border border-border-light dark:border-border-dark focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full h-11 bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:border-blue-500 dark:focus:border-emerald-500 transition-colors"
           />
-        </div>
+        </Field>
       ) : null}
 
       {showBaseUrlInput ? (
-        <div>
-          <label
-            htmlFor={`baseUrl-${provider.id}`}
-            className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
-          >
-            Base URL{provider.baseUrlRequired ? " (required)" : " (optional)"}
-          </label>
+        <Field
+          label={`Base URL${provider.baseUrlRequired ? " — required" : " — optional"}`}
+        >
           <input
-            id={`baseUrl-${provider.id}`}
             type="url"
             placeholder={
               provider.baseUrlPlaceholder ??
@@ -329,28 +291,21 @@ function CredentialForm({
             }
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg bg-element-light dark:bg-element-dark border border-border-light dark:border-border-dark focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full h-11 bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:border-blue-500 dark:focus:border-emerald-500 transition-colors"
           />
-        </div>
+        </Field>
       ) : null}
 
       {showOrg ? (
-        <div>
-          <label
-            htmlFor={`org-${provider.id}`}
-            className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
-          >
-            Organization (optional)
-          </label>
+        <Field label="Organization — optional">
           <input
-            id={`org-${provider.id}`}
             type="text"
             placeholder="org-..."
             value={organization}
             onChange={(e) => setOrganization(e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg bg-element-light dark:bg-element-dark border border-border-light dark:border-border-dark focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full h-11 bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:border-blue-500 dark:focus:border-emerald-500 transition-colors"
           />
-        </div>
+        </Field>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -358,72 +313,97 @@ function CredentialForm({
           type="button"
           onClick={handleSave}
           disabled={upsert.isPending}
-          className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg transition-colors"
+          className="flex items-center justify-center gap-2 h-11 px-5 border border-emerald-500/70 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white dark:hover:text-black transition-colors disabled:opacity-60"
         >
-          {upsert.isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : null}
-          Save
+          <span className="material-symbols-outlined text-[14px]">save</span>
+          {upsert.isPending ? "Saving" : "Save"}
         </button>
         <button
           type="button"
           onClick={handleTest}
           disabled={test.isPending || (!saved && !apiKey.trim())}
-          className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 border border-border-light dark:border-border-dark hover:bg-element-light dark:hover:bg-element-dark disabled:opacity-50 rounded-lg transition-colors"
+          className="flex items-center justify-center gap-2 h-11 px-5 border border-slate-300 hover:border-slate-900 dark:border-white/20 dark:hover:border-white text-slate-700 dark:text-zinc-300 text-[10px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50"
         >
-          {test.isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Zap className="w-4 h-4" />
-          )}
-          Test connection
+          <span className="material-symbols-outlined text-[14px]">bolt</span>
+          {test.isPending ? "Testing" : "Test connection"}
         </button>
         {saved ? (
           <button
             type="button"
             onClick={handleDelete}
             disabled={remove.isPending}
-            className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 rounded-lg transition-colors ml-auto"
+            className="flex items-center justify-center gap-2 h-11 px-5 border border-red-500/40 hover:border-red-500 text-red-700 dark:text-red-400 text-[10px] font-bold uppercase tracking-widest transition-colors disabled:opacity-60 ml-auto"
           >
-            <Trash2 className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[14px]">
+              delete
+            </span>
             Remove
           </button>
         ) : null}
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex items-center px-2 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg transition-colors"
+          className="flex items-center justify-center w-11 h-11 border border-transparent text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
           aria-label="Close"
         >
-          <X className="w-4 h-4" />
+          <span className="material-symbols-outlined text-[18px]">close</span>
         </button>
       </div>
 
       {testResult ? (
         <div
-          className={`text-xs px-3 py-2 rounded-lg ${
+          className={`px-4 py-3 border text-[11px] font-mono ${
             testResult.kind === "ok"
-              ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
-              : "bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+              ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-800 dark:text-emerald-300"
+              : "border-red-500/40 bg-red-500/5 text-red-800 dark:text-red-300"
           }`}
         >
-          {testResult.kind === "ok" ? (
-            <>
-              <Check className="inline w-3.5 h-3.5 mr-1" />
-              Connection OK ({testResult.latencyMs}ms)
-            </>
-          ) : (
-            <>
-              <AlertCircle className="inline w-3.5 h-3.5 mr-1" />
-              {testResult.error}
-            </>
-          )}
+          {testResult.kind === "ok"
+            ? `✓ Connection OK · ${testResult.latencyMs}ms`
+            : `✗ ${testResult.error}`}
         </div>
       ) : upsert.isError ? (
-        <div className="text-xs px-3 py-2 rounded-lg bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300">
-          {upsert.error.message}
+        <div className="px-4 py-3 border border-red-500/40 bg-red-500/5 text-red-800 dark:text-red-300 text-[11px] font-mono">
+          ✗ {upsert.error.message}
         </div>
       ) : null}
     </div>
+  );
+}
+
+function Field({
+  label,
+  docsUrl,
+  docsLabel,
+  children,
+}: {
+  label: string;
+  docsUrl?: string;
+  docsLabel?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    // biome-ignore lint/a11y/noLabelWithoutControl: input is passed via children, biome can't see through it
+    <label className="block">
+      <span className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">
+          {label}
+        </span>
+        {docsUrl ? (
+          <a
+            href={docsUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
+          >
+            {docsLabel ?? "Docs"}
+            <span className="material-symbols-outlined text-[12px]">
+              open_in_new
+            </span>
+          </a>
+        ) : null}
+      </span>
+      {children}
+    </label>
   );
 }
