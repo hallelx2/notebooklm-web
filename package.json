@@ -12,8 +12,16 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.71",
+    "@ai-sdk/cohere": "^3.0.30",
     "@ai-sdk/google": "^3.0.64",
+    "@ai-sdk/groq": "^3.0.35",
+    "@ai-sdk/mistral": "^3.0.30",
+    "@ai-sdk/openai": "^3.0.53",
+    "@ai-sdk/openai-compatible": "^2.0.41",
     "@ai-sdk/react": "^3.0.170",
+    "@ai-sdk/togetherai": "^2.0.45",
+    "@ai-sdk/xai": "^3.0.83",
     "@aws-sdk/client-s3": "^3.1033.0",
     "@aws-sdk/s3-request-presigner": "^3.1033.0",
     "@mozilla/readability": "^0.6.0",
