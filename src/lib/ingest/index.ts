@@ -4,7 +4,11 @@ import { db } from "@/db";
 import { sourceChunks, sources } from "@/db/schema";
 import { maybeAutoTitleNotebook } from "./autotitle";
 import { chunkText } from "./chunk";
-import { embedChunks, buildEmbeddingContext } from "./embed";
+import {
+  buildEmbeddingContext,
+  embedTexts,
+  persistChunkEmbeddings,
+} from "./embed";
 import { parseByMime, parseLink } from "./parse";
 
 async function setStatus(
@@ -18,7 +22,14 @@ async function setStatus(
     .where(eq(sources.id, sourceId));
 }
 
+/**
+ * Chunk + embed + insert. Embeddings are written to the per-dim table
+ * matching the user's currently-configured embedding model. The legacy
+ * `source_chunks.embedding` column is also dual-written when the dim is
+ * 768, so old retrieval paths continue to work during the cutover.
+ */
 async function insertChunks(params: {
+  userId: string;
   sourceId: string;
   notebookId: string;
   text: string;
@@ -28,11 +39,10 @@ async function insertChunks(params: {
   const chunks = chunkText(params.text, params.sourceTitle);
   if (chunks.length === 0) return 0;
 
-  // Build contextual embedding strings
   const embeddingTexts = chunks.map((c) =>
     buildEmbeddingContext(c.content, params.sourceTitle, c.heading),
   );
-  const embeddings = await embedChunks(embeddingTexts);
+  const embedded = await embedTexts(params.userId, embeddingTexts);
 
   const rows = chunks.map((c, i) => ({
     sourceId: params.sourceId,
@@ -46,18 +56,32 @@ async function insertChunks(params: {
       heading: c.heading ?? null,
       position: `${c.ordinal + 1}/${chunks.length}`,
     },
-    embedding: embeddings[i],
+    // Dual-write the legacy column only when dim matches the legacy
+    // pgvector(768) shape. Other dims would fail the column constraint.
+    embedding: embedded.dim === 768 ? embedded.vectors[i] : null,
+    embeddingDim: embedded.dim,
+    embeddingModel: embedded.model,
+    embeddingProvider: embedded.provider,
   }));
 
-  // chunked insert to avoid oversized statements
+  // Insert in batches, capturing the new chunk IDs so we can index their
+  // embeddings into the per-dim sibling table.
   const BATCH = 50;
+  const insertedIds: string[] = [];
   for (let i = 0; i < rows.length; i += BATCH) {
-    await db.insert(sourceChunks).values(rows.slice(i, i + BATCH));
+    const inserted = await db
+      .insert(sourceChunks)
+      .values(rows.slice(i, i + BATCH))
+      .returning({ id: sourceChunks.id });
+    for (const r of inserted) insertedIds.push(r.id);
   }
+
+  await persistChunkEmbeddings({ chunkIds: insertedIds, embedded });
   return rows.length;
 }
 
 export async function ingestFile(params: {
+  userId: string;
   sourceId: string;
   notebookId: string;
   buffer: Buffer;
@@ -73,6 +97,7 @@ export async function ingestFile(params: {
     );
     await setStatus(params.sourceId, "embedding");
     await insertChunks({
+      userId: params.userId,
       sourceId: params.sourceId,
       notebookId: params.notebookId,
       text: parsed.text,
@@ -86,7 +111,9 @@ export async function ingestFile(params: {
         updatedAt: new Date(),
       })
       .where(eq(sources.id, params.sourceId));
-    maybeAutoTitleNotebook(params.notebookId, parsed.text).catch(() => {});
+    maybeAutoTitleNotebook(params.userId, params.notebookId, parsed.text).catch(
+      () => {},
+    );
   } catch (err) {
     await setStatus(
       params.sourceId,
@@ -98,6 +125,7 @@ export async function ingestFile(params: {
 }
 
 export async function ingestLink(params: {
+  userId: string;
   sourceId: string;
   notebookId: string;
   url: string;
@@ -107,6 +135,7 @@ export async function ingestLink(params: {
     const parsed = await parseLink(params.url);
     await setStatus(params.sourceId, "embedding");
     await insertChunks({
+      userId: params.userId,
       sourceId: params.sourceId,
       notebookId: params.notebookId,
       text: parsed.text,
@@ -122,7 +151,9 @@ export async function ingestLink(params: {
         updatedAt: new Date(),
       })
       .where(eq(sources.id, params.sourceId));
-    maybeAutoTitleNotebook(params.notebookId, parsed.text).catch(() => {});
+    maybeAutoTitleNotebook(params.userId, params.notebookId, parsed.text).catch(
+      () => {},
+    );
   } catch (err) {
     await setStatus(
       params.sourceId,
