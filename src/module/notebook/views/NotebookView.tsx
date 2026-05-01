@@ -1,11 +1,11 @@
 "use client";
 
-import type { ServerUser } from "@/lib/auth-server";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { signOut, useSession } from "@/lib/auth-client";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { signOut, useSession } from "@/lib/auth-client";
+import type { ServerUser } from "@/lib/auth-server";
 import { trpc } from "@/trpc/client";
 import { ChatPanel } from "../components/ChatPanel";
 import { DeepResearchModal } from "../components/DeepResearchModal";
@@ -21,7 +21,11 @@ export function NotebookView({ id, user }: { id: string; user: ServerUser }) {
 
   // Real-time sign-out detection
   useEffect(() => {
-    if (clientSession !== undefined && clientSession !== null && !clientSession.user) {
+    if (
+      clientSession !== undefined &&
+      clientSession !== null &&
+      !clientSession.user
+    ) {
       router.replace("/auth/sign-in");
     }
   }, [clientSession, router]);
@@ -35,7 +39,9 @@ export function NotebookView({ id, user }: { id: string; user: ServerUser }) {
     { enabled: true, refetchInterval: 2500 },
   );
 
-  const [mobileTab, setMobileTab] = useState<"sources" | "chat" | "studio">("chat");
+  const [mobileTab, setMobileTab] = useState<"sources" | "chat" | "studio">(
+    "chat",
+  );
   const [sourcesWidth, setSourcesWidth] = useState(320);
   const [studioWidth, setStudioWidth] = useState(320);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -90,7 +96,12 @@ export function NotebookView({ id, user }: { id: string; user: ServerUser }) {
   }
 
   function handleDeleteNotebook() {
-    if (!confirm("Are you sure you want to delete this notebook? This action cannot be undone.")) return;
+    if (
+      !confirm(
+        "Are you sure you want to delete this notebook? This action cannot be undone.",
+      )
+    )
+      return;
     deleteNotebook.mutate({ id });
   }
 
@@ -126,7 +137,8 @@ export function NotebookView({ id, user }: { id: string; user: ServerUser }) {
   function handleSaveNote() {
     const text = noteText.trim();
     if (!text) return;
-    const title = text.slice(0, 60).replace(/\n/g, " ") + (text.length > 60 ? "..." : "");
+    const title =
+      text.slice(0, 60).replace(/\n/g, " ") + (text.length > 60 ? "..." : "");
     addFromText.mutate({
       notebookId: id,
       title: `Note: ${title}`,
@@ -198,7 +210,10 @@ export function NotebookView({ id, user }: { id: string; user: ServerUser }) {
             <div className="h-32 w-full bg-gray-200 dark:bg-gray-700 rounded-2xl" />
             <div className="grid grid-cols-2 gap-2">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-14 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+                <div
+                  key={i}
+                  className="h-14 bg-gray-200 dark:bg-gray-700 rounded-xl"
+                />
               ))}
             </div>
           </div>
@@ -262,28 +277,46 @@ export function NotebookView({ id, user }: { id: string; user: ServerUser }) {
             </button>
             {analyticsOpen && (
               <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-[#1e1f20] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-4 z-50">
-                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notebook Analytics</h3>
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                  Notebook Analytics
+                </h3>
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">Sources</span>
-                    <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{sources.length}</span>
+                    <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                      {sources.length}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">Ready</span>
-                    <span className="text-xs font-medium text-emerald-600">{sources.filter(s => s.status === "ready").length}</span>
+                    <span className="text-xs font-medium text-emerald-600">
+                      {sources.filter((s) => s.status === "ready").length}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">Processing</span>
-                    <span className="text-xs font-medium text-amber-600">{sources.filter(s => ["pending","parsing","embedding"].includes(s.status)).length}</span>
+                    <span className="text-xs font-medium text-amber-600">
+                      {
+                        sources.filter((s) =>
+                          ["pending", "parsing", "embedding"].includes(
+                            s.status,
+                          ),
+                        ).length
+                      }
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">Failed</span>
-                    <span className="text-xs font-medium text-red-600">{sources.filter(s => s.status === "error").length}</span>
+                    <span className="text-xs font-medium text-red-600">
+                      {sources.filter((s) => s.status === "error").length}
+                    </span>
                   </div>
                   <div className="border-t border-gray-100 dark:border-gray-700 pt-2 mt-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-500">Created</span>
-                      <span className="text-xs text-gray-600 dark:text-gray-400">{new Date(n.createdAt).toLocaleDateString()}</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        {new Date(n.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -309,7 +342,8 @@ export function NotebookView({ id, user }: { id: string; user: ServerUser }) {
                 setSettingsOpen((v) => !v);
                 setAnalyticsOpen(false);
                 setProfileOpen(false);
-                if (!settingsOpen) setEditTitle(n.title === "Untitled notebook" ? "" : n.title);
+                if (!settingsOpen)
+                  setEditTitle(n.title === "Untitled notebook" ? "" : n.title);
               }}
               className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
               title="Settings"
@@ -318,17 +352,23 @@ export function NotebookView({ id, user }: { id: string; user: ServerUser }) {
             </button>
             {settingsOpen && (
               <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-[#1e1f20] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-4 z-50">
-                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Settings</h3>
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                  Settings
+                </h3>
 
                 {/* Rename */}
                 <div className="mb-3">
-                  <label className="text-xs text-gray-500 mb-1 block">Notebook title</label>
+                  <label className="text-xs text-gray-500 mb-1 block">
+                    Notebook title
+                  </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleRename();
+                      }}
                       className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-element-dark text-gray-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
                       placeholder={n.title}
                     />
@@ -349,8 +389,12 @@ export function NotebookView({ id, user }: { id: string; user: ServerUser }) {
                     disabled={deleteNotebook.isPending}
                     className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50"
                   >
-                    <span className="material-symbols-outlined text-[16px]">delete</span>
-                    {deleteNotebook.isPending ? "Deleting..." : "Delete notebook"}
+                    <span className="material-symbols-outlined text-[16px]">
+                      delete
+                    </span>
+                    {deleteNotebook.isPending
+                      ? "Deleting..."
+                      : "Delete notebook"}
                   </button>
                 </div>
               </div>
@@ -368,26 +412,30 @@ export function NotebookView({ id, user }: { id: string; user: ServerUser }) {
               }}
               className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm ml-2 cursor-pointer hover:ring-2 hover:ring-indigo-400 transition-shadow"
             >
-              {(user.name ?? user.email)
-                .slice(0, 2)
-                .toUpperCase()}
+              {(user.name ?? user.email).slice(0, 2).toUpperCase()}
             </button>
             {profileOpen && (
               <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#1e1f20] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
                 <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{user.name}</p>
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    {user.name}
+                  </p>
                   <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
                 <div className="p-2">
                   <div className="flex items-center justify-between px-3 py-2">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">Theme</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      Theme
+                    </span>
                     <ThemeToggle />
                   </div>
                   <button
                     onClick={() => signOut().then(() => router.push("/"))}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[18px]">logout</span>
+                    <span className="material-symbols-outlined text-[18px]">
+                      logout
+                    </span>
                     Sign out
                   </button>
                 </div>
@@ -507,7 +555,9 @@ export function NotebookView({ id, user }: { id: string; user: ServerUser }) {
                   : "text-gray-500 dark:text-gray-400"
               }`}
             >
-              <span className="material-symbols-outlined text-xl">{tab.icon}</span>
+              <span className="material-symbols-outlined text-xl">
+                {tab.icon}
+              </span>
               {tab.label}
             </button>
           ))}

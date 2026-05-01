@@ -1,14 +1,14 @@
 "use client";
 
-import { useChat, type UIMessage } from "@ai-sdk/react";
+import { type UIMessage, useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import {
-  useMemo,
-  useState,
+  type ReactNode,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
-  type ReactNode,
+  useState,
 } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -526,17 +526,19 @@ export function ChatPanel({
           </div>
         )}
 
-        {busy && messages.length > 0 && messages[messages.length - 1].role === "user" && (
-          <div className="max-w-[85%] rounded-2xl px-4 py-4 bg-element-light dark:bg-element-dark space-y-2.5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-              <div className="h-3 w-24 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
+        {busy &&
+          messages.length > 0 &&
+          messages[messages.length - 1].role === "user" && (
+            <div className="max-w-[85%] rounded-2xl px-4 py-4 bg-element-light dark:bg-element-dark space-y-2.5">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <div className="h-3 w-24 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
+              </div>
+              <div className="h-3 w-full bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
+              <div className="h-3 w-5/6 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
+              <div className="h-3 w-3/6 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
             </div>
-            <div className="h-3 w-full bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
-            <div className="h-3 w-5/6 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
-            <div className="h-3 w-3/6 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
-          </div>
-        )}
+          )}
       </div>
 
       <form

@@ -435,7 +435,11 @@ export function UploadModal({
                           const isSuccess = l.includes("✓");
                           const isFail = l.includes("✗");
                           const isSearch = l.includes("→");
-                          const isStage = !isSuccess && !isFail && !isSearch && !l.startsWith("  ");
+                          const isStage =
+                            !isSuccess &&
+                            !isFail &&
+                            !isSearch &&
+                            !l.startsWith("  ");
                           return (
                             <div
                               key={`${i}-${l.slice(0, 10)}`}
@@ -462,8 +466,12 @@ export function UploadModal({
                         })}
                         {running && (
                           <div className="flex items-center gap-1.5 pt-1 border-t border-gray-200/50 dark:border-white/5 mt-1">
-                            <span className="material-symbols-outlined text-xs animate-spin text-indigo-500">progress_activity</span>
-                            <span className="text-[10px] font-medium text-indigo-500">Working...</span>
+                            <span className="material-symbols-outlined text-xs animate-spin text-indigo-500">
+                              progress_activity
+                            </span>
+                            <span className="text-[10px] font-medium text-indigo-500">
+                              Working...
+                            </span>
                           </div>
                         )}
                       </div>
@@ -639,7 +647,9 @@ export function UploadModal({
               </p>
               <button
                 type="button"
-                onClick={() => showToast("Google Drive integration coming soon!")}
+                onClick={() =>
+                  showToast("Google Drive integration coming soon!")
+                }
                 className="mt-4 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full font-medium transition-colors"
               >
                 Connect Drive
