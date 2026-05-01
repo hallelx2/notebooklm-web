@@ -1,34 +1,187 @@
+<div align="center">
+
 # notebooklm-web
 
-TypeScript / Next.js rewrite of the NotebookLM clone. Stack mirrors `voxtar-web`:
+**An open-source, self-hostable, local-first NotebookLM. Built end to end in four days.**
 
-- Next.js 16 (App Router) + React 19
-- Bun runtime / package manager
-- Drizzle ORM + Neon (serverless Postgres)
-- tRPC v11 + TanStack Query
-- Better Auth
-- Tailwind CSS v4
-- Biome (lint + format)
+Three-stage hybrid retrieval. Self-critiquing deep research. Two-voice audio overviews. Mind maps, flashcards, quizzes, study guides. Twelve AI providers with encrypted credentials. One Next.js app, one Postgres, one deploy.
 
-## Getting started
+[![Star](https://img.shields.io/github/stars/hallelx2/notebooklm-web?style=flat-square&logo=github&color=2563EB)](https://github.com/hallelx2/notebooklm-web/stargazers)
+[![Fork](https://img.shields.io/github/forks/hallelx2/notebooklm-web?style=flat-square&logo=github&color=2563EB)](https://github.com/hallelx2/notebooklm-web/network/members)
+[![License](https://img.shields.io/badge/license-MIT-2563EB?style=flat-square)](LICENSE)
+[![Whitepaper](https://img.shields.io/badge/whitepaper-45_pages-F59E0B?style=flat-square&logo=adobe-acrobat-reader&logoColor=white)](docs/demo/NotebookLM-in-Four-Days-Whitepaper.pdf)
+
+![demo](docs/demo/demo.gif)
+
+*A 28-second tour at 25× speed. Drop in a PDF, chat with citations, run multi-round web research, generate a two-host audio overview, and walk a mind map of your sources.*
+
+</div>
+
+---
+
+## What you get
+
+- 📚 **Drop in any source** — PDF, web link, pasted text, or audio. Every source walks the same parse → chunk → embed → store pipe.
+- 💬 **Chat with citations** — three-stage retrieval (query expansion → hybrid pgvector + keyword → LLM rerank). Every claim cites the chunk it came from. Click a citation to jump to the source.
+- 🔬 **Deep research** — multi-round web research with self-critique. The agent plans sub-questions aware of your existing notebook, fetches sources via Exa or Tavily, summarises, drafts the report section by section, scores its own quality, fills gaps in a second round, and cross-references every claim. Output saves as a new source you can chat with.
+- 🎙️ **Two-voice audio overviews** — Deepgram Aura's Orion + Asteria voices, scripted as a podcast conversation, rendered as MP3.
+- 🧠 **Studio outputs** — mind maps (markmap), flashcards, quizzes (with scoring), study guides, briefing docs, FAQs, timelines, and user-authored notes. Eight kinds, one table.
+- 🔌 **Twelve AI providers** — OpenAI, Anthropic, Google Gemini, Mistral, Cohere, Voyage, Groq, Ollama (self-hosted), OpenRouter, Together AI, xAI, and any OpenAI-compatible endpoint. Switch providers per user, no code changes.
+- 🔐 **Encrypted credentials** — AES-GCM at rest with versioned keys and userId as AAD. Plaintext API keys never live in the database.
+- 📐 **Multi-dimensional embeddings** — sibling tables for 768/1024/1536/3072 dims. Switching embedding models is non-destructive.
+- 📡 **Streaming everywhere** — NDJSON over POST for orchestration, AI SDK streamText for chat. Every step the agent takes is a UI event.
+
+## Why this project
+
+Most "build a NotebookLM clone" tutorials ship a 200-line demo that breaks the moment you put it in front of a real user. This is the opposite — a real, shipped, opinionated implementation that you can study, fork, run yourself, or use as the substrate for your own product.
+
+The full architectural breakdown — every chapter, every code path, every decision — is in **[the 45-page whitepaper](docs/demo/NotebookLM-in-Four-Days-Whitepaper.pdf)**. If you are building anything RAG-flavoured right now, that PDF is the cheat sheet.
+
+## ⭐ If this is useful
+
+- **Star the repo** — the cheapest signal that helps the project find more builders
+- **Fork it** — clone it, run it, rip out what you do not need, ship your version
+- **Open issues** — bug reports, feature requests, architectural feedback all welcome
+- **Send PRs** — see the Contributing section below
+- **Share it** — if you build something on top, link back so others can find your work
+
+## Quick start
+
+You will need: [Bun](https://bun.sh), a [Neon](https://neon.tech) Postgres database (or any Postgres with pgvector), and an API key from at least one of the supported AI providers.
 
 ```bash
+git clone https://github.com/hallelx2/notebooklm-web.git
+cd notebooklm-web
 bun install
-bun run db:push
-bun run dev
+cp .env.example .env       # fill in DATABASE_URL, AUTH_SECRET, MASTER_KEY_V1
+bun run db:push            # push the Drizzle schema + create pgvector extension
+bun run db:hnsw            # create HNSW indexes on the embedding sibling tables
+bun run dev                # http://localhost:3000
 ```
 
-Copy `.env.example` to `.env` and fill it in (the seed `.env` carried over from the Python app is already here for local dev).
+First-time signup walks you through picking a chat provider and an embedding provider in `/settings`. Drop in your API keys, pick your models, and start building notebooks.
 
-## Layout
+## Stack
+
+| Layer | Tool | Notes |
+|---|---|---|
+| Framework | **Next.js 16** | App Router, Route Handlers for streaming, Server Components |
+| Runtime | **Bun** | Package manager + dev server |
+| Auth | **Better Auth** | Sessions, OAuth, email/password |
+| Database | **Drizzle + Neon Postgres** | Serverless HTTP, branching, pgvector |
+| Vectors | **pgvector** ×4 sibling tables | 768 / 1024 / 1536 / 3072 dim, HNSW cosine indexes |
+| AI Layer | **AI SDK v6** | Uniform `LanguageModel` interface across 12 providers |
+| RPC | **tRPC v11** | Notebooks, sources, studio, providers, AI config |
+| TTS | **Deepgram Aura** | Orion (male) + Asteria (female) for two-host audio |
+| Web search | **Exa + Tavily** | Pluggable, fallback via `SEARCH_PROVIDER_ORDER` |
+| Web extract | **@mozilla/readability** | Article extraction from arbitrary URLs |
+| Storage | **S3 / R2 / Supabase** | Pluggable behind `StorageService` |
+| Mind maps | **markmap-lib** | Markdown headings → interactive SVG |
+| UI | **React 19 + Tailwind v4** | Three-pane workbench, modal viewers per studio kind |
+
+## Architecture at a glance
+
+```
+Browser                    Next.js Server                Shared Libs            External
+
+Notebook UI         →      /api/chat (streamText)    →   lib/retrieve.ts   →   12 LLM providers
+3-pane workbench    →      /api/deep-research        →   lib/ingest        →   Deepgram Aura
+sources · chat ·    →      /api/studio/audio         →   lib/ai/factory    →   Neon Postgres
+studio              →      tRPC routers                                         + pgvector ×4
+```
+
+Read the **[whitepaper](docs/demo/NotebookLM-in-Four-Days-Whitepaper.pdf)** for the full version — sixteen chapters, ~45 pages, every decision explained.
+
+## Project layout
 
 ```
 src/
-  app/         # Next routes (landing, /notebooks, /api/trpc, /api/auth)
-  components/  # ui / shared / layout
-  db/          # Drizzle schema + connection
-  lib/         # auth, utils
-  module/      # Feature modules grouped by domain (landing, notebooks)
-  server/      # tRPC root + routers
-  trpc/        # client + provider
+  app/
+    api/                 # Streaming Route Handlers (chat, deep-research, studio, upload, reembed)
+    auth/                # Sign-in, sign-up
+    notebooks/           # Notebook list + workbench
+    settings/            # Provider config, model picker, profile
+  components/            # ui / shared / layout
+  db/
+    schema.ts            # Drizzle schema (users, notebooks, sources, chunks, embeddings ×4, etc.)
+    migrate-hnsw.ts      # HNSW index migrations
+  lib/
+    retrieve.ts          # The three-stage retrieval pipeline (229 lines)
+    ingest/              # parse · chunk · embed · store
+    ai/
+      providers.ts       # The 12-provider registry
+      factory.ts         # User-scoped chat/embed model factory
+    crypto/              # AES-GCM encrypted credentials
+    auth.ts              # Better Auth config
+  module/                # Feature modules (notebook, notebooks, settings, auth, landing)
+  server/
+    routers/             # tRPC routers (notebook, source, studio, provider, aiConfig, message)
+docs/
+  demo/                  # Demo GIF, MP4, whitepaper PDF
 ```
+
+## Configuration
+
+All env vars live in `.env`. The minimum for local development:
+
+```bash
+DATABASE_URL="postgres://..."             # Neon, Supabase, or any Postgres with pgvector
+AUTH_SECRET="..."                          # 32+ random bytes; openssl rand -base64 32
+MASTER_KEY_V1="..."                        # 32 bytes for AES-GCM credential encryption
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
+
+Optional but useful:
+
+```bash
+DEEPGRAM_API_KEY="..."                     # Required for audio overviews
+EXA_API_KEY="..."                          # For deep-research web search
+TAVILY_API_KEY="..."                       # Fallback web search
+SEARCH_PROVIDER_ORDER="exa,tavily"         # Comma-separated priority order
+SUPABASE_URL="..."                         # If using Supabase Storage
+SUPABASE_SERVICE_ROLE_KEY="..."
+S3_*                                       # If using S3 / R2 instead
+```
+
+User AI provider API keys are **not** environment variables — users add them through the settings UI per-user, encrypted at rest.
+
+## Development
+
+```bash
+bun run dev             # Next.js dev server
+bun run db:push         # Push Drizzle schema changes
+bun run db:hnsw         # Create HNSW indexes (idempotent)
+bun run db:reembed      # Backfill embeddings under a different model
+bun run lint            # Biome lint
+bun run format          # Biome format
+bun run typecheck       # tsc --noEmit
+bun run build           # Production build
+```
+
+## Deploy
+
+Built for **Vercel**. Push to a connected GitHub repo, set env vars in the Vercel dashboard, and deploy. The streaming routes use `maxDuration: 300` to fit deep-research and audio-generation runs comfortably under the function timeout.
+
+For self-hosting, the app runs anywhere Node 20+ runs — Docker, Render, Fly, your own VM. The only hard requirement is a Postgres with pgvector enabled.
+
+## Contributing
+
+Yes please. PRs welcome for:
+
+- New AI providers (the registry is one file)
+- New studio output kinds (one prompt + one renderer)
+- New embedding-dim sibling tables (768/1024/1536/3072 cover most providers; 4096 and beyond are interesting)
+- New web-search providers (Exa and Tavily are pluggable)
+- Bug fixes, docs, tests, accessibility improvements
+
+For non-trivial changes, open an issue first to discuss the shape.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Use it, fork it, ship it, charge for it. If you build something cool, I would love to hear about it.
+
+## Credits
+
+Built by [Halleluyah Darasimi Oludele](https://github.com/hallelx2) between 2026-04-21 and 2026-04-24. The whitepaper is **Field Notes Issue 01** from my open-source notes.
+
+If this saved you a week, [say hi](mailto:halleluyaholudele@gmail.com) or follow on [GitHub](https://github.com/hallelx2).
