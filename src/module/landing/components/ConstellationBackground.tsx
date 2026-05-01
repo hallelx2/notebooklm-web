@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
 import { useTheme } from "next-themes";
+import { useCallback, useEffect, useRef } from "react";
 
 // Cluster colors for dark and light themes
 const CLUSTER_COLORS_DARK = [
@@ -187,9 +187,7 @@ export function ConstellationBackground() {
       ctx!.clearRect(0, 0, W, H);
 
       const isDark = isDarkRef.current;
-      const clusterColors = isDark
-        ? CLUSTER_COLORS_DARK
-        : CLUSTER_COLORS_LIGHT;
+      const clusterColors = isDark ? CLUSTER_COLORS_DARK : CLUSTER_COLORS_LIGHT;
       const baseNodeAlpha = isDark ? 1 : 0.7;
       const baseEdgeAlpha = isDark ? 0.04 : 0.03;
 
@@ -230,10 +228,7 @@ export function ConstellationBackground() {
 
       // Draw query edges
       if (queryState.active && queryState.node) {
-        queryState.node.alpha = Math.min(
-          1,
-          queryState.node.alpha + dt * 0.004
-        );
+        queryState.node.alpha = Math.min(1, queryState.node.alpha + dt * 0.004);
         for (const edge of queryState.edges) {
           const elapsed = queryState.timer / 1000 - edge.delay;
           if (elapsed < 0) continue;
@@ -242,11 +237,9 @@ export function ConstellationBackground() {
           const col = clusterColors[n.cluster];
 
           const ex =
-            queryState.node.x +
-            (n.x - queryState.node.x) * edge.progress;
+            queryState.node.x + (n.x - queryState.node.x) * edge.progress;
           const ey =
-            queryState.node.y +
-            (n.y - queryState.node.y) * edge.progress;
+            queryState.node.y + (n.y - queryState.node.y) * edge.progress;
           ctx!.strokeStyle = col + 0.25 * edge.progress + ")";
           ctx!.lineWidth = 1;
           ctx!.beginPath();
@@ -270,13 +263,13 @@ export function ConstellationBackground() {
           0,
           qn.x * W,
           qn.y * H,
-          qr * 3
+          qr * 3,
         );
         grad.addColorStop(
           0,
           isDark
             ? "rgba(123,143,239," + 0.4 * qn.alpha + ")"
-            : "rgba(79,91,213," + 0.3 * qn.alpha + ")"
+            : "rgba(79,91,213," + 0.3 * qn.alpha + ")",
         );
         grad.addColorStop(1, "transparent");
         ctx!.fillStyle = grad;
@@ -305,8 +298,7 @@ export function ConstellationBackground() {
 
         const col = clusterColors[n.cluster];
         const alpha =
-          (n.baseAlpha + mGlow * 0.3 + n.retrieveAlpha * 0.5) *
-          baseNodeAlpha;
+          (n.baseAlpha + mGlow * 0.3 + n.retrieveAlpha * 0.5) * baseNodeAlpha;
 
         if (n.retrieved || mGlow > 0.1) {
           const glowR = n.r * 4;
@@ -316,7 +308,7 @@ export function ConstellationBackground() {
             0,
             n.x * W,
             n.y * H,
-            glowR
+            glowR,
           );
           haloGrad.addColorStop(0, col + alpha * 0.4 + ")");
           haloGrad.addColorStop(1, "transparent");
@@ -333,7 +325,7 @@ export function ConstellationBackground() {
           n.y * H,
           n.r * (n.retrieved ? 1.8 : 1),
           0,
-          Math.PI * 2
+          Math.PI * 2,
         );
         ctx!.fill();
       }

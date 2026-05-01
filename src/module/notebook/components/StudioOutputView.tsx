@@ -109,10 +109,7 @@ function FlashcardsContent({
       </div>
 
       {/* Card with flip */}
-      <div
-        className="w-full perspective-[800px] cursor-pointer"
-        onClick={flip}
-      >
+      <div className="w-full perspective-[800px] cursor-pointer" onClick={flip}>
         <div
           className={`relative w-full min-h-[260px] transition-transform duration-500 transform-style-3d ${
             isFlipped ? "[transform:rotateY(180deg)]" : ""
@@ -131,7 +128,9 @@ function FlashcardsContent({
               {card.front}
             </p>
             <span className="mt-6 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">touch_app</span>
+              <span className="material-symbols-outlined text-sm">
+                touch_app
+              </span>
               Tap to reveal answer
             </span>
           </div>
@@ -148,7 +147,9 @@ function FlashcardsContent({
               {card.back}
             </p>
             <span className="mt-6 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">touch_app</span>
+              <span className="material-symbols-outlined text-sm">
+                touch_app
+              </span>
               Tap to see question
             </span>
           </div>
@@ -159,7 +160,10 @@ function FlashcardsContent({
       <div className="flex items-center gap-4 mt-6">
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); goPrev(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            goPrev();
+          }}
           disabled={current === 0}
           className="w-10 h-10 rounded-full bg-element-light dark:bg-element-dark border border-border-light dark:border-border-dark flex items-center justify-center transition-colors hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
         >
@@ -170,7 +174,10 @@ function FlashcardsContent({
 
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); flip(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            flip();
+          }}
           className="px-4 py-2 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-medium hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-colors"
         >
           Flip card
@@ -178,7 +185,10 @@ function FlashcardsContent({
 
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); goNext(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            goNext();
+          }}
           disabled={current === total - 1}
           className="w-10 h-10 rounded-full bg-element-light dark:bg-element-dark border border-border-light dark:border-border-dark flex items-center justify-center transition-colors hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
         >
@@ -369,10 +379,7 @@ function QuizContent({
                   ? question.question.slice(0, 60) + "..."
                   : question.question;
               return (
-                <div
-                  key={qIdx}
-                  className="flex items-start gap-3 px-4 py-2.5"
-                >
+                <div key={qIdx} className="flex items-start gap-3 px-4 py-2.5">
                   <span
                     className={`material-symbols-outlined text-base mt-0.5 shrink-0 ${isCorrect ? "text-emerald-500" : "text-red-500"}`}
                   >
@@ -912,9 +919,7 @@ export function StudioOutputView({ output, onNodeClick }: Props) {
   if (typeof content === "object" && "text" in content) {
     return (
       <div className="p-4">
-        <TextContent
-          text={String((content as Record<string, unknown>).text)}
-        />
+        <TextContent text={String((content as Record<string, unknown>).text)} />
       </div>
     );
   }

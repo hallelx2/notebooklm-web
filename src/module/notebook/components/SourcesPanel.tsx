@@ -147,9 +147,7 @@ export function SourcesPanel({
             }}
             className="w-full bg-element-light dark:bg-element-dark border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-blue-500/50 placeholder-gray-500 dark:placeholder-gray-400 text-gray-800 dark:text-gray-200"
             placeholder={
-              searchMode === "web"
-                ? "Search the web..."
-                : "Search my files..."
+              searchMode === "web" ? "Search the web..." : "Search my files..."
             }
             type="text"
           />
@@ -208,76 +206,77 @@ export function SourcesPanel({
                   : "text-gray-500 dark:text-gray-400 hover:text-green-700 dark:hover:text-green-300"
               }`}
             >
-              <span className="material-symbols-outlined text-xs">
-                science
-              </span>
+              <span className="material-symbols-outlined text-xs">science</span>
               Deep
             </button>
           </div>
         )}
 
-        {searchMode === "web" && (results.length > 0 || searchWeb.isPending) && (
-          <div className="mt-2 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col max-h-[60vh]">
-            <div className="flex items-center justify-between mb-2 shrink-0">
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                {searchWeb.isPending
-                  ? "Searching..."
-                  : `${results.length} result(s)`}
-              </span>
-              {results.length > 0 && (
-                <button
-                  type="button"
-                  onClick={addAll}
-                  disabled={addFromUrl.isPending}
-                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-full font-medium transition-colors disabled:opacity-50"
-                >
-                  Add All
-                </button>
-              )}
-            </div>
-            <div className="space-y-2 overflow-y-auto flex-1">
-              {results.map((r) => (
-                <div
-                  key={r.url}
-                  className="p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-xs"
-                >
-                  <p className="font-medium text-gray-800 dark:text-gray-200 line-clamp-2">
-                    {r.title}
-                  </p>
-                  <p className="text-gray-500 line-clamp-2 mt-1">{r.snippet}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <a
-                      href={r.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-blue-600 hover:underline truncate max-w-[60%]"
-                    >
-                      {new URL(r.url).hostname}
-                    </a>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          await addFromUrl.mutateAsync({
-                            notebookId,
-                            url: r.url,
-                            title: r.title,
-                          });
-                          showToast(`Added ${r.title}`);
-                        } catch (e) {
-                          showToast((e as Error).message);
-                        }
-                      }}
-                      className="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200"
-                    >
-                      Add
-                    </button>
+        {searchMode === "web" &&
+          (results.length > 0 || searchWeb.isPending) && (
+            <div className="mt-2 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col max-h-[60vh]">
+              <div className="flex items-center justify-between mb-2 shrink-0">
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                  {searchWeb.isPending
+                    ? "Searching..."
+                    : `${results.length} result(s)`}
+                </span>
+                {results.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={addAll}
+                    disabled={addFromUrl.isPending}
+                    className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-full font-medium transition-colors disabled:opacity-50"
+                  >
+                    Add All
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2 overflow-y-auto flex-1">
+                {results.map((r) => (
+                  <div
+                    key={r.url}
+                    className="p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-xs"
+                  >
+                    <p className="font-medium text-gray-800 dark:text-gray-200 line-clamp-2">
+                      {r.title}
+                    </p>
+                    <p className="text-gray-500 line-clamp-2 mt-1">
+                      {r.snippet}
+                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <a
+                        href={r.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 hover:underline truncate max-w-[60%]"
+                      >
+                        {new URL(r.url).hostname}
+                      </a>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await addFromUrl.mutateAsync({
+                              notebookId,
+                              url: r.url,
+                              title: r.title,
+                            });
+                            showToast(`Added ${r.title}`);
+                          } catch (e) {
+                            showToast((e as Error).message);
+                          }
+                        }}
+                        className="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200"
+                      >
+                        Add
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         <div className="flex flex-col gap-2 mt-2">
           {list.isPending && (
@@ -316,12 +315,17 @@ export function SourcesPanel({
                     ? "bg-red-50/50 dark:bg-red-500/5 border border-red-200/50 dark:border-red-500/10"
                     : ""
                 } ${expandedSourceId === s.id ? "bg-gray-50 dark:bg-gray-800" : ""}`}
-                onClick={() => setExpandedSourceId(expandedSourceId === s.id ? null : s.id)}
+                onClick={() =>
+                  setExpandedSourceId(expandedSourceId === s.id ? null : s.id)
+                }
               >
                 <input
                   type="checkbox"
                   checked={selectedSourceIds.includes(s.id)}
-                  onChange={(e) => { e.stopPropagation(); toggleSelected(s.id); }}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    toggleSelected(s.id);
+                  }}
                   onClick={(e) => e.stopPropagation()}
                   className="shrink-0"
                   disabled={s.status === "error"}
@@ -347,22 +351,29 @@ export function SourcesPanel({
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{s.title}</p>
-                  <p className={`text-[10px] capitalize ${
-                    s.status === "error"
-                      ? "text-red-500 dark:text-red-400"
-                      : "text-gray-500"
-                  }`}>
+                  <p
+                    className={`text-[10px] capitalize ${
+                      s.status === "error"
+                        ? "text-red-500 dark:text-red-400"
+                        : "text-gray-500"
+                    }`}
+                  >
                     {s.status}
                     {s.error ? ` — ${s.error.slice(0, 60)}` : ""}
                   </p>
                 </div>
-                <span className={`material-symbols-outlined text-sm text-gray-400 transition-transform ${expandedSourceId === s.id ? "rotate-180" : ""}`}>
+                <span
+                  className={`material-symbols-outlined text-sm text-gray-400 transition-transform ${expandedSourceId === s.id ? "rotate-180" : ""}`}
+                >
                   expand_more
                 </span>
                 {s.status === "error" && (
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); retry.mutate({ id: s.id }); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      retry.mutate({ id: s.id });
+                    }}
                     disabled={retry.isPending}
                     className="p-1 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                     title="Retry"
@@ -374,7 +385,10 @@ export function SourcesPanel({
                 )}
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); del.mutate({ id: s.id }); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    del.mutate({ id: s.id });
+                  }}
                   className={`p-1 transition-opacity ${
                     s.status === "error"
                       ? "opacity-100 text-red-400 hover:text-red-600"
@@ -392,10 +406,19 @@ export function SourcesPanel({
               {expandedSourceId === s.id && s.content && (
                 <div className="ml-8 mr-2 mb-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 max-h-[40vh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Source Content</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                      Source Content
+                    </span>
                     {s.uri && (
-                      <a href={s.uri} target="_blank" rel="noreferrer" className="text-[10px] text-blue-500 hover:underline flex items-center gap-0.5">
-                        <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                      <a
+                        href={s.uri}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-blue-500 hover:underline flex items-center gap-0.5"
+                      >
+                        <span className="material-symbols-outlined text-[12px]">
+                          open_in_new
+                        </span>
                         Open
                       </a>
                     )}
@@ -403,7 +426,10 @@ export function SourcesPanel({
                   <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
                     {s.content.slice(0, 5000)}
                     {s.content.length > 5000 && (
-                      <span className="text-gray-400 italic"> ... ({s.content.length.toLocaleString()} chars total)</span>
+                      <span className="text-gray-400 italic">
+                        {" "}
+                        ... ({s.content.length.toLocaleString()} chars total)
+                      </span>
                     )}
                   </div>
                 </div>
@@ -413,9 +439,13 @@ export function SourcesPanel({
               {expandedSourceId === s.id && !s.content && (
                 <div className="ml-8 mr-2 mb-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
                   <p className="text-xs text-gray-400 italic">
-                    {s.status === "error" ? "Content not available (source failed to process)" :
-                     s.status === "pending" || s.status === "parsing" || s.status === "embedding" ? "Content is still being processed..." :
-                     "No content available"}
+                    {s.status === "error"
+                      ? "Content not available (source failed to process)"
+                      : s.status === "pending" ||
+                          s.status === "parsing" ||
+                          s.status === "embedding"
+                        ? "Content is still being processed..."
+                        : "No content available"}
                   </p>
                 </div>
               )}

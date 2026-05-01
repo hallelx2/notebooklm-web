@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useCallback } from "react";
 import { useTheme } from "next-themes";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { ConstellationBackground } from "../components/ConstellationBackground";
 import { Footer } from "../components/Footer";
-import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 /* ------------------------------------------------------------------ */
 /* Data                                                                 */
@@ -121,21 +121,88 @@ const GANTT_ROWS = [
 ];
 
 const TOOLS = [
-  { icon: "account_tree", label: "Mind Map", color: "#818cf8", preview: "Nodes · Branches\nClick to explore", span: false },
-  { icon: "quiz", label: "Quiz", color: "#fb923c", preview: "10 questions\nAI study summary", span: false },
-  { icon: "style", label: "Flashcards", color: "#f472b6", preview: "Flip cards\nArrow key nav", span: false },
-  { icon: "menu_book", label: "Study Guide", color: "var(--landing-blue)", preview: "Key concepts\nReview questions", span: false },
-  { icon: "timeline", label: "Timeline", color: "var(--landing-teal)", preview: "Chronological\nKey events", span: false },
-  { icon: "help", label: "FAQ", color: "var(--landing-amber)", preview: "15 questions\nDetailed answers", span: false },
-  { icon: "description", label: "Briefing Document", color: "#34d399", preview: "Executive summary · Findings · Actions", span: true },
+  {
+    icon: "account_tree",
+    label: "Mind Map",
+    color: "#818cf8",
+    preview: "Nodes · Branches\nClick to explore",
+    span: false,
+  },
+  {
+    icon: "quiz",
+    label: "Quiz",
+    color: "#fb923c",
+    preview: "10 questions\nAI study summary",
+    span: false,
+  },
+  {
+    icon: "style",
+    label: "Flashcards",
+    color: "#f472b6",
+    preview: "Flip cards\nArrow key nav",
+    span: false,
+  },
+  {
+    icon: "menu_book",
+    label: "Study Guide",
+    color: "var(--landing-blue)",
+    preview: "Key concepts\nReview questions",
+    span: false,
+  },
+  {
+    icon: "timeline",
+    label: "Timeline",
+    color: "var(--landing-teal)",
+    preview: "Chronological\nKey events",
+    span: false,
+  },
+  {
+    icon: "help",
+    label: "FAQ",
+    color: "var(--landing-amber)",
+    preview: "15 questions\nDetailed answers",
+    span: false,
+  },
+  {
+    icon: "description",
+    label: "Briefing Document",
+    color: "#34d399",
+    preview: "Executive summary · Findings · Actions",
+    span: true,
+  },
 ];
 
 const TESTIMONIALS = [
-  { q: "“It replaced a week of reading with a single afternoon. Every answer is sourced — I can trace every claim to the exact page.”", name: "Adaeze O.", initials: "AO", role: "PhD, Computational Biology" },
-  { q: "“The audio overview is incredible. I listen to papers as podcasts on my commute. Sounds like experts, not robots.”", name: "Marcus K.", initials: "MK", role: "Postdoc, Molecular Medicine" },
-  { q: "“Deep Research plans queries, finds papers, reads them, writes a cited report. Days of work in minutes.”", name: "Sofia L.", initials: "SL", role: "Research Lead, Public Health" },
-  { q: "“The mind map feature transformed how I organize literature reviews. Click a node and it explains the concept.”", name: "James W.", initials: "JW", role: "Professor, Neuroscience" },
-  { q: "“I generated a quiz and it caught gaps in my understanding I didn’t know I had. The AI study summary was spot-on.”", name: "Riya P.", initials: "RP", role: "Medical Student, Year 3" },
+  {
+    q: "“It replaced a week of reading with a single afternoon. Every answer is sourced — I can trace every claim to the exact page.”",
+    name: "Adaeze O.",
+    initials: "AO",
+    role: "PhD, Computational Biology",
+  },
+  {
+    q: "“The audio overview is incredible. I listen to papers as podcasts on my commute. Sounds like experts, not robots.”",
+    name: "Marcus K.",
+    initials: "MK",
+    role: "Postdoc, Molecular Medicine",
+  },
+  {
+    q: "“Deep Research plans queries, finds papers, reads them, writes a cited report. Days of work in minutes.”",
+    name: "Sofia L.",
+    initials: "SL",
+    role: "Research Lead, Public Health",
+  },
+  {
+    q: "“The mind map feature transformed how I organize literature reviews. Click a node and it explains the concept.”",
+    name: "James W.",
+    initials: "JW",
+    role: "Professor, Neuroscience",
+  },
+  {
+    q: "“I generated a quiz and it caught gaps in my understanding I didn’t know I had. The AI study summary was spot-on.”",
+    name: "Riya P.",
+    initials: "RP",
+    role: "Medical Student, Year 3",
+  },
 ];
 
 const DEMO_AI_HTML =
@@ -259,13 +326,16 @@ export function LandingView() {
       timeouts.push(
         setTimeout(() => {
           const sp = document.createElement("span");
-          sp.className = s.cls === "done" ? "text-[var(--landing-pop)]" : "text-[var(--landing-purple)] animate-pulse";
+          sp.className =
+            s.cls === "done"
+              ? "text-[var(--landing-pop)]"
+              : "text-[var(--landing-purple)] animate-pulse";
           sp.innerHTML = s.text;
           sp.style.opacity = "0";
           sp.style.animation = "stepIn 0.3s ease forwards";
           if (i > 0) pipe.appendChild(document.createElement("br"));
           pipe.appendChild(sp);
-        }, s.delay)
+        }, s.delay),
       );
     });
 
@@ -283,7 +353,8 @@ export function LandingView() {
         }
         msg.innerHTML = htmlStr.slice(0, nextIdx);
         charIdx = nextIdx;
-        const delay = htmlStr[charIdx - 1] === ">" ? 5 : 25 + Math.random() * 18;
+        const delay =
+          htmlStr[charIdx - 1] === ">" ? 5 : 25 + Math.random() * 18;
         timeouts.push(setTimeout(typeChar, delay));
       }
     }
@@ -325,11 +396,17 @@ export function LandingView() {
             current += step;
             if (current >= target) {
               current = target;
-              if (target >= 1000) el.textContent = prefix + (target / 1000).toFixed(0) + "K+";
-              else el.textContent = prefix + current.toFixed(decimal) + (decimal && target > 1 ? "%" : "");
+              if (target >= 1000)
+                el.textContent = prefix + (target / 1000).toFixed(0) + "K+";
+              else
+                el.textContent =
+                  prefix +
+                  current.toFixed(decimal) +
+                  (decimal && target > 1 ? "%" : "");
               return;
             }
-            if (target >= 1000) el.textContent = prefix + Math.floor(current / 1000) + "K+";
+            if (target >= 1000)
+              el.textContent = prefix + Math.floor(current / 1000) + "K+";
             else el.textContent = prefix + current.toFixed(decimal);
             requestAnimationFrame(tick);
           }
@@ -337,10 +414,12 @@ export function LandingView() {
           observer.unobserve(el);
         });
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
-    container.querySelectorAll("[data-target]").forEach((el) => observer.observe(el));
+    container
+      .querySelectorAll("[data-target]")
+      .forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
   }, []);
@@ -353,10 +432,12 @@ export function LandingView() {
           if (entry.isIntersecting) entry.target.classList.add("vis");
         });
       },
-      { threshold: 0.06, rootMargin: "0px 0px -40px 0px" }
+      { threshold: 0.06, rootMargin: "0px 0px -40px 0px" },
     );
 
-    document.querySelectorAll(".landing-reveal,.step-card,.rag-row").forEach((el) => observer.observe(el));
+    document
+      .querySelectorAll(".landing-reveal,.step-card,.rag-row")
+      .forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
   }, [mounted]);
@@ -373,9 +454,11 @@ export function LandingView() {
           observer.unobserve(entry.target);
         });
       },
-      { threshold: 0.3 }
+      { threshold: 0.3 },
     );
-    document.querySelectorAll(".gantt-container").forEach((el) => observer.observe(el));
+    document
+      .querySelectorAll(".gantt-container")
+      .forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, [mounted]);
 
@@ -392,7 +475,7 @@ export function LandingView() {
           observer.unobserve(entry.target);
         });
       },
-      { threshold: 0.3 }
+      { threshold: 0.3 },
     );
     document.querySelectorAll(".rag-col").forEach((el) => observer.observe(el));
     return () => observer.disconnect();
@@ -401,7 +484,10 @@ export function LandingView() {
   /* --- Keyboard shortcut --- */
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.key === "s" || e.key === "S") && !(e.target instanceof HTMLInputElement)) {
+      if (
+        (e.key === "s" || e.key === "S") &&
+        !(e.target instanceof HTMLInputElement)
+      ) {
         window.location.href = "/auth/sign-up";
       }
     }
@@ -414,7 +500,9 @@ export function LandingView() {
     const playing = !waveIsPlaying;
     setWaveIsPlaying(playing);
     waveBarsRef.current?.querySelectorAll(".wave-bar").forEach((b) => {
-      (b as HTMLElement).style.animationPlayState = playing ? "running" : "paused";
+      (b as HTMLElement).style.animationPlayState = playing
+        ? "running"
+        : "paused";
     });
     if (playing) {
       waveIntervalRef.current = setInterval(() => {
@@ -425,7 +513,8 @@ export function LandingView() {
         if (waveThumbRef.current) waveThumbRef.current.style.left = p + "%";
         const s = Math.floor((p / 100) * 527);
         if (waveTimeRef.current)
-          waveTimeRef.current.textContent = Math.floor(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
+          waveTimeRef.current.textContent =
+            Math.floor(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
       }, 200);
     } else {
       if (waveIntervalRef.current) clearInterval(waveIntervalRef.current);
@@ -461,7 +550,8 @@ export function LandingView() {
         ref={cursorGlowRef}
         className="fixed w-[500px] h-[500px] rounded-full pointer-events-none z-[2] opacity-0 hover-parent-glow"
         style={{
-          background: "radial-gradient(circle, var(--landing-pop-glow), transparent 70%)",
+          background:
+            "radial-gradient(circle, var(--landing-pop-glow), transparent 70%)",
           transform: "translate(-50%, -50%)",
           transition: "opacity 0.3s",
         }}
@@ -482,19 +572,27 @@ export function LandingView() {
         style={{
           borderBottom: "1px solid var(--landing-line)",
           backdropFilter: scrolled ? "blur(20px) saturate(1.6)" : "blur(8px)",
-          background: scrolled ? "var(--landing-nav-bg-s)" : "var(--landing-nav-bg)",
+          background: scrolled
+            ? "var(--landing-nav-bg-s)"
+            : "var(--landing-nav-bg)",
         }}
       >
         <div
           className="mx-auto flex items-center justify-between"
           style={{ maxWidth: 1400, padding: "0 40px", height: 56 }}
         >
-          <Link href="/" className="flex items-center gap-2.5 hover:scale-[1.03] transition-transform">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 hover:scale-[1.03] transition-transform"
+          >
             <div
               className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center"
               style={{ background: "var(--landing-pop)" }}
             >
-              <span className="material-symbols-outlined icon-filled" style={{ fontSize: 14, color: "white" }}>
+              <span
+                className="material-symbols-outlined icon-filled"
+                style={{ fontSize: 14, color: "white" }}
+              >
                 book_2
               </span>
             </div>
@@ -514,8 +612,12 @@ export function LandingView() {
               href="#"
               className="text-[13px] px-3.5 py-[7px] rounded-[6px] transition-colors hidden md:inline-block"
               style={{ color: "var(--landing-mid)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-ink)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-mid)")}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.color = "var(--landing-ink)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.color = "var(--landing-mid)")
+              }
             >
               Features
             </Link>
@@ -523,8 +625,12 @@ export function LandingView() {
               href="#"
               className="text-[13px] px-3.5 py-[7px] rounded-[6px] transition-colors hidden md:inline-block"
               style={{ color: "var(--landing-mid)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-ink)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-mid)")}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.color = "var(--landing-ink)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.color = "var(--landing-mid)")
+              }
             >
               Docs
             </Link>
@@ -534,8 +640,12 @@ export function LandingView() {
               rel="noreferrer"
               className="text-[13px] px-3.5 py-[7px] rounded-[6px] transition-colors hidden md:inline-block"
               style={{ color: "var(--landing-mid)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-ink)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-mid)")}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.color = "var(--landing-ink)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.color = "var(--landing-mid)")
+              }
             >
               GitHub
             </a>
@@ -543,8 +653,12 @@ export function LandingView() {
               href="/auth/sign-in"
               className="text-[13px] px-3.5 py-[7px] rounded-[6px] transition-colors hidden md:inline-block"
               style={{ color: "var(--landing-mid)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-ink)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-mid)")}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.color = "var(--landing-ink)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.color = "var(--landing-mid)")
+              }
             >
               Sign in
             </Link>
@@ -564,7 +678,10 @@ export function LandingView() {
       </nav>
 
       {/* ==================== HERO ==================== */}
-      <section className="relative z-10 mx-auto" style={{ maxWidth: 1400, padding: "130px 40px 0" }}>
+      <section
+        className="relative z-10 mx-auto"
+        style={{ maxWidth: 1400, padding: "130px 40px 0" }}
+      >
         <div className="text-center mb-14">
           {/* Tag */}
           <div
@@ -582,7 +699,10 @@ export function LandingView() {
           >
             <span
               className="w-[5px] h-[5px] rounded-full"
-              style={{ background: "var(--landing-pop)", animation: "landingPulse 2s infinite" }}
+              style={{
+                background: "var(--landing-pop)",
+                animation: "landingPulse 2s infinite",
+              }}
             />
             PUBLIC PREVIEW v0.2
           </div>
@@ -609,7 +729,9 @@ export function LandingView() {
               {ROTATING_WORDS.map((w, i) => (
                 <span
                   key={w}
-                  ref={(el) => { wordRefs.current[i] = el; }}
+                  ref={(el) => {
+                    wordRefs.current[i] = el;
+                  }}
                   className={`word ${i === wordIndex ? "active" : ""} ${i === prevWordIndex ? "out" : ""}`}
                 >
                   {w}
@@ -645,11 +767,15 @@ export function LandingView() {
                   background: "var(--landing-pop)",
                   color: "white",
                   border: "none",
-                  boxShadow: "0 0 28px var(--landing-pop-glow), 0 2px 8px rgba(0,0,0,0.3)",
+                  boxShadow:
+                    "0 0 28px var(--landing-pop-glow), 0 2px 8px rgba(0,0,0,0.3)",
                 }}
                 onClick={handleRipple}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: 18 }}
+                >
                   arrow_forward
                 </span>
                 Start free
@@ -723,8 +849,12 @@ export function LandingView() {
                 : "0 60px 120px -20px rgba(0,0,0,0.35), 0 0 60px var(--landing-pop-glow)",
               transform: "rotateX(2deg)",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = "rotateX(0) scale(1.003)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "rotateX(2deg)")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.transform = "rotateX(0) scale(1.003)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.transform = "rotateX(2deg)")
+            }
           >
             {/* Window bar */}
             <div
@@ -734,9 +864,18 @@ export function LandingView() {
                 background: "var(--landing-surface)",
               }}
             >
-              <div className="w-2 h-2 rounded-full" style={{ background: "#ff5f57" }} />
-              <div className="w-2 h-2 rounded-full" style={{ background: "#febc2e" }} />
-              <div className="w-2 h-2 rounded-full" style={{ background: "#28c840" }} />
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ background: "#ff5f57" }}
+              />
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ background: "#febc2e" }}
+              />
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ background: "#28c840" }}
+              />
               <div
                 className="flex-1 text-center"
                 style={{
@@ -752,7 +891,10 @@ export function LandingView() {
             {/* Demo body */}
             <div className="grid grid-cols-1 md:grid-cols-[200px_1fr_200px] min-h-[400px]">
               {/* Sources col */}
-              <div className="p-[18px] text-[12px] border-b md:border-b-0 md:border-r" style={{ borderColor: "var(--landing-line)" }}>
+              <div
+                className="p-[18px] text-[12px] border-b md:border-b-0 md:border-r"
+                style={{ borderColor: "var(--landing-line)" }}
+              >
                 <div
                   className="flex items-center gap-1.5 mb-3.5"
                   style={{
@@ -764,26 +906,54 @@ export function LandingView() {
                   }}
                 >
                   Sources
-                  <span className="flex-1 h-px" style={{ background: "var(--landing-line)" }} />
+                  <span
+                    className="flex-1 h-px"
+                    style={{ background: "var(--landing-line)" }}
+                  />
                 </div>
                 {[
-                  { icon: "description", name: "Cervical_Cancer.pdf", hl: true, delay: "0.8s" },
-                  { icon: "link", name: "frontiersin.org", hl: false, delay: "1.0s" },
-                  { icon: "link", name: "pubmed.ncbi.nlm", hl: false, delay: "1.2s" },
-                  { icon: "description", name: "Multi-Omics.pdf", hl: false, delay: "1.4s" },
+                  {
+                    icon: "description",
+                    name: "Cervical_Cancer.pdf",
+                    hl: true,
+                    delay: "0.8s",
+                  },
+                  {
+                    icon: "link",
+                    name: "frontiersin.org",
+                    hl: false,
+                    delay: "1.0s",
+                  },
+                  {
+                    icon: "link",
+                    name: "pubmed.ncbi.nlm",
+                    hl: false,
+                    delay: "1.2s",
+                  },
+                  {
+                    icon: "description",
+                    name: "Multi-Omics.pdf",
+                    hl: false,
+                    delay: "1.4s",
+                  },
                 ].map((s) => (
                   <div
                     key={s.name}
                     className={`flex items-center gap-[7px] px-2 py-1.5 rounded-[6px] mb-[3px] text-[11px] transition-colors ${s.hl ? "" : ""}`}
                     style={{
                       color: "var(--landing-mid)",
-                      background: s.hl ? "var(--landing-tag-bg)" : "transparent",
+                      background: s.hl
+                        ? "var(--landing-tag-bg)"
+                        : "transparent",
                       opacity: 0,
                       transform: "translateX(-8px)",
                       animation: `srcIn 0.3s ease ${s.delay} forwards`,
                     }}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 14, color: "var(--landing-pop)" }}>
+                    <span
+                      className="material-symbols-outlined"
+                      style={{ fontSize: 14, color: "var(--landing-pop)" }}
+                    >
                       {s.icon}
                     </span>
                     <span>{s.name}</span>
@@ -798,7 +968,10 @@ export function LandingView() {
                     animation: "srcIn 0.3s ease 1.5s forwards",
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 14 }}
+                  >
                     science
                   </span>
                   Deep Research
@@ -818,7 +991,10 @@ export function LandingView() {
                   }}
                 >
                   Chat
-                  <span className="flex-1 h-px" style={{ background: "var(--landing-line)" }} />
+                  <span
+                    className="flex-1 h-px"
+                    style={{ background: "var(--landing-line)" }}
+                  />
                 </div>
                 <div
                   className="px-3.5 py-2.5 rounded-xl mb-3 max-w-[88%] text-[12px]"
@@ -855,7 +1031,10 @@ export function LandingView() {
               </div>
 
               {/* Studio col */}
-              <div className="p-[18px] text-[12px] border-t md:border-t-0 md:border-l" style={{ borderColor: "var(--landing-line)" }}>
+              <div
+                className="p-[18px] text-[12px] border-t md:border-t-0 md:border-l"
+                style={{ borderColor: "var(--landing-line)" }}
+              >
                 <div
                   className="flex items-center gap-1.5 mb-3.5"
                   style={{
@@ -867,22 +1046,54 @@ export function LandingView() {
                   }}
                 >
                   Studio
-                  <span className="flex-1 h-px" style={{ background: "var(--landing-line)" }} />
+                  <span
+                    className="flex-1 h-px"
+                    style={{ background: "var(--landing-line)" }}
+                  />
                 </div>
                 {[
-                  { icon: "headphones", label: "Audio Overview", hl: true, filled: true },
-                  { icon: "account_tree", label: "Mind Map", hl: false, filled: false },
+                  {
+                    icon: "headphones",
+                    label: "Audio Overview",
+                    hl: true,
+                    filled: true,
+                  },
+                  {
+                    icon: "account_tree",
+                    label: "Mind Map",
+                    hl: false,
+                    filled: false,
+                  },
                   { icon: "quiz", label: "Quiz", hl: false, filled: false },
-                  { icon: "style", label: "Flashcards", hl: false, filled: false },
-                  { icon: "menu_book", label: "Study Guide", hl: false, filled: false },
-                  { icon: "timeline", label: "Timeline", hl: false, filled: false },
+                  {
+                    icon: "style",
+                    label: "Flashcards",
+                    hl: false,
+                    filled: false,
+                  },
+                  {
+                    icon: "menu_book",
+                    label: "Study Guide",
+                    hl: false,
+                    filled: false,
+                  },
+                  {
+                    icon: "timeline",
+                    label: "Timeline",
+                    hl: false,
+                    filled: false,
+                  },
                 ].map((t) => (
                   <div
                     key={t.label}
                     className="flex items-center gap-[7px] px-[9px] py-[7px] rounded-[6px] mb-1 text-[11px] transition-colors"
                     style={{
-                      border: t.hl ? "1px solid rgba(123,143,239,0.12)" : "1px solid var(--landing-line)",
-                      background: t.hl ? "var(--landing-tag-bg)" : "transparent",
+                      border: t.hl
+                        ? "1px solid rgba(123,143,239,0.12)"
+                        : "1px solid var(--landing-line)",
+                      background: t.hl
+                        ? "var(--landing-tag-bg)"
+                        : "transparent",
                       color: "var(--landing-mid)",
                     }}
                   >
@@ -890,7 +1101,9 @@ export function LandingView() {
                       className={`material-symbols-outlined ${t.filled ? "icon-filled" : ""}`}
                       style={{
                         fontSize: 14,
-                        color: t.hl ? "var(--landing-pop)" : "var(--landing-dim)",
+                        color: t.hl
+                          ? "var(--landing-pop)"
+                          : "var(--landing-dim)",
                       }}
                     >
                       {t.icon}
@@ -907,7 +1120,10 @@ export function LandingView() {
       {/* Hero fade */}
       <div
         className="h-[100px] -mt-[100px] relative z-[11] pointer-events-none"
-        style={{ background: "linear-gradient(to bottom, transparent, var(--landing-bg))" }}
+        style={{
+          background:
+            "linear-gradient(to bottom, transparent, var(--landing-bg))",
+        }}
       />
 
       {/* ==================== DOUBLE MARQUEE ==================== */}
@@ -922,8 +1138,12 @@ export function LandingView() {
           <div className="inner">
             {[...MARQUEE_ROW_1, ...MARQUEE_ROW_1].map((item, i) => (
               <span key={i}>
-                <span className="px-[18px] transition-colors hover:text-[var(--landing-pop)]">{item}</span>
-                <span className="sep" style={{ color: "var(--landing-pop)" }}>/</span>
+                <span className="px-[18px] transition-colors hover:text-[var(--landing-pop)]">
+                  {item}
+                </span>
+                <span className="sep" style={{ color: "var(--landing-pop)" }}>
+                  /
+                </span>
               </span>
             ))}
           </div>
@@ -932,8 +1152,12 @@ export function LandingView() {
           <div className="inner">
             {[...MARQUEE_ROW_2, ...MARQUEE_ROW_2].map((item, i) => (
               <span key={i}>
-                <span className="px-[18px] transition-colors hover:text-[var(--landing-pop)]">{item}</span>
-                <span className="sep" style={{ color: "var(--landing-pop)" }}>/</span>
+                <span className="px-[18px] transition-colors hover:text-[var(--landing-pop)]">
+                  {item}
+                </span>
+                <span className="sep" style={{ color: "var(--landing-pop)" }}>
+                  /
+                </span>
               </span>
             ))}
           </div>
@@ -962,8 +1186,12 @@ export function LandingView() {
               background: "var(--landing-bg)",
               padding: "36px 20px",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--landing-bg2)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--landing-bg)")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "var(--landing-bg2)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "var(--landing-bg)")
+            }
           >
             <div className="flex items-center justify-center gap-3">
               <div
@@ -986,7 +1214,8 @@ export function LandingView() {
                 <span
                   className="absolute inset-0 rounded"
                   style={{
-                    background: "linear-gradient(90deg, transparent, var(--landing-pop-glow), transparent)",
+                    background:
+                      "linear-gradient(90deg, transparent, var(--landing-pop-glow), transparent)",
                     animation: "landingShimmer 3s ease-in-out infinite",
                   }}
                 />
@@ -1018,7 +1247,10 @@ export function LandingView() {
       </div>
 
       {/* ==================== FEATURE: RAG ==================== */}
-      <section className="relative z-10 mx-auto" style={{ maxWidth: 1100, padding: "140px 40px" }}>
+      <section
+        className="relative z-10 mx-auto"
+        style={{ maxWidth: 1100, padding: "140px 40px" }}
+      >
         <div className="grid md:grid-cols-2 gap-16 items-center landing-reveal">
           <div>
             <div
@@ -1047,7 +1279,10 @@ export function LandingView() {
               <br />
               Actual understanding.
             </h2>
-            <p className="text-[13px] leading-[1.8] max-w-[400px]" style={{ color: "var(--landing-mid)" }}>
+            <p
+              className="text-[13px] leading-[1.8] max-w-[400px]"
+              style={{ color: "var(--landing-mid)" }}
+            >
               Semantic chunking preserves paragraphs. Contextual embeddings know
               the source. Query expansion catches what you meant. LLM reranking
               scores real relevance.
@@ -1061,7 +1296,8 @@ export function LandingView() {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "var(--landing-line-h)";
-              e.currentTarget.style.boxShadow = "0 0 40px var(--landing-pop-glow)";
+              e.currentTarget.style.boxShadow =
+                "0 0 40px var(--landing-pop-glow)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.borderColor = "var(--landing-line)";
@@ -1072,7 +1308,8 @@ export function LandingView() {
               <div
                 className="absolute left-[11px] top-4 bottom-4 w-px"
                 style={{
-                  background: "linear-gradient(to bottom, var(--landing-pop), var(--landing-teal), var(--landing-amber), #34d399)",
+                  background:
+                    "linear-gradient(to bottom, var(--landing-pop), var(--landing-teal), var(--landing-amber), #34d399)",
                   opacity: 0.15,
                 }}
               />
@@ -1096,7 +1333,10 @@ export function LandingView() {
                     e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: row.color }}>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 16, color: row.color }}
+                  >
                     {row.icon}
                   </span>
                   <span
@@ -1106,10 +1346,10 @@ export function LandingView() {
                         row.tagClass === "t-pop"
                           ? "var(--landing-tag-bg)"
                           : row.tagClass === "t-teal"
-                          ? "rgba(45,212,191,0.1)"
-                          : row.tagClass === "t-amber"
-                          ? "rgba(251,191,36,0.1)"
-                          : "rgba(52,211,153,0.1)",
+                            ? "rgba(45,212,191,0.1)"
+                            : row.tagClass === "t-amber"
+                              ? "rgba(251,191,36,0.1)"
+                              : "rgba(52,211,153,0.1)",
                       color: row.color,
                     }}
                   >
@@ -1124,8 +1364,14 @@ export function LandingView() {
       </section>
 
       {/* ==================== FEATURE: DEEP RESEARCH ==================== */}
-      <section className="relative z-10 mx-auto" style={{ maxWidth: 1100, padding: "0 40px 140px" }}>
-        <div className="grid md:grid-cols-2 gap-16 items-center landing-reveal" style={{ direction: "rtl" }}>
+      <section
+        className="relative z-10 mx-auto"
+        style={{ maxWidth: 1100, padding: "0 40px 140px" }}
+      >
+        <div
+          className="grid md:grid-cols-2 gap-16 items-center landing-reveal"
+          style={{ direction: "rtl" }}
+        >
           <div style={{ direction: "ltr" }}>
             <div
               className="mb-2.5"
@@ -1153,7 +1399,10 @@ export function LandingView() {
               <br />
               don&apos;t have to.
             </h2>
-            <p className="text-[13px] leading-[1.8] max-w-[400px]" style={{ color: "var(--landing-mid)" }}>
+            <p
+              className="text-[13px] leading-[1.8] max-w-[400px]"
+              style={{ color: "var(--landing-mid)" }}
+            >
               Plans sub-questions. Searches in parallel. Scores sources. Reads
               pages. Writes section-by-section. Self-critiques and fills gaps.
             </p>
@@ -1167,26 +1416,44 @@ export function LandingView() {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "var(--landing-line-h)";
-              e.currentTarget.style.boxShadow = "0 0 40px var(--landing-pop-glow)";
+              e.currentTarget.style.boxShadow =
+                "0 0 40px var(--landing-pop-glow)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.borderColor = "var(--landing-line)";
               e.currentTarget.style.boxShadow = "none";
             }}
           >
-            <div className="gantt-container" style={{ fontFamily: "'Azeret Mono', monospace", fontSize: 10 }}>
+            <div
+              className="gantt-container"
+              style={{ fontFamily: "'Azeret Mono', monospace", fontSize: 10 }}
+            >
               {GANTT_ROWS.map((row) => (
                 <div key={row.label} className="flex items-center gap-2 py-1.5">
-                  <div className="w-[70px] shrink-0 text-right" style={{ color: row.color }}>
+                  <div
+                    className="w-[70px] shrink-0 text-right"
+                    style={{ color: row.color }}
+                  >
                     {row.label}
                   </div>
                   <div
                     className="gantt-bar-wrap flex-1 h-4 rounded-[3px] overflow-hidden"
-                    style={{ background: "var(--landing-surface)", "--w": row.w } as React.CSSProperties}
+                    style={
+                      {
+                        background: "var(--landing-surface)",
+                        "--w": row.w,
+                      } as React.CSSProperties
+                    }
                   >
-                    <div className="gantt-bar" style={{ background: row.color }} />
+                    <div
+                      className="gantt-bar"
+                      style={{ background: row.color }}
+                    />
                   </div>
-                  <div className="text-[9px] w-7 shrink-0" style={{ color: "var(--landing-dim)" }}>
+                  <div
+                    className="text-[9px] w-7 shrink-0"
+                    style={{ color: "var(--landing-dim)" }}
+                  >
                     {row.time}
                   </div>
                 </div>
@@ -1197,7 +1464,10 @@ export function LandingView() {
       </section>
 
       {/* ==================== FEATURE: AUDIO ==================== */}
-      <section className="relative z-10 mx-auto" style={{ maxWidth: 1100, padding: "0 40px 140px" }}>
+      <section
+        className="relative z-10 mx-auto"
+        style={{ maxWidth: 1100, padding: "0 40px 140px" }}
+      >
         <div className="grid md:grid-cols-2 gap-16 items-center landing-reveal">
           <div>
             <div
@@ -1226,7 +1496,10 @@ export function LandingView() {
               <br />
               as a podcast.
             </h2>
-            <p className="text-[13px] leading-[1.8] max-w-[400px]" style={{ color: "var(--landing-mid)" }}>
+            <p
+              className="text-[13px] leading-[1.8] max-w-[400px]"
+              style={{ color: "var(--landing-mid)" }}
+            >
               Two AI hosts discuss your sources naturally. Deepgram neural
               voices. Choose episode length. Focus on specific topics.
             </p>
@@ -1239,7 +1512,8 @@ export function LandingView() {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "var(--landing-line-h)";
-              e.currentTarget.style.boxShadow = "0 0 40px var(--landing-pop-glow)";
+              e.currentTarget.style.boxShadow =
+                "0 0 40px var(--landing-pop-glow)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.borderColor = "var(--landing-line)";
@@ -1263,7 +1537,10 @@ export function LandingView() {
                 >
                   ALEX
                 </div>
-                <div className="text-[11px] italic mt-0.5" style={{ color: "var(--landing-mid)" }}>
+                <div
+                  className="text-[11px] italic mt-0.5"
+                  style={{ color: "var(--landing-mid)" }}
+                >
                   &quot;The metabolome emerged as the top predictor...&quot;
                 </div>
               </div>
@@ -1284,7 +1561,10 @@ export function LandingView() {
                 >
                   SAM
                 </div>
-                <div className="text-[11px] italic mt-0.5" style={{ color: "var(--landing-mid)" }}>
+                <div
+                  className="text-[11px] italic mt-0.5"
+                  style={{ color: "var(--landing-mid)" }}
+                >
                   &quot;Wait — so it outperforms genomics alone?&quot;
                 </div>
               </div>
@@ -1306,7 +1586,10 @@ export function LandingView() {
                   boxShadow: "0 0 16px var(--landing-pop-glow)",
                 }}
               >
-                <span className="material-symbols-outlined icon-filled" style={{ fontSize: 18, color: "white" }}>
+                <span
+                  className="material-symbols-outlined icon-filled"
+                  style={{ fontSize: 18, color: "white" }}
+                >
                   {waveIsPlaying ? "pause" : "play_arrow"}
                 </span>
               </button>
@@ -1353,8 +1636,14 @@ export function LandingView() {
       </section>
 
       {/* ==================== FEATURE: TOOLS ==================== */}
-      <section className="relative z-10 mx-auto" style={{ maxWidth: 1100, padding: "0 40px 140px" }}>
-        <div className="grid md:grid-cols-2 gap-16 items-center landing-reveal" style={{ direction: "rtl" }}>
+      <section
+        className="relative z-10 mx-auto"
+        style={{ maxWidth: 1100, padding: "0 40px 140px" }}
+      >
+        <div
+          className="grid md:grid-cols-2 gap-16 items-center landing-reveal"
+          style={{ direction: "rtl" }}
+        >
           <div style={{ direction: "ltr" }}>
             <div
               className="mb-2.5"
@@ -1382,7 +1671,10 @@ export function LandingView() {
               <br />
               Zero hallucinations.
             </h2>
-            <p className="text-[13px] leading-[1.8] max-w-[400px]" style={{ color: "var(--landing-mid)" }}>
+            <p
+              className="text-[13px] leading-[1.8] max-w-[400px]"
+              style={{ color: "var(--landing-mid)" }}
+            >
               Every output is from your actual sources. Interactive mind maps.
               Quizzes with AI study summaries. Flashcards with keyboard nav.
             </p>
@@ -1396,7 +1688,8 @@ export function LandingView() {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "var(--landing-line-h)";
-              e.currentTarget.style.boxShadow = "0 0 40px var(--landing-pop-glow)";
+              e.currentTarget.style.boxShadow =
+                "0 0 40px var(--landing-pop-glow)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.borderColor = "var(--landing-line)";
@@ -1423,7 +1716,10 @@ export function LandingView() {
                     e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 15, color: tool.color }}>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 15, color: tool.color }}
+                  >
                     {tool.icon}
                   </span>
                   {tool.label}
@@ -1447,7 +1743,10 @@ export function LandingView() {
       </section>
 
       {/* ==================== STEPS ==================== */}
-      <section className="relative z-10 mx-auto" style={{ maxWidth: 1100, padding: "0 40px 140px" }}>
+      <section
+        className="relative z-10 mx-auto"
+        style={{ maxWidth: 1100, padding: "0 40px 140px" }}
+      >
         <div className="mb-14 landing-reveal">
           <div
             className="mb-2.5"
@@ -1510,8 +1809,12 @@ export function LandingView() {
                 padding: "40px 28px",
                 transitionDelay: `${i * 0.1}s`,
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--landing-bg2)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "var(--landing-bg)")}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = "var(--landing-bg2)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = "var(--landing-bg)")
+              }
             >
               <div
                 className="absolute top-4 right-5"
@@ -1521,7 +1824,9 @@ export function LandingView() {
                   fontWeight: 800,
                   letterSpacing: "-0.06em",
                   lineHeight: 1,
-                  color: isDark ? "rgba(255,255,255,0.025)" : "var(--landing-surface)",
+                  color: isDark
+                    ? "rgba(255,255,255,0.025)"
+                    : "var(--landing-surface)",
                 }}
               >
                 {step.n}
@@ -1533,7 +1838,10 @@ export function LandingView() {
                   border: "1px solid rgba(123,143,239,0.08)",
                 }}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 18, color: "var(--landing-pop)" }}>
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: 18, color: "var(--landing-pop)" }}
+                >
                   {step.icon}
                 </span>
               </div>
@@ -1548,7 +1856,10 @@ export function LandingView() {
               >
                 {step.title}
               </h3>
-              <p className="text-[12px] leading-[1.65]" style={{ color: "var(--landing-mid)" }}>
+              <p
+                className="text-[12px] leading-[1.65]"
+                style={{ color: "var(--landing-mid)" }}
+              >
                 {step.body}
               </p>
             </div>
@@ -1557,8 +1868,14 @@ export function LandingView() {
       </section>
 
       {/* ==================== TESTIMONIALS ==================== */}
-      <section className="relative z-10 overflow-hidden" style={{ padding: "60px 0 140px" }}>
-        <div className="mx-auto mb-12 landing-reveal" style={{ maxWidth: 1100, padding: "0 40px" }}>
+      <section
+        className="relative z-10 overflow-hidden"
+        style={{ padding: "60px 0 140px" }}
+      >
+        <div
+          className="mx-auto mb-12 landing-reveal"
+          style={{ maxWidth: 1100, padding: "0 40px" }}
+        >
           <div
             className="mb-2.5"
             style={{
@@ -1594,17 +1911,24 @@ export function LandingView() {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = "var(--landing-line-h)";
-                e.currentTarget.style.boxShadow = "0 0 30px var(--landing-pop-glow)";
+                e.currentTarget.style.boxShadow =
+                  "0 0 30px var(--landing-pop-glow)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = "var(--landing-line)";
                 e.currentTarget.style.boxShadow = "none";
               }}
             >
-              <div className="text-[12px] tracking-widest mb-3.5" style={{ color: "var(--landing-amber)" }}>
+              <div
+                className="text-[12px] tracking-widest mb-3.5"
+                style={{ color: "var(--landing-amber)" }}
+              >
                 &#9733;&#9733;&#9733;&#9733;&#9733;
               </div>
-              <p className="text-[13px] leading-[1.7] mb-4" style={{ color: "var(--landing-mid)" }}>
+              <p
+                className="text-[13px] leading-[1.7] mb-4"
+                style={{ color: "var(--landing-mid)" }}
+              >
                 {t.q}
               </p>
               <div className="flex items-center gap-2.5">
@@ -1633,7 +1957,10 @@ export function LandingView() {
       </section>
 
       {/* ==================== CTA ==================== */}
-      <section className="relative z-10 text-center overflow-hidden landing-reveal" style={{ padding: "100px 40px 140px" }}>
+      <section
+        className="relative z-10 text-center overflow-hidden landing-reveal"
+        style={{ padding: "100px 40px 140px" }}
+      >
         {/* Floating orbs */}
         <div className="absolute inset-0 pointer-events-none">
           <div
@@ -1690,7 +2017,10 @@ export function LandingView() {
           Start your first{" "}
           <span style={{ color: "var(--landing-pop)" }}>notebook.</span>
         </h2>
-        <p className="text-[15px] mb-9 relative" style={{ color: "var(--landing-mid)" }}>
+        <p
+          className="text-[15px] mb-9 relative"
+          style={{ color: "var(--landing-mid)" }}
+        >
           Free while in preview. No credit card.
         </p>
         <Link href="/auth/sign-up">
@@ -1700,11 +2030,15 @@ export function LandingView() {
               background: "var(--landing-pop)",
               color: "white",
               border: "none",
-              boxShadow: "0 0 28px var(--landing-pop-glow), 0 2px 8px rgba(0,0,0,0.3)",
+              boxShadow:
+                "0 0 28px var(--landing-pop-glow), 0 2px 8px rgba(0,0,0,0.3)",
             }}
             onClick={handleRipple}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 18 }}
+            >
               arrow_forward
             </span>
             Create your account

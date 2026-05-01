@@ -288,7 +288,9 @@ export function DeepResearchModal({
                       : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                   }`}
                 >
-                  <span className="material-symbols-outlined text-xs align-middle mr-1">bolt</span>
+                  <span className="material-symbols-outlined text-xs align-middle mr-1">
+                    bolt
+                  </span>
                   Fast
                 </button>
                 <button
@@ -301,31 +303,37 @@ export function DeepResearchModal({
                       : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                   }`}
                 >
-                  <span className="material-symbols-outlined text-xs align-middle mr-1">science</span>
+                  <span className="material-symbols-outlined text-xs align-middle mr-1">
+                    science
+                  </span>
                   Deep
                 </button>
               </div>
-            <button
-              type="button"
-              onClick={() => (running ? abortRef.current?.abort() : run())}
-              className={`px-6 py-3 rounded-xl text-sm font-semibold transition-all shadow-sm ${
-                running
-                  ? "bg-red-600 hover:bg-red-700 text-white shadow-red-500/25"
-                  : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/25"
-              }`}
-            >
-              {running ? (
-                <span className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-                  Stop
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">play_arrow</span>
-                  Research
-                </span>
-              )}
-            </button>
+              <button
+                type="button"
+                onClick={() => (running ? abortRef.current?.abort() : run())}
+                className={`px-6 py-3 rounded-xl text-sm font-semibold transition-all shadow-sm ${
+                  running
+                    ? "bg-red-600 hover:bg-red-700 text-white shadow-red-500/25"
+                    : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/25"
+                }`}
+              >
+                {running ? (
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm animate-spin">
+                      progress_activity
+                    </span>
+                    Stop
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm">
+                      play_arrow
+                    </span>
+                    Research
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 
@@ -351,10 +359,14 @@ export function DeepResearchModal({
                 {stageMsg || stage}
               </span>
               {stage === "done" && (
-                <span className="material-symbols-outlined text-sm text-green-500">check_circle</span>
+                <span className="material-symbols-outlined text-sm text-green-500">
+                  check_circle
+                </span>
               )}
               {stage === "error" && (
-                <span className="material-symbols-outlined text-sm text-red-500">error</span>
+                <span className="material-symbols-outlined text-sm text-red-500">
+                  error
+                </span>
               )}
             </div>
           )}
@@ -372,7 +384,9 @@ export function DeepResearchModal({
             {plan.length > 0 && (
               <div>
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sm">checklist</span>
+                  <span className="material-symbols-outlined text-sm">
+                    checklist
+                  </span>
                   Research Plan
                 </h3>
                 <div className="space-y-2">
@@ -395,12 +409,17 @@ export function DeepResearchModal({
             {logs.length > 0 && (
               <div>
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sm">terminal</span>
+                  <span className="material-symbols-outlined text-sm">
+                    terminal
+                  </span>
                   Activity
                 </h3>
                 <div className="text-[11px] font-mono text-gray-500 dark:text-gray-400 space-y-1 bg-gray-100/70 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200/50 dark:border-gray-700/30">
                   {logs.map((l, i) => (
-                    <div key={`${i}-${l.slice(0, 12)}`} className="leading-relaxed">
+                    <div
+                      key={`${i}-${l.slice(0, 12)}`}
+                      className="leading-relaxed"
+                    >
                       {l}
                     </div>
                   ))}
@@ -409,7 +428,9 @@ export function DeepResearchModal({
             )}
             {running && (
               <div className="flex items-center gap-2 text-xs text-indigo-500 dark:text-indigo-400 pt-2">
-                <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                <span className="material-symbols-outlined text-sm animate-spin">
+                  progress_activity
+                </span>
                 <span>Working...</span>
               </div>
             )}
@@ -429,7 +450,9 @@ export function DeepResearchModal({
           <div className="overflow-y-auto p-6">
             {report ? (
               <article className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {report}
+                </ReactMarkdown>
               </article>
             ) : running ? (
               <div className="space-y-4 animate-pulse">

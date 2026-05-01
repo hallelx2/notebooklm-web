@@ -114,7 +114,10 @@ function AudioPlayer({ src }: { src: string }) {
     const bar = progressRef.current;
     if (!audio || !bar || !audio.duration) return;
     const rect = bar.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const ratio = Math.max(
+      0,
+      Math.min(1, (e.clientX - rect.left) / rect.width),
+    );
     audio.currentTime = ratio * audio.duration;
   }
 
@@ -180,7 +183,10 @@ function ScriptView({ script }: { script: ScriptLine[] }) {
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
       >
-        <span className="material-symbols-outlined text-lg transition-transform" style={{ transform: expanded ? "rotate(180deg)" : undefined }}>
+        <span
+          className="material-symbols-outlined text-lg transition-transform"
+          style={{ transform: expanded ? "rotate(180deg)" : undefined }}
+        >
           expand_more
         </span>
         Podcast Script
@@ -331,9 +337,7 @@ export function AudioOverviewModal({ open, onClose, notebookId }: Props) {
         case "tts": {
           const d = evt.data as { index: number; total: number };
           setTtsProgress({ index: d.index + 1, total: d.total });
-          setStageMsg(
-            `Converting to audio (${d.index + 1}/${d.total})...`,
-          );
+          setStageMsg(`Converting to audio (${d.index + 1}/${d.total})...`);
           break;
         }
         case "done": {
@@ -356,8 +360,7 @@ export function AudioOverviewModal({ open, onClose, notebookId }: Props) {
 
   if (!open) return null;
 
-  const running =
-    stage !== "idle" && stage !== "done" && stage !== "error";
+  const running = stage !== "idle" && stage !== "done" && stage !== "error";
   const progressPct =
     ttsProgress.total > 0
       ? Math.round((ttsProgress.index / ttsProgress.total) * 100)

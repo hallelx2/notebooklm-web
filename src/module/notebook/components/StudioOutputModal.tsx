@@ -35,13 +35,18 @@ const KIND_ICONS: Record<string, string> = {
 };
 
 const KIND_COLORS: Record<string, string> = {
-  "audio-overview": "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
-  "study-guide": "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
-  "briefing-doc": "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+  "audio-overview":
+    "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
+  "study-guide":
+    "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
+  "briefing-doc":
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
   faq: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
   timeline: "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300",
-  "mind-map": "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300",
-  flashcards: "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300",
+  "mind-map":
+    "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300",
+  flashcards:
+    "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300",
   quiz: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
 };
 
@@ -280,7 +285,10 @@ function AudioOverviewPlayer({
     const bar = barRef.current;
     if (!audio || !bar || !audio.duration) return;
     const rect = bar.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const ratio = Math.max(
+      0,
+      Math.min(1, (e.clientX - rect.left) / rect.width),
+    );
     audio.currentTime = ratio * audio.duration;
   }
 
@@ -409,7 +417,12 @@ function AudioOverviewPlayer({
 /* ------------------------------------------------------------------ */
 /* Main Modal                                                           */
 /* ------------------------------------------------------------------ */
-export function StudioOutputModal({ output, onClose, onDelete, onNodeClick }: Props) {
+export function StudioOutputModal({
+  output,
+  onClose,
+  onDelete,
+  onNodeClick,
+}: Props) {
   const content = output.content as Record<string, unknown> | unknown[] | null;
   const kind = output.kind;
   const icon = KIND_ICONS[kind] ?? "auto_awesome";
@@ -455,7 +468,11 @@ export function StudioOutputModal({ output, onClose, onDelete, onNodeClick }: Pr
     }
 
     // Mind map (markmap-based)
-    if (kind === "mind-map" && typeof content === "object" && "markdown" in content) {
+    if (
+      kind === "mind-map" &&
+      typeof content === "object" &&
+      "markdown" in content
+    ) {
       return (
         <MindMapRenderer
           markdown={String((content as Record<string, unknown>).markdown)}
@@ -465,8 +482,15 @@ export function StudioOutputModal({ output, onClose, onDelete, onNodeClick }: Pr
     }
 
     // Mind map (legacy JSON format fallback)
-    if (kind === "mind-map" && typeof content === "object" && "center" in content) {
-      const legacy = content as { center: string; branches: { label: string; children: string[] }[] };
+    if (
+      kind === "mind-map" &&
+      typeof content === "object" &&
+      "center" in content
+    ) {
+      const legacy = content as {
+        center: string;
+        branches: { label: string; children: string[] }[];
+      };
       // Convert legacy JSON to markdown for markmap
       let md = `# ${legacy.center}\n`;
       for (const branch of legacy.branches ?? []) {
@@ -507,7 +531,9 @@ export function StudioOutputModal({ output, onClose, onDelete, onNodeClick }: Pr
 
     // Text content (study-guide, briefing-doc, faq, timeline, audio-overview, fallback)
     if (typeof content === "object" && "text" in content) {
-      return <TextContent text={String((content as Record<string, unknown>).text)} />;
+      return (
+        <TextContent text={String((content as Record<string, unknown>).text)} />
+      );
     }
 
     // Fallback for anything else
@@ -522,7 +548,9 @@ export function StudioOutputModal({ output, onClose, onDelete, onNodeClick }: Pr
         className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className={`relative w-full ${kind === "mind-map" ? "max-w-5xl" : "max-w-3xl"} bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden`}>
+      <div
+        className={`relative w-full ${kind === "mind-map" ? "max-w-5xl" : "max-w-3xl"} bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark shrink-0">
           <div className="flex items-center gap-3 min-w-0">
