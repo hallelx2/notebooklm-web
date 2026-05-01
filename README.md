@@ -164,17 +164,41 @@ Built for **Vercel**. Push to a connected GitHub repo, set env vars in the Verce
 
 For self-hosting, the app runs anywhere Node 20+ runs — Docker, Render, Fly, your own VM. The only hard requirement is a Postgres with pgvector enabled.
 
+## Roadmap
+
+The big direction this project is heading is **a fully local desktop app** — same workbench, same retrieval, same studio kinds, but with no cloud dependencies and no API keys required. Drop a folder of PDFs onto your laptop, open the app, and learn from them entirely offline.
+
+To get there, the repo will move to a **pnpm workspace** so the web app and the desktop app can share a common core (`packages/core`: retrieval, ingest, AI factory, schema, prompts) while each app owns its own surface (`apps/web` for the hosted Next.js version, `apps/desktop` for the local Electron or Tauri shell).
+
+The local stack we are aiming at:
+
+| Layer | Local choice | Notes |
+|---|---|---|
+| Chat models | **Ollama** | Llama 3.3, Qwen 2.5, Mistral, anything served on `localhost:11434` |
+| Embedding models | **Ollama** (Nomic, mxbai) or **GGUF** | 768- or 1024-dim, local inference |
+| TTS | **Piper** or **Kokoro-82M** | Free, offline, no Deepgram dependency |
+| Database | **Embedded Postgres** or **SQLite + sqlite-vec** | No Neon connection, runs in-process |
+| Web search | **Optional** | Local-only mode skips deep-research's web stage; offline still has retrieval, studio, audio |
+| Storage | **Local filesystem** | The user's own folders are the canonical store |
+| Shell | **Tauri 2** or **Electron** | Native window, drag-and-drop folders, file watcher |
+
+The shape of the work: the existing `lib/ai/factory.ts`, `lib/retrieve.ts`, `lib/ingest`, and the studio router are already provider-agnostic — Ollama is supported in the registry today. Pulling them into `packages/core`, swapping Neon for an embedded DB, and replacing Deepgram with Piper at the TTS boundary is the bulk of the desktop port.
+
 ## Contributing
 
-Yes please. PRs welcome for:
+Yes please. The contributions I am most excited to see:
 
-- New AI providers (the registry is one file)
-- New studio output kinds (one prompt + one renderer)
-- New embedding-dim sibling tables (768/1024/1536/3072 cover most providers; 4096 and beyond are interesting)
-- New web-search providers (Exa and Tavily are pluggable)
-- Bug fixes, docs, tests, accessibility improvements
+- 💻 **The desktop app.** Tauri or Electron shell that wraps the existing core and runs fully offline. File-system access to user folders, automatic ingest of dropped folders, local Ollama + Piper integration, embedded database. This is the headline contribution.
+- 📦 **pnpm workspace migration.** Turn this repo into a monorepo with `apps/web`, `apps/desktop`, and `packages/core`. Move the shared libraries (`lib/ai`, `lib/retrieve`, `lib/ingest`, `db/schema`) into `packages/core` so both surfaces consume the same code.
+- 🧠 **Local model integrations.** Better Ollama UX (auto-detect installed models, one-click pull). Native llama.cpp bindings for sub-second embedding. GGUF embedding adapters.
+- 🗣️ **Local TTS adapters.** Piper, Kokoro-82M, Coqui XTTS — same interface as the Deepgram adapter, drop-in for audio overviews.
+- 🔌 **More AI providers** (the registry is one file).
+- 🎨 **More studio output kinds** (one prompt + one renderer).
+- 📐 **More embedding-dim sibling tables** (768/1024/1536/3072 today; 4096 and beyond are interesting).
+- 🔎 **More web-search providers** (Exa and Tavily are pluggable).
+- 🐛 **Bug fixes, docs, tests, accessibility improvements.**
 
-For non-trivial changes, open an issue first to discuss the shape.
+For non-trivial changes — especially the desktop app and the workspace migration — open an issue first so we can talk through the shape before you spend hours on it.
 
 ## License
 
