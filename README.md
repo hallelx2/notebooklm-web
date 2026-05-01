@@ -166,6 +166,11 @@ For self-hosting, the app runs anywhere Node 20+ runs — Docker, Render, Fly, y
 
 ## Roadmap
 
+> **Three companion documents** live alongside this README and go deeper on each direction:
+> - [`ROADMAP.md`](ROADMAP.md) — phased plan from v1 through marketplace
+> - [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to land a useful PR
+> - [`docs/AGENT-HARNESS.md`](docs/AGENT-HARNESS.md) — the technical vision for pluggable agent runtimes
+
 The big direction this project is heading is **a fully local desktop app** — same workbench, same retrieval, same studio kinds, but with no cloud dependencies and no API keys required. Drop a folder of PDFs onto your laptop, open the app, and learn from them entirely offline.
 
 To get there, the repo will move to a **pnpm workspace** so the web app and the desktop app can share a common core (`packages/core`: retrieval, ingest, AI factory, schema, prompts) while each app owns its own surface (`apps/web` for the hosted Next.js version, `apps/desktop` for the local Electron or Tauri shell).
