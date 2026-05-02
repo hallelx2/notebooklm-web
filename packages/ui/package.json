@@ -21,6 +21,8 @@
     "./components/landing": "./src/components/landing/index.ts",
     "./components/landing/Footer": "./src/components/landing/Footer.tsx",
     "./components/landing/ConstellationBackground": "./src/components/landing/ConstellationBackground.tsx",
+    "./components/AuthGate": "./src/components/AuthGate.tsx",
+    "./components/LoadingScreen": "./src/components/LoadingScreen.tsx",
     "./components/ThemeProvider": "./src/components/ThemeProvider.tsx",
     "./components/ThemeToggle": "./src/components/ThemeToggle.tsx",
     "./contexts": "./src/contexts/index.ts",

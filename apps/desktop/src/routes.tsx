@@ -1,3 +1,4 @@
+import { AuthGate } from "@notebooklm/ui/components/AuthGate";
 import { ThemeProvider } from "@notebooklm/ui/components/ThemeProvider";
 import { SignInView } from "@notebooklm/ui/views/auth/SignInView";
 import { SignUpView } from "@notebooklm/ui/views/auth/SignUpView";
@@ -63,10 +64,17 @@ const signUpRoute = createRoute({
   component: SignUpView,
 });
 
+// AuthGate enforces "must be signed in AND onboarded" before notebook
+// surfaces. The settings tree below uses requireOnboarding={false} so the
+// user can actually complete onboarding without being bounced out of it.
 const notebooksRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/notebooks",
-  component: NotebooksView,
+  component: () => (
+    <AuthGate>
+      <NotebooksView />
+    </AuthGate>
+  ),
 });
 
 const notebookRoute = createRoute({
@@ -74,7 +82,11 @@ const notebookRoute = createRoute({
   path: "/notebooks/$id",
   component: () => {
     const { id } = notebookRoute.useParams();
-    return <NotebookView id={id} />;
+    return (
+      <AuthGate>
+        <NotebookView id={id} />
+      </AuthGate>
+    );
   },
 });
 
@@ -82,13 +94,15 @@ const settingsLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "settings-layout",
   component: () => (
-    <div className="relative z-10 flex min-h-screen w-full flex-col bg-white dark:bg-[#050505] text-slate-900 dark:text-white overflow-x-hidden">
-      <SettingsChrome />
-      <main className="flex-grow flex flex-col relative z-10">
-        <SettingsNav />
-        <Outlet />
-      </main>
-    </div>
+    <AuthGate requireOnboarding={false}>
+      <div className="relative z-10 flex min-h-screen w-full flex-col bg-white dark:bg-[#050505] text-slate-900 dark:text-white overflow-x-hidden">
+        <SettingsChrome />
+        <main className="flex-grow flex flex-col relative z-10">
+          <SettingsNav />
+          <Outlet />
+        </main>
+      </div>
+    </AuthGate>
   ),
 });
 

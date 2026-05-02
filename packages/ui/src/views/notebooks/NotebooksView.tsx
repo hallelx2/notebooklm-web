@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingScreen } from "@notebooklm/ui/components/LoadingScreen";
 import { ThemeToggle } from "@notebooklm/ui/components/ThemeToggle";
 import { Link, useAuth, useRouter } from "@notebooklm/ui/contexts";
 import { trpc } from "@notebooklm/ui/trpc/client";
@@ -12,27 +13,19 @@ import {
 import { NotebooksHeader } from "./NotebooksHeader";
 
 export function NotebooksView() {
+  // ── Hooks (must run unconditionally on every render) ──
   const router = useRouter();
   const auth = useAuth();
-
-  // Real-time sign-out detection
-  useEffect(() => {
-    if (auth.status === "unauthenticated") {
-      router.replace("/auth/sign-in");
-    }
-  }, [auth.status, router]);
-
-  // Wait until session resolves so the rest of the view can rely on `user`.
-  if (!auth.user) return null;
-  const user = auth.user;
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"recent" | "alpha">("recent");
   const [view, setView] = useState<"grid" | "list">("grid");
-
+  const [listMenuOpenId, setListMenuOpenId] = useState<string | null>(null);
+  const listMenuRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
+  // tRPC queries are gated on auth so they don't fire before we have a user.
   const list = trpc.notebook.list.useQuery(undefined, {
-    enabled: true,
+    enabled: !!auth.user,
   });
   const create = trpc.notebook.create.useMutation({
     onSuccess: (row) => {
@@ -45,10 +38,14 @@ export function NotebooksView() {
     },
   });
 
-  // List-view dropdown state
-  const [listMenuOpenId, setListMenuOpenId] = useState<string | null>(null);
-  const listMenuRef = useRef<HTMLDivElement>(null);
+  // Real-time sign-out detection
+  useEffect(() => {
+    if (auth.status === "unauthenticated") {
+      router.replace("/auth/sign-in");
+    }
+  }, [auth.status, router]);
 
+  // Close list-view kebab menu on outside click
   useEffect(() => {
     if (!listMenuOpenId) return;
     function handleClick(e: MouseEvent) {
@@ -62,10 +59,6 @@ export function NotebooksView() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [listMenuOpenId]);
-
-  function handleDelete(id: string) {
-    deleteMut.mutate({ id });
-  }
 
   const notebooks = useMemo(() => {
     const items = (list.data ?? []).slice();
@@ -87,6 +80,19 @@ export function NotebooksView() {
     }
     return filtered;
   }, [list.data, query, sort]);
+
+  // ── Early return AFTER all hooks (Rules of Hooks: same call order every
+  // render). When the AuthGate wraps this view in routes.tsx the user is
+  // guaranteed present; the guard below is a defensive fallback for the
+  // brief window between sign-out and the redirect firing.
+  if (!auth.user) {
+    return <LoadingScreen message="Loading your notebooks" />;
+  }
+  const user = auth.user;
+
+  function handleDelete(id: string) {
+    deleteMut.mutate({ id });
+  }
 
   return (
     <div className="relative z-10 flex min-h-screen w-full flex-col bg-white dark:bg-[#050505] text-slate-900 dark:text-white overflow-x-hidden">

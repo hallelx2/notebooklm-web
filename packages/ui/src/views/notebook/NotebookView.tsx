@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingScreen } from "@notebooklm/ui/components/LoadingScreen";
 import { ThemeToggle } from "@notebooklm/ui/components/ThemeToggle";
 import { ChatPanel } from "@notebooklm/ui/components/notebook/ChatPanel";
 import { DeepResearchModal } from "@notebooklm/ui/components/notebook/DeepResearchModal";
@@ -13,28 +14,18 @@ import { trpc } from "@notebooklm/ui/trpc/client";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function NotebookView({ id }: { id: string }) {
+  // ── Hooks (stable order on every render — Rules of Hooks) ──
   const router = useRouter();
   const auth = useAuth();
-
-  // Real-time sign-out detection
-  useEffect(() => {
-    if (auth.status === "unauthenticated") {
-      router.replace("/auth/sign-in");
-    }
-  }, [auth.status, router]);
-
-  // While Better Auth resolves the session on first paint, render nothing —
-  // the existing skeleton path below kicks in once `q` is loaded.
-  if (!auth.user) return null;
-  const user = auth.user;
+  const utils = trpc.useUtils();
 
   const q = trpc.notebook.byId.useQuery(
     { id },
-    { enabled: true, refetchInterval: 4000 },
+    { enabled: !!auth.user, refetchInterval: 4000 },
   );
   const sourcesQ = trpc.source.list.useQuery(
     { notebookId: id },
-    { enabled: true, refetchInterval: 2500 },
+    { enabled: !!auth.user, refetchInterval: 2500 },
   );
 
   const [mobileTab, setMobileTab] = useState<"sources" | "chat" | "studio">(
@@ -67,7 +58,6 @@ export function NotebookView({ id }: { id: string }) {
       showToast("Note saved");
     },
   });
-  const utils = trpc.useUtils();
 
   const updateNotebook = trpc.notebook.update.useMutation({
     onSuccess: () => {
@@ -163,6 +153,20 @@ export function NotebookView({ id }: { id: string }) {
       window.history.replaceState({}, "", url);
     }
   }, []);
+
+  // Real-time sign-out detection
+  useEffect(() => {
+    if (auth.status === "unauthenticated") {
+      router.replace("/auth/sign-in");
+    }
+  }, [auth.status, router]);
+
+  // ── Early returns AFTER every hook is registered. AuthGate keeps the
+  // user present in normal flows; this guard is the brief sign-out window.
+  if (!auth.user) {
+    return <LoadingScreen message="Loading notebook" />;
+  }
+  const user = auth.user;
 
   if (q.isPending) {
     return (
