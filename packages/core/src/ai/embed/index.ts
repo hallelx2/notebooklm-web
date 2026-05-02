@@ -1,4 +1,4 @@
-import type { ProviderId } from "@/lib/ai/providers";
+import type { ProviderId } from "../providers";
 import { cohereEmbedAdapter } from "./cohere";
 import { googleEmbedAdapter } from "./google";
 import { mistralEmbedAdapter } from "./mistral";

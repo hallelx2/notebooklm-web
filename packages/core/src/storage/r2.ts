@@ -55,6 +55,18 @@ export const r2Provider: StorageProvider = {
       : await this.getSignedUrl(input.key);
     return { key: input.key, url, provider: "r2" };
   },
+  async read(key) {
+    const cfg = requireR2Config();
+    const res = await client().send(
+      new GetObjectCommand({ Bucket: cfg.bucket, Key: key }),
+    );
+    if (!res.Body) throw new Error(`R2 object ${key} has no body`);
+    const chunks: Uint8Array[] = [];
+    // @ts-expect-error AWS SDK v3 streams: Body is a Web ReadableStream
+    for await (const c of res.Body) chunks.push(c as Uint8Array);
+    const body = Buffer.concat(chunks.map((c) => Buffer.from(c)));
+    return { body, contentType: res.ContentType };
+  },
   async getSignedUrl(key, expiresInSeconds = 60 * 60) {
     const cfg = requireR2Config();
     return getSignedUrl(

@@ -1,7 +1,6 @@
-import "server-only";
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { sourceChunks, sources } from "@/db/schema";
+import { sourceChunks, sources } from "../db/schema";
+import { coreDb } from "../runtime";
 import { maybeAutoTitleNotebook } from "./autotitle";
 import { chunkText } from "./chunk";
 import {
@@ -16,6 +15,7 @@ async function setStatus(
   status: string,
   error?: string | null,
 ) {
+  const db = coreDb();
   await db
     .update(sources)
     .set({ status, error: error ?? null, updatedAt: new Date() })
@@ -66,6 +66,7 @@ async function insertChunks(params: {
 
   // Insert in batches, capturing the new chunk IDs so we can index their
   // embeddings into the per-dim sibling table.
+  const db = coreDb();
   const BATCH = 50;
   const insertedIds: string[] = [];
   for (let i = 0; i < rows.length; i += BATCH) {
@@ -103,7 +104,7 @@ export async function ingestFile(params: {
       text: parsed.text,
       sourceTitle: params.filename,
     });
-    await db
+    await coreDb()
       .update(sources)
       .set({
         status: "ready",
@@ -142,7 +143,7 @@ export async function ingestLink(params: {
       sourceTitle: parsed.title ?? params.url,
       sourceUrl: params.url,
     });
-    await db
+    await coreDb()
       .update(sources)
       .set({
         status: "ready",

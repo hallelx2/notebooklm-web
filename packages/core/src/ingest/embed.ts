@@ -1,15 +1,14 @@
-import "server-only";
 import { sql } from "drizzle-orm";
-import { db } from "@/db";
+import { googleEmbedAdapter } from "../ai/embed/google";
+import { getEmbedFn } from "../ai/factory";
+import { isSupportedDim, type SupportedEmbedDim } from "../ai/providers";
 import {
   chunkEmbeddings768,
   chunkEmbeddings1024,
   chunkEmbeddings1536,
   chunkEmbeddings3072,
-} from "@/db/schema";
-import { googleEmbedAdapter } from "@/lib/ai/embed/google";
-import { getEmbedFn } from "@/lib/ai/factory";
-import { isSupportedDim, type SupportedEmbedDim } from "@/lib/ai/providers";
+} from "../db/schema";
+import { coreDb } from "../runtime";
 
 /* ------------------------------------------------------------------ */
 /*  Per-dimension table routing                                         */
@@ -101,6 +100,7 @@ export async function persistChunkEmbeddings(opts: {
   }
   if (chunkIds.length === 0) return;
 
+  const db = coreDb();
   const table = embeddingTableForDim(embedded.dim);
   const rows = chunkIds.map((id, i) => ({
     chunkId: id,

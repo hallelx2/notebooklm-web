@@ -1,5 +1,5 @@
 import { isNotNull, isNull, sql } from "drizzle-orm";
-import { db } from "./index";
+import type { Database } from "./index";
 import { sourceChunks } from "./schema";
 
 /**
@@ -12,7 +12,7 @@ import { sourceChunks } from "./schema";
  *
  * Run via `POST /api/admin/migrate?step=backfill` after `db:push`.
  */
-export async function backfillLegacyEmbeddings(): Promise<{
+export async function backfillLegacyEmbeddings(db: Database): Promise<{
   copied: number;
   skipped: number;
 }> {

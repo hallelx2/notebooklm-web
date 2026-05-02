@@ -1,9 +1,8 @@
-import "server-only";
 import { generateText } from "ai";
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { notebooks } from "@/db/schema";
-import { getChatModel, NoAiConfigError } from "@/lib/ai/factory";
+import { getChatModel, NoAiConfigError } from "../ai/factory";
+import { notebooks } from "../db/schema";
+import { coreDb } from "../runtime";
 
 const DEFAULT_TITLES = new Set(["Untitled notebook", "Untitled"]);
 
@@ -18,6 +17,7 @@ export async function maybeAutoTitleAndSummarize(
   notebookId: string,
   sourcePreview: string,
 ) {
+  const db = coreDb();
   const [nb] = await db
     .select()
     .from(notebooks)

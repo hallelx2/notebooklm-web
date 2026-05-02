@@ -1,7 +1,6 @@
-import "server-only";
 import { and, asc, eq, inArray } from "drizzle-orm";
-import { db } from "@/db";
-import { notebooks, sourceChunks, sources } from "@/db/schema";
+import { notebooks, sourceChunks, sources } from "../db/schema";
+import { coreDb } from "../runtime";
 import {
   buildEmbeddingContext,
   embedTexts,
@@ -25,6 +24,7 @@ export async function reembedSource(params: {
   newProvider: string;
 }> {
   const { userId, sourceId } = params;
+  const db = coreDb();
 
   // Verify the source belongs to this user (via the notebook FK).
   const [src] = await db
@@ -61,8 +61,15 @@ export async function reembedSource(params: {
     };
   }
 
+  type ReembedChunkRow = {
+    id: string;
+    content: string;
+    metadata: unknown;
+  };
+  const typedChunks = chunks as ReembedChunkRow[];
+
   // Build embedding contexts using the same shape as ingestion.
-  const embeddingTexts = chunks.map((c) => {
+  const embeddingTexts = typedChunks.map((c) => {
     const meta = (c.metadata as { heading?: string } | null) ?? {};
     return buildEmbeddingContext(c.content, src.title, meta.heading);
   });
@@ -71,14 +78,14 @@ export async function reembedSource(params: {
 
   // Persist into the new dim's table.
   await persistChunkEmbeddings({
-    chunkIds: chunks.map((c) => c.id),
+    chunkIds: typedChunks.map((c) => c.id),
     embedded,
   });
 
   // Atomically flip the per-chunk pointer columns AND the legacy column when
   // we're at 768 (so retrieval keeps working without the legacy fallback).
   // We do this in batches since pgvector inputs are large.
-  const ids = chunks.map((c) => c.id);
+  const ids = typedChunks.map((c) => c.id);
   const BATCH = 100;
   for (let i = 0; i < ids.length; i += BATCH) {
     await db
@@ -118,6 +125,7 @@ export async function* reembedAllUserSources(userId: string): AsyncGenerator<
   | { type: "source-error"; sourceId: string; error: string }
   | { type: "summary"; total: number; succeeded: number; failed: number }
 > {
+  const db = coreDb();
   const userSources = await db
     .select({
       id: sources.id,

@@ -1,4 +1,3 @@
-import "server-only";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createCohere } from "@ai-sdk/cohere";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
@@ -10,15 +9,15 @@ import { createTogetherAI } from "@ai-sdk/togetherai";
 import { createXai } from "@ai-sdk/xai";
 import type { LanguageModel } from "ai";
 import { and, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { userAiConfig, userProviderCredentials } from "@/db/schema";
-import { getEmbedAdapter } from "@/lib/ai/embed";
+import { decryptSecret } from "../crypto/secret";
+import { userAiConfig, userProviderCredentials } from "../db/schema";
+import { coreDb } from "../runtime";
+import { getEmbedAdapter } from "./embed";
 import {
   getProvider,
   isValidProviderId,
   type ProviderId,
-} from "@/lib/ai/providers";
-import { decryptSecret } from "@/lib/crypto/secret";
+} from "./providers";
 
 /* ------------------------------------------------------------------ */
 /*  Errors                                                             */
@@ -101,6 +100,7 @@ async function loadCredential(
   userId: string,
   providerId: ProviderId,
 ): Promise<ResolvedCredential> {
+  const db = coreDb();
   const [row] = await db
     .select()
     .from(userProviderCredentials)
@@ -143,6 +143,7 @@ async function loadCredential(
  * configured a chat provider yet.
  */
 export async function getChatModel(userId: string): Promise<LanguageModel> {
+  const db = coreDb();
   const [cfg] = await db
     .select()
     .from(userAiConfig)
@@ -231,6 +232,7 @@ export interface EmbedHandle {
  * configured an embedding provider yet.
  */
 export async function getEmbedFn(userId: string): Promise<EmbedHandle> {
+  const db = coreDb();
   const [cfg] = await db
     .select()
     .from(userAiConfig)

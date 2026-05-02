@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "./index";
+import type { Database } from "./index";
 
 /**
  * Create HNSW cosine indexes for the per-dimension embedding tables.
@@ -11,7 +11,7 @@ import { db } from "./index";
  * Call this after any new dimension table is added in the schema, or once
  * per fresh deploy.
  */
-export async function createVectorIndexes() {
+export async function createVectorIndexes(db: Database) {
   // chunk_embeddings_768
   await db.execute(sql`
     CREATE INDEX IF NOT EXISTS chunk_embeddings_768_hnsw_idx

@@ -1,11 +1,10 @@
-import "server-only";
 import { generateObject } from "ai";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@/db";
-import { sourceChunks, sources } from "@/db/schema";
-import { getChatModel } from "@/lib/ai/factory";
+import { getChatModel } from "./ai/factory";
+import { sourceChunks, sources } from "./db/schema";
 import { embeddingTableForDim, embedQueryFor } from "./ingest/embed";
+import { coreDb } from "./runtime";
 
 export type RetrievedChunk = {
   chunkId: string;
@@ -93,6 +92,7 @@ export async function retrieveForQuery(params: {
   sourceIds?: string[];
 }): Promise<RetrievedChunk[]> {
   const topK = params.topK ?? 12;
+  const db = coreDb();
 
   // Step 1: Expand query (using the user's chat model).
   const expandedQueries = await expandQuery(params.userId, params.query);

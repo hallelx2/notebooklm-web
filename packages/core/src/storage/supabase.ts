@@ -54,6 +54,13 @@ export const supabaseProvider: StorageProvider = {
     const url = `${cfg.url}/storage/v1/object/public/${cfg.bucket}/${encodeURIComponent(input.key)}`;
     return { key: input.key, url, provider: "supabase" };
   },
+  async read(key) {
+    const cfg = requireConfig();
+    const res = await call("GET", `object/${cfg.bucket}/${encodeURIComponent(key)}`);
+    const body = Buffer.from(await res.arrayBuffer());
+    const contentType = res.headers.get("content-type") ?? undefined;
+    return { body, contentType };
+  },
   async getSignedUrl(key, expiresInSeconds = 60 * 60) {
     const cfg = requireConfig();
     const res = await call(

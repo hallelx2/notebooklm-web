@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
-import { db } from "./index";
+import type { Database } from "./index";
 
-export async function createHNSWIndex() {
+export async function createHNSWIndex(db: Database) {
   await db.execute(sql`
     CREATE INDEX IF NOT EXISTS chunks_embedding_hnsw_idx
     ON source_chunks

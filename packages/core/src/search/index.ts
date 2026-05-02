@@ -1,4 +1,3 @@
-import "server-only";
 import { exaProvider } from "./exa";
 import { tavilyProvider } from "./tavily";
 import type {

@@ -1,7 +1,6 @@
-import "server-only";
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { sourceChunks, sources } from "@/db/schema";
+import { sourceChunks, sources } from "../db/schema";
+import { coreDb } from "../runtime";
 import { chunkText } from "./chunk";
 import {
   buildEmbeddingContext,
@@ -21,6 +20,7 @@ export async function ingestText(params: {
   text: string;
   sourceTitle?: string;
 }) {
+  const db = coreDb();
   try {
     await db
       .update(sources)
