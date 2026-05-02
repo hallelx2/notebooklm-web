@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { userAiConfig } from "@/db/schema";
+import { userAiConfig } from "@notebooklm/core/db/schema";
 import { requireSession } from "@/lib/auth-server";
 
 /**

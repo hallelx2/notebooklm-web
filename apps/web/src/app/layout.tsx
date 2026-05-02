@@ -1,6 +1,8 @@
+import { ThemeProvider } from "@notebooklm/ui";
 import type { Metadata } from "next";
-import { ThemeProvider } from "@/lib/theme-provider";
-import TRPCProvider from "@/trpc/provider";
+import { AuthBridge } from "@/providers/AuthBridge";
+import { RouterBridge } from "@/providers/RouterBridge";
+import { TransportBridge } from "@/providers/TransportBridge";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -25,7 +27,11 @@ export default function RootLayout({
       </head>
       <body className="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-200 min-h-screen antialiased">
         <ThemeProvider>
-          <TRPCProvider>{children}</TRPCProvider>
+          <RouterBridge>
+            <TransportBridge>
+              <AuthBridge>{children}</AuthBridge>
+            </TransportBridge>
+          </RouterBridge>
         </ThemeProvider>
       </body>
     </html>

@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Tailwind v4 has no `tailwind.config.content` — use @source to add the
+   shared UI package to the JIT scan, otherwise classes used only inside
+   @notebooklm/ui get tree-shaken from the production bundle. */
+@source "../../../../packages/ui/src/**/*.{ts,tsx}";
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {

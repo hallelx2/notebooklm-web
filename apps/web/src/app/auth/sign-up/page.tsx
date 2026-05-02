@@ -1,5 +1,5 @@
 import { redirectIfAuthenticated } from "@/lib/auth-server";
-import { SignUpView } from "@/module/auth/views/SignUpView";
+import { SignUpView } from "@notebooklm/ui/views/auth/SignUpView";
 
 export default async function SignUpPage() {
   await redirectIfAuthenticated();
