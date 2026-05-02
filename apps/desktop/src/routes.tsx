@@ -1,7 +1,6 @@
 import { ThemeProvider } from "@notebooklm/ui/components/ThemeProvider";
 import { SignInView } from "@notebooklm/ui/views/auth/SignInView";
 import { SignUpView } from "@notebooklm/ui/views/auth/SignUpView";
-import { LandingView } from "@notebooklm/ui/views/landing/LandingView";
 import { NotebookView } from "@notebooklm/ui/views/notebook/NotebookView";
 import { NotebooksView } from "@notebooklm/ui/views/notebooks/NotebooksView";
 import { AppearanceView } from "@notebooklm/ui/views/settings/AppearanceView";
@@ -15,6 +14,7 @@ import {
   createRoute,
   createRouter,
   Outlet,
+  redirect,
 } from "@tanstack/react-router";
 import { AuthBridge } from "./providers/AuthBridge";
 import { RouterBridge } from "./providers/RouterBridge";
@@ -37,10 +37,18 @@ const rootRoute = createRootRoute({
   ),
 });
 
+// Desktop apps don't have a marketing landing page — the user double-clicks
+// the icon to use the product, not to read about it. `/` bounces to
+// `/notebooks`, which renders the notebook list when authenticated and
+// redirects to `/auth/sign-in` otherwise (NotebooksView already does that
+// guard via useAuth().status). Skipping the landing also means the LandingView
+// component never gets bundled into the desktop renderer.
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: LandingView,
+  beforeLoad: () => {
+    throw redirect({ to: "/notebooks" });
+  },
 });
 
 const signInRoute = createRoute({
