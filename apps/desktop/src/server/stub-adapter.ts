@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
 import { vector } from "@electric-sql/pglite/vector";
 import { createAuth } from "@notebooklm/core/auth";
@@ -11,6 +12,30 @@ import type { StorageProvider } from "@notebooklm/core/storage/types";
 import type { PlatformAdapter } from "@notebooklm/server";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
+
+/**
+ * Phase 1 stub fills in any env vars the core libraries demand at runtime
+ * but the desktop has no real value for yet. Saved encrypted credentials
+ * die with the in-memory PGlite anyway, so a fresh ENCRYPTION_KEY per launch
+ * is correct — Phase 2's on-disk PGlite will persist this from a per-user
+ * config file alongside the data directory.
+ */
+function ensureRuntimeEnv() {
+  if (!process.env.ENCRYPTION_KEY) {
+    process.env.ENCRYPTION_KEY = randomBytes(32).toString("hex");
+    // biome-ignore lint/suspicious/noConsole: dev-only diagnostic
+    console.warn(
+      "[NotebookLM Desktop] auto-generated ENCRYPTION_KEY for this session. " +
+        "Saved credentials will not survive a restart while the stub uses " +
+        "PGlite memory mode. Set ENCRYPTION_KEY in your environment to pin it.",
+    );
+  }
+  if (!process.env.BETTER_AUTH_SECRET) {
+    // Better Auth would auto-generate one but warn loudly. Pin it explicitly
+    // so re-runs within the same Vite session keep the same session signing.
+    process.env.BETTER_AUTH_SECRET = randomBytes(32).toString("hex");
+  }
+}
 
 /**
  * Phase 1 stub adapter for the desktop app.
@@ -36,6 +61,8 @@ function buildStorage(): StorageProvider {
 
 export async function getStubAdapter(): Promise<PlatformAdapter> {
   if (cachedAdapter) return cachedAdapter;
+
+  ensureRuntimeEnv();
 
   const pg = new PGlite("memory://", { extensions: { vector } });
   await pg.waitReady;
