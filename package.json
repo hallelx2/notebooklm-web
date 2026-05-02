@@ -47,6 +47,6 @@
   "devDependencies": {
     "@biomejs/biome": "2.2.0"
   },
-  "trustedDependencies": ["sharp", "unrs-resolver"],
+  "trustedDependencies": ["sharp", "unrs-resolver", "electron", "electron-builder"],
   "ignoreScripts": ["sharp", "unrs-resolver"]
 }

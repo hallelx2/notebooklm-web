@@ -3,6 +3,10 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  // Relative asset URLs so the production build works under Electron's
+  // file:// protocol (loadFile points at dist/index.html, then assets
+  // resolve relative to that).
+  base: "./",
   plugins: [
     react(),
     tailwindcss(),
