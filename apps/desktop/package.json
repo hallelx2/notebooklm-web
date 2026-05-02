@@ -4,7 +4,7 @@
   "private": true,
   "main": "electron/main.cjs",
   "scripts": {
-    "dev": "concurrently -k -n vite,electron -c \"cyan,magenta\" \"bun run dev:vite\" \"wait-on tcp:5173 && bun run dev:electron\"",
+    "dev": "concurrently -k -n vite,electron -c \"cyan,magenta\" \"bun run dev:vite\" \"wait-on -t 60000 -i 500 http-get://localhost:5173 && bun run dev:electron\"",
     "dev:vite": "vite",
     "dev:electron": "electron .",
     "dev:browser": "vite",
