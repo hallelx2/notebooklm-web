@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+/* Tailwind v4 has no `tailwind.config.content` — use @source to add the
+   shared UI package to the JIT scan. */
+@source "../../../packages/ui/src/**/*.{ts,tsx}";
+@source "./**/*.{ts,tsx}";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Google Sans", "Plus Jakarta Sans", sans-serif;
+  --color-background-light: #f0f2f5;
+  --color-surface-light: #ffffff;
+  --color-background-dark: #131314;
+  --color-surface-dark: #1e1f20;
+}
+
+body {
+  font-family: var(--font-sans);
+}
