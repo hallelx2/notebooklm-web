@@ -1,4 +1,7 @@
 import { randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { vector } from "@electric-sql/pglite/vector";
 import { createAuth } from "@notebooklm/core/auth";
@@ -14,57 +17,101 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 
 /**
- * Phase 1 stub fills in any env vars the core libraries demand at runtime
- * but the desktop has no real value for yet. Saved encrypted credentials
- * die with the in-memory PGlite anyway, so a fresh ENCRYPTION_KEY per launch
- * is correct — Phase 2's on-disk PGlite will persist this from a per-user
- * config file alongside the data directory.
- */
-function ensureRuntimeEnv() {
-  if (!process.env.ENCRYPTION_KEY) {
-    process.env.ENCRYPTION_KEY = randomBytes(32).toString("hex");
-    // biome-ignore lint/suspicious/noConsole: dev-only diagnostic
-    console.warn(
-      "[NotebookLM Desktop] auto-generated ENCRYPTION_KEY for this session. " +
-        "Saved credentials will not survive a restart while the stub uses " +
-        "PGlite memory mode. Set ENCRYPTION_KEY in your environment to pin it.",
-    );
-  }
-  if (!process.env.BETTER_AUTH_SECRET) {
-    // Better Auth would auto-generate one but warn loudly. Pin it explicitly
-    // so re-runs within the same Vite session keep the same session signing.
-    process.env.BETTER_AUTH_SECRET = randomBytes(32).toString("hex");
-  }
-}
-
-/**
- * Phase 1 stub adapter for the desktop app.
+ * Phase 1.5 desktop adapter.
  *
- * - Database: PGlite in `memory://` mode (no persistence across restarts).
- * - Storage: `createMemoryStorageProvider()` by default. Set
- *   `DESKTOP_STORAGE_DIR` env to swap in a real `createLocalStorageProvider`
- *   rooted at that path — useful for verifying the local-FS branch end to
- *   end before Phase 2's Tauri shell takes over.
- * - Auth: `createAuth({ db, baseURL })` so signups land in PGlite.
+ * What's persistent:
+ *   - PGlite directory at <dataDir>/pglite — users, notebooks, sources,
+ *     chunks, embeddings, messages, saved provider credentials.
+ *   - Local-FS storage at <dataDir>/storage — uploaded PDFs, generated
+ *     audio overviews, anything the StorageProvider writes.
+ *   - Config at <dataDir>/config.json — the per-install ENCRYPTION_KEY
+ *     and BETTER_AUTH_SECRET. Generated on first launch, reused after.
  *
- * Phase 2 swaps PGlite-memory for PGlite-on-disk and the storage default
- * for `createLocalStorageProvider(<user data dir>)`. The Hono app, the
- * tRPC routers, the streaming handlers — none of them change.
+ * Default <dataDir> is `~/.notebooklm`. Override with NOTEBOOKLM_DATA_DIR.
+ * Set NOTEBOOKLM_DATA_DIR=memory: to fall back to the original ephemeral
+ * stub (PGlite memory + in-memory storage + per-launch keys) for testing.
+ *
+ * Phase 2 will move this construction into a Tauri/Electron sidecar binary
+ * that resolves <dataDir> via `app.getPath('userData')`, but the shape of
+ * the adapter doesn't change — same Hono app mounts on top.
  */
 
 let cachedAdapter: PlatformAdapter | null = null;
 
+const MEMORY_MODE = process.env.NOTEBOOKLM_DATA_DIR === "memory:";
+const DATA_DIR = process.env.NOTEBOOKLM_DATA_DIR && !MEMORY_MODE
+  ? process.env.NOTEBOOKLM_DATA_DIR
+  : join(homedir(), ".notebooklm");
+
+type DesktopConfig = {
+  encryptionKey: string;
+  betterAuthSecret: string;
+};
+
+function loadOrCreateConfig(): DesktopConfig {
+  if (MEMORY_MODE) {
+    return {
+      encryptionKey: randomBytes(32).toString("hex"),
+      betterAuthSecret: randomBytes(32).toString("hex"),
+    };
+  }
+
+  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+  const configPath = join(DATA_DIR, "config.json");
+
+  if (existsSync(configPath)) {
+    try {
+      const raw = JSON.parse(readFileSync(configPath, "utf8")) as Partial<DesktopConfig>;
+      if (raw.encryptionKey && raw.betterAuthSecret) {
+        return raw as DesktopConfig;
+      }
+    } catch {
+      // fall through to regenerate
+    }
+  }
+
+  const fresh: DesktopConfig = {
+    encryptionKey: randomBytes(32).toString("hex"),
+    betterAuthSecret: randomBytes(32).toString("hex"),
+  };
+  writeFileSync(configPath, JSON.stringify(fresh, null, 2), { mode: 0o600 });
+  // biome-ignore lint/suspicious/noConsole: dev-only diagnostic
+  console.warn(
+    `[NotebookLM Desktop] generated fresh config at ${configPath}. ` +
+      `Treat it like a credential — losing it bricks every saved AI key.`,
+  );
+  return fresh;
+}
+
+function ensureRuntimeEnv(cfg: DesktopConfig) {
+  if (!process.env.ENCRYPTION_KEY) process.env.ENCRYPTION_KEY = cfg.encryptionKey;
+  if (!process.env.BETTER_AUTH_SECRET)
+    process.env.BETTER_AUTH_SECRET = cfg.betterAuthSecret;
+}
+
 function buildStorage(): StorageProvider {
-  const dir = process.env.DESKTOP_STORAGE_DIR;
-  return dir ? createLocalStorageProvider(dir) : createMemoryStorageProvider();
+  if (MEMORY_MODE) return createMemoryStorageProvider();
+  const dir = process.env.DESKTOP_STORAGE_DIR ?? join(DATA_DIR, "storage");
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  return createLocalStorageProvider(dir);
+}
+
+function buildPGlite() {
+  if (MEMORY_MODE) {
+    return new PGlite("memory://", { extensions: { vector } });
+  }
+  const dbDir = join(DATA_DIR, "pglite");
+  if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
+  return new PGlite(dbDir, { extensions: { vector } });
 }
 
 export async function getStubAdapter(): Promise<PlatformAdapter> {
   if (cachedAdapter) return cachedAdapter;
 
-  ensureRuntimeEnv();
+  const cfg = loadOrCreateConfig();
+  ensureRuntimeEnv(cfg);
 
-  const pg = new PGlite("memory://", { extensions: { vector } });
+  const pg = buildPGlite();
   await pg.waitReady;
   const db = drizzle(pg, { schema });
   bindCoreRuntime({ db });
@@ -85,9 +132,6 @@ export async function getStubAdapter(): Promise<PlatformAdapter> {
     storage,
     env: {
       APP_URL: "http://localhost:5173",
-      // BYOK env keys flow into the desktop the same way they would on the
-      // web: read from process.env at adapter-build time so handlers see
-      // them via `adapter.env.X`.
       DEEPGRAM_API_KEY: process.env.DEEPGRAM_API_KEY,
       EXA_API_KEY: process.env.EXA_API_KEY,
       TAVILY_API_KEY: process.env.TAVILY_API_KEY,
@@ -102,9 +146,10 @@ export async function getStubAdapter(): Promise<PlatformAdapter> {
  * dependency order. PGlite supports pgvector when its `vector` extension
  * is loaded, so embedding columns Just Work.
  *
- * If the schema in core is changed, this function needs the matching DDL.
- * The plan is to replace this hand-rolled SQL with `drizzle-kit push`
- * against the PGlite db once the desktop persists across runs (Phase 2).
+ * `IF NOT EXISTS` everywhere — safe to run every launch against a
+ * persistent db without rebuilding existing tables. When the schema in
+ * core changes this block needs the matching DDL; Phase 2 swaps for
+ * `drizzle-kit migrate` so additive migrations are tracked properly.
  */
 async function initSchema(db: ReturnType<typeof drizzle>) {
   await db.execute(sql`CREATE EXTENSION IF NOT EXISTS vector`);
@@ -173,7 +218,7 @@ async function initSchema(db: ReturnType<typeof drizzle>) {
     sql`CREATE INDEX IF NOT EXISTS "verification_identifier_idx" ON "verification" ("identifier")`,
   );
 
-  // ── Notebook + sources + chunks ────────────────────────────────
+  // ── Notebooks + sources + chunks ───────────────────────────────
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS "notebooks" (
       "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
