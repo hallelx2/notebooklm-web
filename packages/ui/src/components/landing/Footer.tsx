@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@notebooklm/ui/contexts";
 
 const COLUMNS: {
   heading: string;
