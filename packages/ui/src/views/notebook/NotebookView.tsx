@@ -1,6 +1,6 @@
 "use client";
 
-import { ThemeToggle } from "@notebooklm/ui";
+import { ThemeToggle } from "@notebooklm/ui/components/ThemeToggle";
 import { ChatPanel } from "@notebooklm/ui/components/notebook/ChatPanel";
 import { DeepResearchModal } from "@notebooklm/ui/components/notebook/DeepResearchModal";
 import { ResizeHandle } from "@notebooklm/ui/components/notebook/ResizeHandle";

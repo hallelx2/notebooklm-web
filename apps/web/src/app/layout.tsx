@@ -1,4 +1,4 @@
-import { ThemeProvider } from "@notebooklm/ui";
+import { ThemeProvider } from "@notebooklm/ui/components/ThemeProvider";
 import type { Metadata } from "next";
 import { AuthBridge } from "@/providers/AuthBridge";
 import { RouterBridge } from "@/providers/RouterBridge";

@@ -1,6 +1,6 @@
 "use client";
 
-import { ThemeToggle } from "@notebooklm/ui";
+import { ThemeToggle } from "@notebooklm/ui/components/ThemeToggle";
 import { Link, useAuth, useRouter } from "@notebooklm/ui/contexts";
 import { trpc } from "@notebooklm/ui/trpc/client";
 import { useEffect, useMemo, useRef, useState } from "react";

@@ -1,4 +1,4 @@
-import { ThemeProvider } from "@notebooklm/ui";
+import { ThemeProvider } from "@notebooklm/ui/components/ThemeProvider";
 import { SignInView } from "@notebooklm/ui/views/auth/SignInView";
 import { SignUpView } from "@notebooklm/ui/views/auth/SignUpView";
 import { LandingView } from "@notebooklm/ui/views/landing/LandingView";
