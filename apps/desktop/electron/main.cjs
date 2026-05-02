@@ -35,7 +35,8 @@ function createWindow() {
 
   if (isDev) {
     win.loadURL(DEV_URL);
-    win.webContents.openDevTools({ mode: "detach" });
+    // Side-pane so the console is visible at boot — F12 to toggle later.
+    win.webContents.openDevTools({ mode: "right" });
   } else {
     win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   }
