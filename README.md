@@ -156,17 +156,21 @@ User AI provider API keys are **not** environment variables — users add them t
 
 ### Self-hosting SearxNG
 
-SearxNG aggregates Google / Bing / DuckDuckGo / Wikipedia behind one JSON API and is the OSS option that lets users run deep-research without paid keys. Quickest local setup:
+SearxNG aggregates Google / Bing / DuckDuckGo / Wikipedia behind one JSON API and is the OSS option that lets users run deep-research without paid keys. A ready-to-run Docker setup lives at [`docker/searxng/`](docker/searxng/):
 
 ```bash
-docker run -d --name searxng -p 8080:8080 \
-  -v "$(pwd)/searxng-config:/etc/searxng" \
-  searxng/searxng:latest
-# then in your env:
-export SEARXNG_URL=http://localhost:8080
+cd docker/searxng
+export SEARXNG_PORT=8888
+export SEARXNG_SECRET=$(openssl rand -hex 32)
+docker compose up -d
+
+# point the app at it
+export SEARXNG_URL=http://localhost:${SEARXNG_PORT}
 ```
 
-Public instances (e.g. `https://searx.be`) work for testing but rate-limit unpredictably — self-host for production. Full setup options: <https://docs.searxng.org/admin/installation.html>
+The desktop app **auto-starts the same compose stack on first launch** when Docker is available — no setup needed beyond installing Docker Desktop. See [`docker/searxng/README.md`](docker/searxng/README.md) for details, tear-down, and tuning.
+
+Public instances (e.g. `https://searx.be`) work for testing but rate-limit unpredictably — self-host for production. Full SearxNG reference: <https://docs.searxng.org/admin/installation.html>
 
 ## Development
 
