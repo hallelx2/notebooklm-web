@@ -45,6 +45,18 @@ export function NotebooksView() {
     }
   }, [auth.status, router]);
 
+  // Desktop menu bridge: Cmd/Ctrl-N (File > New Notebook) dispatches a
+  // window event that we translate into the same `create.mutate` call the
+  // header button uses. Web users never fire this event so the listener
+  // is a harmless no-op there. See apps/desktop/src/main.tsx for the
+  // dispatch side and apps/desktop/electron/menu.cjs for the menu wiring.
+  useEffect(() => {
+    if (!auth.user) return;
+    const handler = () => create.mutate({ title: "Untitled notebook" });
+    window.addEventListener("notebooklm:new-notebook", handler);
+    return () => window.removeEventListener("notebooklm:new-notebook", handler);
+  }, [auth.user, create]);
+
   // Close list-view kebab menu on outside click
   useEffect(() => {
     if (!listMenuOpenId) return;

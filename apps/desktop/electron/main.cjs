@@ -2,6 +2,7 @@
 // The renderer (Vite output) is ESM and lives separately.
 const { app, BrowserWindow, shell } = require("electron");
 const path = require("node:path");
+const { buildMenu } = require("./menu");
 const { createWindowState } = require("./window-state");
 
 const isDev = !app.isPackaged;
@@ -75,6 +76,9 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // Loaded before the renderer; exposes `window.notebooklm.onMenuCommand`
+      // via contextBridge. See apps/desktop/electron/preload.cjs.
+      preload: path.join(__dirname, "preload.cjs"),
     },
   });
 
@@ -101,7 +105,13 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // Install the application menu once. It uses BrowserWindow.getFocusedWindow()
+  // at click time so it stays correct across window close/recreate cycles
+  // (notably macOS where the app stays alive after window-all-closed).
+  buildMenu({ isDev });
+  createWindow();
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
