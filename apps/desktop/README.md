@@ -48,12 +48,36 @@ Special value `NOTEBOOKLM_DATA_DIR=memory:` runs everything in-memory (PGlite me
 
 ## Configuration
 
-Most env vars are auto-generated on first launch and persisted to `config.json`. The two you might want to set explicitly are documented in [`apps/desktop/.env.example`](.env.example):
+Most env vars are auto-generated on first launch and persisted to `config.json`. The ones you might want to set explicitly are documented in [`apps/desktop/.env.example`](.env.example):
 
-- **`SEARXNG_URL`** — point at a self-hosted SearxNG instance for OSS web search (no Exa/Tavily key required). Recommended docker command in the example file.
+- **`SEARXNG_URL`** — point at an existing SearxNG instance to skip the auto-start. Without this, the auto-start kicks in (see below).
+- **`NOTEBOOKLM_SEARXNG_AUTOSTART=0`** — disable the auto-started container even when Docker is available.
+- **`NOTEBOOKLM_SEARXNG_PORT=8888`** — host port for the auto-started container (default 8888).
 - **`NOTEBOOKLM_ENABLE_CLAUDE_AGENT_SDK=1`** — opt into the Claude Agent SDK runtime for deep-research (requires an Anthropic credential saved via Settings → Providers). Without this flag, deep-research uses the AI SDK runtime against whatever provider you configured.
 
 User AI provider keys (OpenAI, Anthropic, Google, Ollama, etc.) are added through the in-app settings UI per-user, encrypted at rest with the per-install key — same as the web app.
+
+### SearxNG auto-start
+
+Deep-research needs a web-search backend. If you don't have Exa or Tavily keys configured, the desktop adapter auto-starts a local SearxNG container on first launch — provided **Docker is installed and running**.
+
+What the manager does (see `apps/desktop/src/server/searxng-manager.ts`):
+
+1. Skips entirely if `SEARXNG_URL` is already set, or if `NOTEBOOKLM_SEARXNG_AUTOSTART=0`.
+2. Detects Docker on PATH; logs a hint and skips if absent.
+3. If a healthy container is already running on the expected port, just sets `SEARXNG_URL` and returns.
+4. Otherwise: copies `docker/searxng/{docker-compose.yml,settings.yml}` to `<dataDir>/searxng/` (so per-install settings tweaks survive repo updates), generates a 32-byte `SEARXNG_SECRET` and persists it at `<dataDir>/searxng/.secret` (mode 0600), runs `docker compose up -d`, and waits up to 60s for `/healthz` before pointing the app at `http://localhost:<port>`.
+
+The first launch is slow (~30s for image pull). Subsequent launches reuse the running container — log line `searxng reused at …`. The container deliberately persists across desktop restarts so the second launch is instant.
+
+To fully tear down:
+
+```bash
+cd ~/.notebooklm/searxng
+docker compose down -v
+```
+
+Configuration reference: [`docker/searxng/README.md`](../../docker/searxng/README.md).
 
 ## Custom app icon
 

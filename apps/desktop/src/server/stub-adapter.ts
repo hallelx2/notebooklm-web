@@ -15,6 +15,7 @@ import type { StorageProvider } from "@notebooklm/core/storage/types";
 import type { PlatformAdapter } from "@notebooklm/server";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
+import { ensureSearxng } from "./searxng-manager";
 
 /**
  * Phase 1.5 desktop adapter.
@@ -117,6 +118,42 @@ export async function getStubAdapter(): Promise<PlatformAdapter> {
   bindCoreRuntime({ db });
 
   await initSchema(db);
+
+  // Fire-and-forget: spawn SearxNG in the background so deep-research
+  // has an OSS web search backend without paid keys. Idempotent — picks
+  // up an existing container if one is running, no-ops if Docker isn't
+  // available or the user set SEARXNG_URL to an external instance.
+  // We don't await: the Hono server should boot immediately even if the
+  // image-pull on first run takes a while. The search provider reads
+  // process.env.SEARXNG_URL at call time so a delayed set still works.
+  if (!MEMORY_MODE) {
+    ensureSearxng(DATA_DIR)
+      .then((status) => {
+        if (status.state === "auto-started") {
+          console.log(
+            `[NotebookLM Desktop] searxng auto-started at ${status.url} (config: ${status.configDir})`,
+          );
+        } else if (status.state === "already-running") {
+          console.log(
+            `[NotebookLM Desktop] searxng reused at ${status.url}`,
+          );
+        } else if (status.state === "user-configured") {
+          console.log(
+            `[NotebookLM Desktop] searxng using user-configured ${status.url}`,
+          );
+        } else {
+          console.log(
+            `[NotebookLM Desktop] searxng skipped — ${status.reason}`,
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn(
+          "[NotebookLM Desktop] searxng auto-start failed",
+          err instanceof Error ? err.message : err,
+        );
+      });
+  }
 
   const storage = buildStorage();
 
