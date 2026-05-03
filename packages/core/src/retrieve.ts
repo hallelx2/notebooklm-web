@@ -1,7 +1,5 @@
-import { generateObject } from "ai";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import { z } from "zod";
-import { getChatModel } from "./ai/factory";
+import { runAgent } from "./agent";
 import { sourceChunks, sources } from "./db/schema";
 import { embeddingTableForDim, embedQueryFor } from "./ingest/embed";
 import { coreDb } from "./runtime";
@@ -15,26 +13,30 @@ export type RetrievedChunk = {
 };
 
 /* ---------- Query Expansion ---------- */
+/* Routes through `runAgent({ kind: "rerank" }, ...)` with empty
+ * candidates — see `packages/core/src/agent/runtimes/ai-sdk/index.ts`
+ * `runExpand` for the LLM call. The harness's silent error fallback
+ * matches the pre-harness `try/catch -> [query]` behaviour. */
 
 async function expandQuery(userId: string, query: string): Promise<string[]> {
-  try {
-    const model = await getChatModel(userId);
-    const { object } = await generateObject({
-      model,
-      schema: z.object({
-        queries: z.array(z.string()).min(1).max(4),
-      }),
-      prompt: `Generate 2-3 alternative search queries that capture different aspects of this question. Include the original query first. Be concise.
-
-Original: ${query}`,
-    });
-    return object.queries;
-  } catch {
-    return [query]; // fallback to original
+  for await (const ev of runAgent(
+    { kind: "rerank", userId, query, candidates: [], topK: 0 },
+    [{ id: "ai-sdk" }],
+    { userId },
+  )) {
+    if (ev.type === "done") {
+      const obj = ev.finalObject as { queries?: string[] } | undefined;
+      return obj?.queries ?? [query];
+    }
   }
+  return [query];
 }
 
 /* ---------- LLM Reranking ---------- */
+/* Same `kind: "rerank"` task with non-empty candidates; the runtime
+ * adapter switches to score mode (`runScore`) and yields a sorted
+ * topK slice. The pre-harness short-circuit "if chunks.length <= topK
+ * skip the LLM" lives in the adapter now too. */
 
 async function rerankChunks(
   userId: string,
@@ -50,36 +52,17 @@ async function rerankChunks(
 ): Promise<typeof chunks> {
   if (chunks.length <= topK) return chunks;
 
-  try {
-    const model = await getChatModel(userId);
-    const { object } = await generateObject({
-      model,
-      schema: z.object({
-        ranked: z.array(
-          z.object({
-            index: z.number(),
-            relevance: z.number().min(0).max(10),
-          }),
-        ),
-      }),
-      prompt: `Rate each text chunk's relevance to the question on a 0-10 scale.
-Question: "${query}"
-
-Chunks:
-${chunks.map((c, i) => `[${i}] (${c.sourceTitle}): ${c.content.slice(0, 300)}`).join("\n\n")}
-
-Return relevance scores for ALL chunks. 10 = directly answers the question, 0 = completely irrelevant.`,
-    });
-
-    const scoreMap = new Map(object.ranked.map((r) => [r.index, r.relevance]));
-    const sorted = [...chunks]
-      .map((c, i) => ({ ...c, llmScore: scoreMap.get(i) ?? 5 }))
-      .sort((a, b) => b.llmScore - a.llmScore);
-
-    return sorted.slice(0, topK);
-  } catch {
-    return chunks.slice(0, topK);
+  for await (const ev of runAgent(
+    { kind: "rerank", userId, query, candidates: chunks, topK },
+    [{ id: "ai-sdk" }],
+    { userId },
+  )) {
+    if (ev.type === "done") {
+      const obj = ev.finalObject as { sorted?: typeof chunks } | undefined;
+      return obj?.sorted ?? chunks.slice(0, topK);
+    }
   }
+  return chunks.slice(0, topK);
 }
 
 /* ---------- Hybrid Retrieval ---------- */

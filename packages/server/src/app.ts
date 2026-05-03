@@ -1,4 +1,9 @@
 import { trpcServer } from "@hono/trpc-server";
+// Side-effect import: registers every adapter with the agent harness so
+// `runAgent({ kind, ... }, [{ id: "ai-sdk" }], ctx)` resolves before any
+// handler invokes it. Both apps mount this app, so adding the import here
+// covers web (apps/web) and desktop (apps/desktop) without per-app wiring.
+import "@notebooklm/core/agent/runtimes";
 import { Hono } from "hono";
 import type { PlatformAdapter } from "./adapter";
 import { adminMigrateHandler } from "./handlers/admin/migrate";
