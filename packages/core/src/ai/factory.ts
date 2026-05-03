@@ -91,9 +91,23 @@ export function invalidateUserAiCache(userId: string) {
 /*  Credential loading + decryption                                    */
 /* ------------------------------------------------------------------ */
 
-interface ResolvedCredential {
+export interface ResolvedCredential {
   apiKey: string | undefined;
   baseUrl: string | null;
+}
+
+/**
+ * Load + decrypt the user's saved credential for a provider. Throws
+ * {@link NoAiConfigError} if no row exists. Exported so adapters that
+ * need the raw key (e.g. the Claude Agent SDK runtime, which spawns a
+ * subprocess and can't reuse our cached `LanguageModel` handle) can
+ * resolve credentials without re-implementing decryption.
+ */
+export async function loadUserCredential(
+  userId: string,
+  providerId: ProviderId,
+): Promise<ResolvedCredential> {
+  return loadCredential(userId, providerId);
 }
 
 async function loadCredential(
