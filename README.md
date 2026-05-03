@@ -61,6 +61,14 @@ bun run dev                # http://localhost:3000
 
 First-time signup walks you through picking a chat provider and an embedding provider in `/settings`. Drop in your API keys, pick your models, and start building notebooks.
 
+### Desktop
+
+The same workbench is available as a native Electron app under `apps/desktop` — runs against an embedded PGlite database with local-FS storage, fully offline against Ollama. See [`apps/desktop/README.md`](apps/desktop/README.md) for the quick-start and keyboard shortcuts.
+
+```bash
+bun --filter @notebooklm/desktop dev
+```
+
 ## Stack
 
 | Layer | Tool | Notes |
