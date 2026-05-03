@@ -2,6 +2,7 @@
 // The renderer (Vite output) is ESM and lives separately.
 const { app, BrowserWindow, shell } = require("electron");
 const path = require("node:path");
+const { createWindowState } = require("./window-state");
 
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.NOTEBOOKLM_DEV_URL ?? "http://localhost:5173";
@@ -34,21 +35,51 @@ async function loadWithRetry(win, url, retries = 30, delayMs = 1000) {
   }
 }
 
+/**
+ * Per-platform native chrome.
+ *
+ * macOS: frameless titlebar with traffic lights inset over the content +
+ *   sidebar vibrancy so the background blends with the OS chrome. Matches
+ *   the standard Apple-app feel (Mail, Notes, Xcode).
+ *
+ * Windows: keep the default frame for now. Win11 mica/acrylic via
+ *   `backgroundMaterial: "mica"` needs Electron 35+; we're on 33. Flagged
+ *   for a follow-up Electron upgrade in P1.
+ *
+ * Linux: default frame. GTK/CSD integration is its own story.
+ */
+function platformWindowOptions() {
+  if (process.platform === "darwin") {
+    return {
+      titleBarStyle: "hiddenInset",
+      vibrancy: "sidebar",
+      visualEffectState: "active",
+    };
+  }
+  return {};
+}
+
 function createWindow() {
+  const state = createWindowState();
   const win = new BrowserWindow({
-    width: 1440,
-    height: 920,
+    x: state.x,
+    y: state.y,
+    width: state.width,
+    height: state.height,
     minWidth: 960,
     minHeight: 600,
     backgroundColor: "#050505",
-    autoHideMenuBar: true,
     title: "NotebookLM",
+    ...platformWindowOptions(),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
     },
   });
+
+  // Hook resize/move/close so the keeper writes window-state.json.
+  state.manage(win);
 
   // External links open in the user's default browser, not inside the app.
   win.webContents.setWindowOpenHandler(({ url }) => {
