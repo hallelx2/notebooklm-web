@@ -1,4 +1,4 @@
-import { runAgent } from "@notebooklm/core/agent";
+import { loadRuntimesForTask, runAgent } from "@notebooklm/core/agent";
 import { NoAiConfigError } from "@notebooklm/core/ai/factory";
 import { notebooks, sources, studioOutputs } from "@notebooklm/core/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -121,6 +121,11 @@ export async function audioOverviewHandler(
           message: "Generating podcast script...",
         });
 
+        const runtimes = await loadRuntimesForTask(
+          session.user.id,
+          "studio",
+        );
+
         let rawScript = "";
         try {
           for await (const ev of runAgent(
@@ -135,7 +140,7 @@ export async function audioOverviewHandler(
                 sourceContent,
               },
             },
-            [{ id: "ai-sdk" }],
+            runtimes,
             { userId: session.user.id, signal: req.signal },
           )) {
             if (ev.type === "text-delta") {

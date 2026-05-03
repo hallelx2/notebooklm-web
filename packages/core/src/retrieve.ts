@@ -1,5 +1,5 @@
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import { runAgent } from "./agent";
+import { loadRuntimesForTask, runAgent } from "./agent";
 import { sourceChunks, sources } from "./db/schema";
 import { embeddingTableForDim, embedQueryFor } from "./ingest/embed";
 import { coreDb } from "./runtime";
@@ -19,9 +19,10 @@ export type RetrievedChunk = {
  * matches the pre-harness `try/catch -> [query]` behaviour. */
 
 async function expandQuery(userId: string, query: string): Promise<string[]> {
+  const runtimes = await loadRuntimesForTask(userId, "rerank");
   for await (const ev of runAgent(
     { kind: "rerank", userId, query, candidates: [], topK: 0 },
-    [{ id: "ai-sdk" }],
+    runtimes,
     { userId },
   )) {
     if (ev.type === "done") {
@@ -52,9 +53,10 @@ async function rerankChunks(
 ): Promise<typeof chunks> {
   if (chunks.length <= topK) return chunks;
 
+  const runtimes = await loadRuntimesForTask(userId, "rerank");
   for await (const ev of runAgent(
     { kind: "rerank", userId, query, candidates: chunks, topK },
-    [{ id: "ai-sdk" }],
+    runtimes,
     { userId },
   )) {
     if (ev.type === "done") {
