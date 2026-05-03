@@ -15,3 +15,9 @@ drizzle
 
 .vercel
 .claude
+
+# electron-builder source-resource directory (icons, entitlements, installer
+# templates). The default `build` ignore above swallows it; un-ignore so
+# `apps/desktop/build/icon.{svg,png}` are tracked.
+!apps/desktop/build/
+!apps/desktop/build/**

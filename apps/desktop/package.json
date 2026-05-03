@@ -9,6 +9,7 @@
     "dev:electron": "electron .",
     "dev:browser": "vite",
     "build": "vite build",
+    "build:icon": "node scripts/build-icon.mjs",
     "build:electron": "vite build && electron-builder",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
@@ -42,6 +43,7 @@
     "concurrently": "^9.1.0",
     "electron": "^33.2.0",
     "electron-builder": "^25.1.0",
+    "sharp": "^0.34.5",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "^6.0.0",
@@ -51,19 +53,23 @@
     "appId": "com.notebooklm.desktop",
     "productName": "NotebookLM",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": ["dist/**/*", "electron/**/*"],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.png"
     },
     "mac": {
       "target": "dmg",
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png"
     },
     "linux": {
       "target": "AppImage",
-      "category": "Office"
+      "category": "Office",
+      "icon": "build/icon.png"
     }
   }
 }
