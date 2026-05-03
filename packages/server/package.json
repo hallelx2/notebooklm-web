@@ -1,0 +1,40 @@
+{
+  "name": "@notebooklm/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./app": "./src/app.ts",
+    "./adapter": "./src/adapter.ts",
+    "./trpc": "./src/trpc/index.ts",
+    "./trpc/router": "./src/trpc/router.ts",
+    "./trpc/context": "./src/trpc/context.ts",
+    "./handlers/chat": "./src/handlers/chat.ts",
+    "./handlers/deep-research": "./src/handlers/deep-research.ts",
+    "./handlers/studio/audio-overview": "./src/handlers/studio/audio-overview.ts",
+    "./handlers/studio/quiz-summary": "./src/handlers/studio/quiz-summary.ts",
+    "./handlers/upload": "./src/handlers/upload.ts",
+    "./handlers/reembed": "./src/handlers/reembed.ts",
+    "./handlers/files": "./src/handlers/files.ts",
+    "./handlers/admin/migrate": "./src/handlers/admin/migrate.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@notebooklm/core": "workspace:*",
+    "@hono/trpc-server": "catalog:",
+    "@trpc/server": "catalog:",
+    "ai": "catalog:",
+    "better-auth": "catalog:",
+    "drizzle-orm": "catalog:",
+    "hono": "catalog:",
+    "uuid": "^13.0.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}
