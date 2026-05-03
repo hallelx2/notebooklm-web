@@ -8,6 +8,22 @@ const { createWindowState } = require("./window-state");
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.NOTEBOOKLM_DEV_URL ?? "http://localhost:5173";
 
+// Single-instance lock: if another copy of the app is already running,
+// the second invocation receives `false` and exits immediately. The
+// running copy gets a `second-instance` event we use to focus its window
+// (handled in app.whenReady below). Without this, double-clicking the
+// app icon — or in future a `notebooklm://` deep link — would spawn a
+// duplicate process holding a second PGlite handle.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+  // The require chain above is still resolving when quit() runs; return
+  // here so we don't continue evaluating (which would attach more event
+  // listeners on a quitting app).
+  // biome-ignore lint/correctness/noUnusedExpressions: noop sentinel
+  process.exit(0);
+}
+
 /**
  * Try to load `url` into `win`. If Vite isn't ready yet (ERR_CONNECTION_REFUSED)
  * or any other transient load failure, retry up to `retries` times with a
@@ -102,6 +118,28 @@ function createWindow() {
     win.webContents.openDevTools({ mode: "right" });
   } else {
     win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
+
+    // Production: block F12 / Cmd-Opt-I / Ctrl-Shift-I so end users can't
+    // accidentally pop open devtools. The View > Toggle DevTools menu item
+    // is already gated behind isDev (see electron/menu.cjs). We still let
+    // Cmd/Ctrl-R reload — that's a useful escape hatch from a stuck UI.
+    win.webContents.on("before-input-event", (event, input) => {
+      const key = input.key?.toLowerCase();
+      const isF12 = key === "f12";
+      const isMacShortcut =
+        process.platform === "darwin" &&
+        input.meta &&
+        input.alt &&
+        key === "i";
+      const isWinLinuxShortcut =
+        process.platform !== "darwin" &&
+        input.control &&
+        input.shift &&
+        key === "i";
+      if (isF12 || isMacShortcut || isWinLinuxShortcut) {
+        event.preventDefault();
+      }
+    });
   }
 }
 
@@ -111,6 +149,23 @@ app.whenReady().then(() => {
   // (notably macOS where the app stays alive after window-all-closed).
   buildMenu({ isDev });
   createWindow();
+});
+
+// Second-instance handler — runs in the FIRST (still-running) copy when a
+// user double-clicks the app icon while it's already open. Find the
+// existing window, restore + focus it. The newly-launched copy already
+// quit at the top of this file when requestSingleInstanceLock() returned
+// false.
+app.on("second-instance", () => {
+  const wins = BrowserWindow.getAllWindows();
+  const win = wins[0];
+  if (!win) {
+    createWindow();
+    return;
+  }
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
 });
 
 app.on("window-all-closed", () => {
