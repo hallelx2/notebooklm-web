@@ -14,12 +14,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@notebooklm/core": "workspace:*",
-    "@notebooklm/server": "workspace:*",
-    "@notebooklm/ui": "workspace:*",
     "@ai-sdk/react": "catalog:",
     "@electric-sql/pglite": "^0.2.17",
     "@hono/node-server": "^1.13.0",
+    "@notebooklm/core": "workspace:*",
+    "@notebooklm/server": "workspace:*",
+    "@notebooklm/ui": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "^1.95.0",
     "@trpc/client": "catalog:",
@@ -27,6 +27,7 @@
     "ai": "catalog:",
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
+    "electron-window-state": "^5.0.3",
     "hono": "catalog:",
     "next-themes": "catalog:",
     "react": "catalog:",
