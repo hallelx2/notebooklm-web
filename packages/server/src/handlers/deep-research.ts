@@ -1,4 +1,4 @@
-import { runAgent } from "@notebooklm/core/agent";
+import { loadRuntimesForTask, runAgent } from "@notebooklm/core/agent";
 import { NoAiConfigError } from "@notebooklm/core/ai/factory";
 import { deepResearchRuns, notebooks, sources } from "@notebooklm/core/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -74,6 +74,13 @@ export async function deepResearchHandler(
     })
     .returning();
 
+  // Resolve the user's runtime preference for research. Default is
+  // `["claude-agent-sdk", "ai-sdk"]` so users with Anthropic creds
+  // get the SDK's native sub-agents; everyone else falls back to the
+  // ai-sdk runtime's manual orchestration. The harness's strict
+  // `available()` on claude-agent-sdk handles the fallback silently.
+  const runtimes = await loadRuntimesForTask(session.user.id, "research");
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -104,7 +111,7 @@ export async function deepResearchHandler(
             query: body.query,
             mode: body.mode,
           },
-          [{ id: "ai-sdk" }],
+          runtimes,
           { userId: session.user.id, signal: req.signal },
         )) {
           /* ── step: phase boundaries with human-readable messages ── */

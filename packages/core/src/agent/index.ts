@@ -27,3 +27,11 @@ export {
   registerAdapter,
   runAgent,
 } from "./harness";
+
+export {
+  loadRuntimesForTask,
+  preferencesForTask,
+  readRuntimePreferences,
+  type RuntimePreferences,
+  RuntimePreferencesSchema,
+} from "./preferences";

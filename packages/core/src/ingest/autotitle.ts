@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { runAgent } from "../agent";
+import { loadRuntimesForTask, runAgent } from "../agent";
 import { NoAiConfigError } from "../ai/factory";
 import { notebooks } from "../db/schema";
 import { coreDb } from "../runtime";
@@ -42,6 +42,7 @@ export async function maybeAutoTitleAndSummarize(
 
   let result: { title?: string; description?: string } = {};
   try {
+    const runtimes = await loadRuntimesForTask(userId, "studio");
     for await (const ev of runAgent(
       {
         kind: "studio",
@@ -50,7 +51,7 @@ export async function maybeAutoTitleAndSummarize(
         outputKind: "auto-title",
         opts: { excerpt, needsTitle, needsDescription },
       },
-      [{ id: "ai-sdk" }],
+      runtimes,
       { userId },
     )) {
       if (ev.type === "structured") {

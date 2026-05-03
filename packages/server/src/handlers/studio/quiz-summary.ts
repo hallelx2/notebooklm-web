@@ -1,4 +1,4 @@
-import { runAgent } from "@notebooklm/core/agent";
+import { loadRuntimesForTask, runAgent } from "@notebooklm/core/agent";
 import { NoAiConfigError } from "@notebooklm/core/ai/factory";
 import type { PlatformAdapter } from "../../adapter";
 
@@ -30,6 +30,8 @@ export async function quizSummaryHandler(
   };
   const { questions, answers } = body;
 
+  const runtimes = await loadRuntimesForTask(session.user.id, "studio");
+
   let summary = "";
   try {
     for await (const ev of runAgent(
@@ -39,7 +41,7 @@ export async function quizSummaryHandler(
         outputKind: "quiz-summary",
         opts: { questions, answers },
       },
-      [{ id: "ai-sdk" }],
+      runtimes,
       { userId: session.user.id, signal: req.signal },
     )) {
       if (ev.type === "done" && typeof ev.finalText === "string") {

@@ -1,4 +1,4 @@
-import { runAgent } from "@notebooklm/core/agent";
+import { loadRuntimesForTask, runAgent } from "@notebooklm/core/agent";
 import { NoAiConfigError } from "@notebooklm/core/ai/factory";
 import { messages, notebooks } from "@notebooklm/core/db/schema";
 import {
@@ -70,6 +70,10 @@ export async function chatHandler(
     content: query,
   });
 
+  // Resolve the user's runtime preference for chat. Defaults to
+  // ["ai-sdk"] if they've never opened the runtime settings UI.
+  const runtimes = await loadRuntimesForTask(session.user.id, "chat");
+
   // Collect citations + final text from the agent stream so we can
   // persist the assistant message after the UI stream finishes.
   const collectedCitations: Citation[] = [];
@@ -100,7 +104,7 @@ export async function chatHandler(
             messages: uiMessages,
             sourceIds: body.sourceIds,
           },
-          [{ id: "ai-sdk" }],
+          runtimes,
           { userId: session.user.id, signal: req.signal },
         )) {
           if (ev.type === "text-delta") {
