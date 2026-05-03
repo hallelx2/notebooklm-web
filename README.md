@@ -73,7 +73,7 @@ First-time signup walks you through picking a chat provider and an embedding pro
 | AI Layer | **AI SDK v6** | Uniform `LanguageModel` interface across 12 providers |
 | RPC | **tRPC v11** | Notebooks, sources, studio, providers, AI config |
 | TTS | **Deepgram Aura** | Orion (male) + Asteria (female) for two-host audio |
-| Web search | **Exa + Tavily** | Pluggable, fallback via `SEARCH_PROVIDER_ORDER` |
+| Web search | **Exa + Tavily + SearxNG** | Two paid APIs and one OSS fallback. Pluggable order via `SEARCH_PROVIDER_ORDER`. |
 | Web extract | **@mozilla/readability** | Article extraction from arbitrary URLs |
 | Storage | **S3 / R2 / Supabase** | Pluggable behind `StorageService` |
 | Mind maps | **markmap-lib** | Markdown headings → interactive SVG |
@@ -134,16 +134,31 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 Optional but useful:
 
 ```bash
-DEEPGRAM_API_KEY="..."                     # Required for audio overviews
-EXA_API_KEY="..."                          # For deep-research web search
-TAVILY_API_KEY="..."                       # Fallback web search
-SEARCH_PROVIDER_ORDER="exa,tavily"         # Comma-separated priority order
-SUPABASE_URL="..."                         # If using Supabase Storage
+DEEPGRAM_API_KEY="..."                          # Required for audio overviews
+EXA_API_KEY="..."                               # Paid; deep-research web search
+TAVILY_API_KEY="..."                            # Paid; fallback web search
+SEARXNG_URL="http://localhost:8080"             # OSS; self-hosted SearxNG instance
+SEARCH_PROVIDER_ORDER="exa,tavily,searxng"      # Comma-separated priority order
+SUPABASE_URL="..."                              # If using Supabase Storage
 SUPABASE_SERVICE_ROLE_KEY="..."
-S3_*                                       # If using S3 / R2 instead
+S3_*                                            # If using S3 / R2 instead
 ```
 
 User AI provider API keys are **not** environment variables — users add them through the settings UI per-user, encrypted at rest.
+
+### Self-hosting SearxNG
+
+SearxNG aggregates Google / Bing / DuckDuckGo / Wikipedia behind one JSON API and is the OSS option that lets users run deep-research without paid keys. Quickest local setup:
+
+```bash
+docker run -d --name searxng -p 8080:8080 \
+  -v "$(pwd)/searxng-config:/etc/searxng" \
+  searxng/searxng:latest
+# then in your env:
+export SEARXNG_URL=http://localhost:8080
+```
+
+Public instances (e.g. `https://searx.be`) work for testing but rate-limit unpredictably — self-host for production. Full setup options: <https://docs.searxng.org/admin/installation.html>
 
 ## Development
 
