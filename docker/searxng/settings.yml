@@ -1,0 +1,61 @@
+# SearxNG settings tuned for notebooklm-web's deep-research provider.
+# Full schema reference: https://docs.searxng.org/admin/settings/index.html
+#
+# We extend the upstream defaults rather than replacing them — only the
+# overrides we care about live here. The big change vs. stock is that
+# `formats` includes `json`; the notebooklm provider POSTs format=json
+# and gets a hard error if it's missing (stock SearxNG omits it for
+# anti-scraping reasons, which we accept the risk of for a private
+# instance).
+
+use_default_settings: true
+
+server:
+  # Filled in via the SEARXNG_SECRET env var when the desktop auto-start
+  # manager generates one per-install (or by the operator manually).
+  secret_key: "must-be-set-via-SEARXNG_SECRET-env"
+  base_url: false
+  image_proxy: false
+  http_protocol_version: "1.1"
+  method: "POST"
+  default_http_headers:
+    X-Content-Type-Options: nosniff
+    X-Download-Options: noopen
+    X-Robots-Tag: noindex, nofollow
+    Referrer-Policy: no-referrer
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "en"
+  formats:
+    - html
+    - json # required by packages/core/src/search/searxng.ts
+
+ui:
+  static_use_hash: true
+  default_theme: simple
+  default_locale: en
+
+# Engines we whitelist for the deep-research workflow. Cross-source
+# coverage is the goal — Google + Bing for general SERP, DuckDuckGo as
+# the privacy-friendly bump, Wikipedia for canonical references, Brave
+# for an independent index.
+#
+# Override per-install by editing this file inside
+# <NOTEBOOKLM_DATA_DIR>/searxng/ then `docker compose restart`.
+engines:
+  - name: google
+    disabled: false
+
+  - name: bing
+    disabled: false
+
+  - name: duckduckgo
+    disabled: false
+
+  - name: wikipedia
+    disabled: false
+
+  - name: brave
+    disabled: false

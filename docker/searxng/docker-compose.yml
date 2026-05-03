@@ -1,0 +1,72 @@
+# Self-hosted SearxNG for notebooklm-web's deep-research provider.
+#
+# Bring up:    docker compose up -d
+# Tear down:   docker compose down
+# Logs:        docker compose logs -f searxng
+# Update:      docker compose pull && docker compose up -d
+#
+# After `up`, set SEARXNG_URL=http://localhost:${SEARXNG_PORT:-8888} in
+# your environment (apps/web/.env or apps/desktop/.env). The desktop
+# app's stub-adapter detects this folder on first launch and runs
+# `docker compose up -d` automatically when:
+#   - SEARXNG_URL isn't already set
+#   - Docker is available on PATH
+#   - NOTEBOOKLM_SEARXNG_AUTOSTART != "0"
+#
+# When the desktop auto-starts SearxNG, it copies this compose file
+# (along with settings.yml) to <NOTEBOOKLM_DATA_DIR>/searxng/ so each
+# install owns its own config — edit it there, not in the repo.
+
+services:
+  searxng:
+    image: searxng/searxng:latest
+    container_name: notebooklm-searxng
+    restart: unless-stopped
+    ports:
+      # Host-side port. Override with SEARXNG_PORT env var to dodge a
+      # conflict with another local service.
+      - "${SEARXNG_PORT:-8888}:8080"
+    volumes:
+      # Read-only mount so the container can't mutate the file we just
+      # provisioned. Edit settings.yml on the host side and `docker
+      # compose restart` to apply.
+      - ./settings.yml:/etc/searxng/settings.yml:ro
+      # Persistent /uwsgi.ini cache. Optional; speeds up subsequent boots.
+      - searxng-cache:/var/cache/searxng
+    environment:
+      # SearxNG reads these at boot and templates them into settings.yml
+      # via the `use_default_settings: true` cascade.
+      - SEARXNG_BASE_URL=http://localhost:${SEARXNG_PORT:-8888}/
+      # IMPORTANT: set SEARXNG_SECRET to a long random value (e.g.
+      # `openssl rand -hex 32`). The auto-start manager generates one
+      # and persists it next to this file the first time it runs.
+      - SEARXNG_SECRET=${SEARXNG_SECRET:?set SEARXNG_SECRET to a long random value}
+      - INSTANCE_NAME=notebooklm
+    cap_drop:
+      - ALL
+    cap_add:
+      # Minimum needed for SearxNG's startup chown of /var/cache/searxng.
+      - CHOWN
+      - SETGID
+      - SETUID
+    healthcheck:
+      test:
+        - "CMD"
+        - "wget"
+        - "--quiet"
+        - "--tries=1"
+        - "--spider"
+        - "http://localhost:8080/healthz"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+volumes:
+  searxng-cache:
+    name: notebooklm-searxng-cache
