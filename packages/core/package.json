@@ -32,7 +32,10 @@
     "./env": "./src/env.ts",
     "./auth": "./src/auth.ts",
     "./utils": "./src/utils.ts",
-    "./runtime": "./src/runtime.ts"
+    "./runtime": "./src/runtime.ts",
+    "./agent": "./src/agent/index.ts",
+    "./agent/preferences": "./src/agent/preferences.ts",
+    "./agent/runtimes": "./src/agent/runtimes/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
