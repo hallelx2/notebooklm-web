@@ -4,6 +4,42 @@ import { createRoot } from "react-dom/client";
 import "./main.css";
 import { router } from "./routes";
 
+/**
+ * Wire main-process menu commands into router navigation.
+ *
+ * The Electron preload (`apps/desktop/electron/preload.cjs`) exposes
+ * `window.notebooklm.onMenuCommand` via contextBridge. Each command name
+ * maps to a navigation target; once the route mounts, page-level effects
+ * (e.g. NotebooksView listening for `notebooklm:new-notebook` window
+ * events) handle any follow-up action.
+ *
+ * The `onMenuCommand` handle is registered exactly once at boot. The
+ * preload's listener cleanup is exposed but unused — the desktop app
+ * doesn't unmount its root, so leaking is fine.
+ */
+function wireMenuBridge() {
+  if (typeof window === "undefined") return;
+  const bridge = window.notebooklm;
+  if (!bridge) return; // running under `dev:browser` (no Electron) — no bridge
+
+  bridge.onMenuCommand(async (cmd) => {
+    if (cmd === "new-notebook") {
+      // Navigate to the notebooks list, then nudge the page to create one.
+      // NotebooksView listens for the window event and calls trpc.notebook
+      // .create.useMutation.mutate() on receipt. setTimeout(0) is the
+      // simplest way to let the new route mount + attach its listener.
+      await router.navigate({ to: "/notebooks" });
+      setTimeout(() => {
+        window.dispatchEvent(new Event("notebooklm:new-notebook"));
+      }, 0);
+    } else if (cmd === "open-settings") {
+      router.navigate({ to: "/settings/profile" });
+    }
+  });
+}
+
+wireMenuBridge();
+
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Root element #root not found");
 
