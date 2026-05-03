@@ -8,7 +8,7 @@ export type WebResult = {
   source?: string;
 };
 
-export type SearchProviderName = "exa" | "tavily";
+export type SearchProviderName = "exa" | "tavily" | "searxng";
 
 export interface SearchProvider {
   name: SearchProviderName;
