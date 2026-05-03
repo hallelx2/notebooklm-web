@@ -104,6 +104,11 @@ export type AgentEvent =
       chunkId: string;
       sourceId: string;
       sourceTitle: string;
+      /** First ~240 chars of the cited chunk — populated when the
+       *  citation comes from a pre-retrieved chunk we have content for.
+       *  Handlers store this on the persisted assistant message so the
+       *  client can show a preview without round-tripping. */
+      snippet?: string;
     }
   | { type: "structured"; data: unknown }
   | { type: "done"; finalText?: string; finalObject?: unknown }

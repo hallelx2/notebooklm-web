@@ -1,6 +1,6 @@
-import { generateText } from "ai";
 import { eq } from "drizzle-orm";
-import { getChatModel, NoAiConfigError } from "../ai/factory";
+import { runAgent } from "../agent";
+import { NoAiConfigError } from "../ai/factory";
 import { notebooks } from "../db/schema";
 import { coreDb } from "../runtime";
 
@@ -11,6 +11,13 @@ const DEFAULT_TITLES = new Set(["Untitled notebook", "Untitled"]);
  * ask the user's configured chat model to suggest something based on the
  * first source's text. Silent on any failure -- this is a UX nicety, not a
  * critical path.
+ *
+ * Routes through the agent harness with `kind: "studio", outputKind:
+ * "auto-title"`. The runtime adapter (`ai-sdk/index.ts -> runAutoTitle`)
+ * runs the same two `generateText` calls as the pre-harness helper and
+ * yields a `structured: { title?, description? }` event we read off the
+ * stream. DB read/write of the notebook row stays here because that's
+ * orchestration, not an LLM call.
  */
 export async function maybeAutoTitleAndSummarize(
   userId: string,
@@ -33,55 +40,34 @@ export async function maybeAutoTitleAndSummarize(
   const excerpt = sourcePreview.replace(/\s+/g, " ").trim().slice(0, 3000);
   if (!excerpt) return;
 
-  let model: Awaited<ReturnType<typeof getChatModel>>;
+  let result: { title?: string; description?: string } = {};
   try {
-    model = await getChatModel(userId);
+    for await (const ev of runAgent(
+      {
+        kind: "studio",
+        userId,
+        notebookId,
+        outputKind: "auto-title",
+        opts: { excerpt, needsTitle, needsDescription },
+      },
+      [{ id: "ai-sdk" }],
+      { userId },
+    )) {
+      if (ev.type === "structured") {
+        result = ev.data as { title?: string; description?: string };
+      }
+    }
   } catch (err) {
     // User hasn't configured a chat provider yet -- skip auto-titling.
     if (err instanceof NoAiConfigError) return;
-    console.warn("auto-title: getChatModel failed", err);
+    console.warn("auto-title: runAgent failed", err);
     return;
   }
 
   const updates: Record<string, unknown> = { updatedAt: new Date() };
-
-  if (needsTitle) {
-    try {
-      const { text } = await generateText({
-        model,
-        system:
-          "You generate concise notebook titles (3 to 6 words). Respond with only the title text -- no quotes, no punctuation at the end, no prefix like 'Title:'.",
-        prompt: `Suggest a notebook title for a workspace whose first source begins with:\n\n${excerpt}`,
-      });
-      const title = text
-        .split("\n")[0]
-        .replace(/^["']|["']$/g, "")
-        .replace(/\.$/, "")
-        .trim()
-        .slice(0, 80);
-      if (title) updates.title = title;
-    } catch (err) {
-      console.warn("auto-title failed", err);
-    }
-  }
-
-  if (needsDescription) {
-    try {
-      const { text } = await generateText({
-        model,
-        system:
-          "You generate concise notebook summaries (2 to 3 sentences). Describe what the source material covers and its key topics. Respond with only the summary text -- no quotes, no prefix like 'Summary:'.",
-        prompt: `Write a 2-3 sentence summary for a notebook whose first source begins with:\n\n${excerpt}`,
-      });
-      const description = text
-        .replace(/^["']|["']$/g, "")
-        .trim()
-        .slice(0, 500);
-      if (description) updates.description = description;
-    } catch (err) {
-      console.warn("auto-summarize failed", err);
-    }
-  }
+  if (needsTitle && result.title) updates.title = result.title;
+  if (needsDescription && result.description)
+    updates.description = result.description;
 
   if (Object.keys(updates).length > 1) {
     await db.update(notebooks).set(updates).where(eq(notebooks.id, notebookId));

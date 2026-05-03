@@ -159,6 +159,7 @@ async function* runChat(
         chunkId: r.chunkId,
         sourceId: r.sourceId,
         sourceTitle: r.sourceTitle,
+        snippet: r.content.slice(0, 240),
       };
     }
   }

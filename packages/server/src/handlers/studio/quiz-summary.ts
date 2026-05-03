@@ -1,5 +1,5 @@
-import { getChatModel, NoAiConfigError } from "@notebooklm/core/ai/factory";
-import { generateText } from "ai";
+import { runAgent } from "@notebooklm/core/agent";
+import { NoAiConfigError } from "@notebooklm/core/ai/factory";
 import type { PlatformAdapter } from "../../adapter";
 
 interface QuizQuestion {
@@ -8,6 +8,15 @@ interface QuizQuestion {
   answer: number;
 }
 
+/**
+ * Routes through the agent harness with `kind: "studio", outputKind:
+ * "quiz-summary"`. The adapter grades the answers locally and asks the
+ * user's chat model for the supportive write-up — same prompt and
+ * output as the pre-harness handler. The handler shrinks to:
+ *   1. auth + body parse
+ *   2. dispatch the task
+ *   3. read `done.finalText` and return as JSON
+ */
 export async function quizSummaryHandler(
   req: Request,
   adapter: PlatformAdapter,
@@ -15,9 +24,28 @@ export async function quizSummaryHandler(
   const session = await adapter.auth.api.getSession({ headers: req.headers });
   if (!session?.user) return new Response("Unauthorized", { status: 401 });
 
-  let chatModel: Awaited<ReturnType<typeof getChatModel>>;
+  const body = (await req.json()) as {
+    questions: QuizQuestion[];
+    answers: number[];
+  };
+  const { questions, answers } = body;
+
+  let summary = "";
   try {
-    chatModel = await getChatModel(session.user.id);
+    for await (const ev of runAgent(
+      {
+        kind: "studio",
+        userId: session.user.id,
+        outputKind: "quiz-summary",
+        opts: { questions, answers },
+      },
+      [{ id: "ai-sdk" }],
+      { userId: session.user.id, signal: req.signal },
+    )) {
+      if (ev.type === "done" && typeof ev.finalText === "string") {
+        summary = ev.finalText;
+      }
+    }
   } catch (err) {
     if (err instanceof NoAiConfigError) {
       return Response.json(
@@ -28,41 +56,5 @@ export async function quizSummaryHandler(
     throw err;
   }
 
-  const body = (await req.json()) as {
-    questions: QuizQuestion[];
-    answers: number[];
-  };
-  const { questions, answers } = body;
-
-  const results = questions.map((q, i) => {
-    const selected = answers[i];
-    const isCorrect = selected === q.answer;
-    return {
-      question: q.question,
-      correctAnswer: q.options[q.answer],
-      userAnswer: selected !== undefined ? q.options[selected] : "Not answered",
-      isCorrect,
-    };
-  });
-
-  const correct = results.filter((r) => r.isCorrect).length;
-  const total = results.length;
-
-  const { text } = await generateText({
-    model: chatModel,
-    prompt: `You are a study coach reviewing a student's quiz results. They scored ${correct}/${total}.
-
-Here are the results:
-${results.map((r, i) => `${i + 1}. ${r.question}\n   Correct: ${r.correctAnswer}\n   Student answered: ${r.userAnswer} — ${r.isCorrect ? "✓ Correct" : "✗ Wrong"}`).join("\n\n")}
-
-Write a brief, encouraging personalized study summary (3-5 paragraphs):
-1. Overall performance assessment
-2. Key strengths (topics they got right)
-3. Areas to improve (topics they got wrong, with brief explanations of the correct answers)
-4. Specific study recommendations
-
-Be encouraging but honest. Use markdown formatting.`,
-  });
-
-  return Response.json({ summary: text });
+  return Response.json({ summary });
 }

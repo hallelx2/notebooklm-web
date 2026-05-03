@@ -1,6 +1,6 @@
-import { getChatModel, NoAiConfigError } from "@notebooklm/core/ai/factory";
+import { runAgent } from "@notebooklm/core/agent";
+import { NoAiConfigError } from "@notebooklm/core/ai/factory";
 import { notebooks, sources, studioOutputs } from "@notebooklm/core/db/schema";
-import { streamText } from "ai";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { PlatformAdapter } from "../../adapter";
@@ -10,12 +10,6 @@ const Body = z.object({
   length: z.enum(["short", "medium", "long"]),
   focus: z.string().optional(),
 });
-
-const LENGTH_GUIDE: Record<string, string> = {
-  short: "short conversation = 4-6 exchanges total",
-  medium: "medium conversation = 8-12 exchanges total",
-  long: "long deep-dive conversation = 15-20 exchanges total",
-};
 
 const VOICE_MAP: Record<string, string> = {
   Alex: "aura-orion-en",
@@ -44,6 +38,12 @@ async function ttsSegment(segment: Segment, apiKey: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
+/**
+ * Audio overview = LLM-generated podcast script (via the harness) + TTS
+ * (Deepgram, stays in this handler — it's not an agent task). The split
+ * keeps the handler thin around the LLM portion while the streaming /
+ * upload / DB-write orchestration stays where it always was.
+ */
 export async function audioOverviewHandler(
   req: Request,
   adapter: PlatformAdapter,
@@ -71,19 +71,6 @@ export async function audioOverviewHandler(
       JSON.stringify({ error: "DEEPGRAM_API_KEY is not configured" }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
-  }
-
-  let chatModel: Awaited<ReturnType<typeof getChatModel>>;
-  try {
-    chatModel = await getChatModel(session.user.id);
-  } catch (err) {
-    if (err instanceof NoAiConfigError) {
-      return Response.json(
-        { error: "NO_AI_CONFIG", role: err.role },
-        { status: 412 },
-      );
-    }
-    throw err;
   }
 
   const [row] = await adapter.db
@@ -134,33 +121,47 @@ export async function audioOverviewHandler(
           message: "Generating podcast script...",
         });
 
-        const lengthGuide = LENGTH_GUIDE[body.length];
-        const result = streamText({
-          model: chatModel,
-          prompt: `Generate a podcast-style conversation between two hosts discussing the source material.
-
-Host A ("Alex") is the main explainer who presents key ideas clearly.
-Host B ("Sam") asks insightful questions, adds reactions, and provides alternative perspectives.
-
-Length guideline: ${lengthGuide}
-${body.focus ? `Focus area: ${body.focus}` : "Cover the main topics comprehensively."}
-
-Return ONLY valid JSON array: [{ "speaker": "Alex" | "Sam", "text": "..." }, ...]
-
-Make it natural, conversational, engaging. Include:
-- An introduction where Alex introduces the topic
-- Back-and-forth discussion with Sam asking good questions
-- Sam occasionally saying "That's fascinating" or "Wait, so you're saying..."
-- A brief conclusion/summary
-
-Source material:
-${sourceContent}`,
-        });
-
         let rawScript = "";
-        for await (const chunk of result.textStream) {
-          rawScript += chunk;
-          send("script-delta", { text: chunk });
+        try {
+          for await (const ev of runAgent(
+            {
+              kind: "studio",
+              userId: session.user.id,
+              notebookId: body.notebookId,
+              outputKind: "audio-script",
+              opts: {
+                length: body.length,
+                focus: body.focus,
+                sourceContent,
+              },
+            },
+            [{ id: "ai-sdk" }],
+            { userId: session.user.id, signal: req.signal },
+          )) {
+            if (ev.type === "text-delta") {
+              rawScript += ev.text;
+              send("script-delta", { text: ev.text });
+            } else if (ev.type === "done" && typeof ev.finalText === "string") {
+              // belt + braces — the runtime always emits the assembled
+              // text on the final event.
+              if (!rawScript) rawScript = ev.finalText;
+            } else if (ev.type === "error") {
+              throw new Error(ev.message);
+            }
+          }
+        } catch (err) {
+          if (err instanceof NoAiConfigError) {
+            send("error", {
+              message: `Configure a chat provider in Settings before generating studio outputs. (${err.role})`,
+            });
+            await adapter.db
+              .update(studioOutputs)
+              .set({ status: "error", content: { error: "NO_AI_CONFIG" } })
+              .where(eq(studioOutputs.id, row.id));
+            controller.close();
+            return;
+          }
+          throw err;
         }
 
         const cleaned = rawScript
