@@ -12,6 +12,10 @@ bun --filter @notebooklm/desktop dev
 
 That spawns Vite on `http://localhost:5173` and an Electron window pointed at it. First launch generates `~/.notebooklm/config.json` with a fresh per-install encryption key + auth secret, creates `~/.notebooklm/pglite/` (the embedded Postgres data dir), and walks you through onboarding (chat provider + embedding provider).
 
+> **First-launch note**: Vite re-optimizes dependencies on the first run after a `bun install`, which can take 30–90s. The dev script gives `wait-on` a 3-minute window to handle this; on subsequent launches Vite is ready in ~2s.
+
+> **`ELECTRON_RUN_AS_NODE` trap**: if your shell environment has this variable set (some agent runtimes / CI configs export it), Electron launches in plain-Node mode and `require("electron")` returns just the binary path — your main process crashes on `app.isPackaged`. Confirm with `echo %ELECTRON_RUN_AS_NODE%` (cmd) / `$env:ELECTRON_RUN_AS_NODE` (PowerShell) / `echo $ELECTRON_RUN_AS_NODE` (bash). Unset it before `bun --filter @notebooklm/desktop dev`.
+
 ## Keyboard shortcuts
 
 | Action | macOS | Windows / Linux |

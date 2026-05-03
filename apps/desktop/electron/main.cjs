@@ -2,8 +2,8 @@
 // The renderer (Vite output) is ESM and lives separately.
 const { app, BrowserWindow, shell } = require("electron");
 const path = require("node:path");
-const { buildMenu } = require("./menu");
-const { createWindowState } = require("./window-state");
+const { buildMenu } = require("./menu.cjs");
+const { createWindowState } = require("./window-state.cjs");
 
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.NOTEBOOKLM_DEV_URL ?? "http://localhost:5173";
