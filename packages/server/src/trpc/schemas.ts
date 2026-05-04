@@ -65,6 +65,7 @@ export const StudioOutputSchema = z.object({
   content: z.unknown().nullable(),
   assetUrl: z.string().nullable(),
   status: z.string(),
+  progress: z.unknown().nullable(),
   createdAt: dateLike,
 });
 export type StudioOutput = z.infer<typeof StudioOutputSchema>;

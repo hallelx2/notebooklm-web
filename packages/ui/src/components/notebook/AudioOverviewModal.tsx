@@ -10,9 +10,29 @@ type Props = {
   open: boolean;
   onClose: () => void;
   notebookId: string;
+  /**
+   * When set, the modal opens in "reattach" mode — it skips the
+   * configuration form and the POST to /api/studio/audio-overview,
+   * and instead polls `studio.byId(reattachId)` to reconstruct the
+   * progress UI from the row's persisted `progress` snapshot. Set this
+   * when the user clicks an in-flight "Generating..." pill in the
+   * Studio panel.
+   */
+  reattachId?: string | null;
+};
+
+type ProgressSnapshot = {
+  stage?: string;
+  message?: string;
+  ttsCompleted?: number;
+  ttsTotal?: number;
+  provider?: string;
+  concurrency?: number;
+  updatedAt?: string;
 };
 
 type Length = "short" | "medium" | "long";
+type TtsProvider = "deepgram" | "kokoro";
 
 type Stage =
   | "idle"
@@ -21,7 +41,8 @@ type Stage =
   | "combining"
   | "uploading"
   | "done"
-  | "error";
+  | "error"
+  | "cancelled";
 
 type ScriptLine = {
   speaker: string;
@@ -42,6 +63,26 @@ const LENGTH_OPTIONS: { value: Length; label: string }[] = [
   { value: "short", label: "Short (~3 min)" },
   { value: "medium", label: "Medium (~8 min)" },
   { value: "long", label: "Long (~15 min)" },
+];
+
+const TTS_OPTIONS: {
+  value: TtsProvider;
+  label: string;
+  hint: string;
+  icon: string;
+}[] = [
+  {
+    value: "kokoro",
+    label: "Kokoro (local)",
+    hint: "Runs on your machine via Kokoro-FastAPI. Free, offline, no rate limits.",
+    icon: "home_storage",
+  },
+  {
+    value: "deepgram",
+    label: "Deepgram (cloud)",
+    hint: "Polished Aura voices. Requires DEEPGRAM_API_KEY and an internet connection.",
+    icon: "cloud",
+  },
 ];
 
 const STAGE_LABELS: Record<string, string> = {
@@ -232,15 +273,30 @@ function ScriptView({ script }: { script: ScriptLine[] }) {
 /* ------------------------------------------------------------------ */
 /* Main Modal                                                          */
 /* ------------------------------------------------------------------ */
-export function AudioOverviewModal({ open, onClose, notebookId }: Props) {
+export function AudioOverviewModal({
+  open,
+  onClose,
+  notebookId,
+  reattachId = null,
+}: Props) {
   const [length, setLength] = useState<Length>("medium");
   const [focus, setFocus] = useState("");
+  // Default to Kokoro because it's local-first; the server falls back
+  // to whichever provider it actually has if the user-selected one
+  // isn't configured (a 400 with `available` comes back).
+  const [ttsProvider, setTtsProvider] = useState<TtsProvider>("kokoro");
   const [stage, setStage] = useState<Stage>("idle");
   const [stageMsg, setStageMsg] = useState("");
   const [ttsProgress, setTtsProgress] = useState({ index: 0, total: 0 });
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [script, setScript] = useState<ScriptLine[]>([]);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  // Server-side row id, captured the moment the streaming response
+  // emits its first event with one. We need this for the cancel
+  // button, which posts to /api/studio/cancel { id } so the in-process
+  // registry can flip the cancellation flag for that specific job.
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const utils = trpc.useUtils();
 
@@ -251,12 +307,88 @@ export function AudioOverviewModal({ open, onClose, notebookId }: Props) {
     setAudioUrl(null);
     setScript([]);
     setErrMsg(null);
+    setJobId(null);
+    setCancelling(false);
   }, []);
 
   useEffect(() => {
     if (!open) return;
     reset();
-  }, [open, reset]);
+    if (reattachId) {
+      // We're attaching to an in-flight job. Skip the configuration
+      // form, jump straight to a loading-ish state — the polling
+      // useQuery below picks up the live progress snapshot from the
+      // row and drives the UI.
+      setJobId(reattachId);
+      setStage("generating-script");
+      setStageMsg("Reattaching to running job...");
+    }
+  }, [open, reset, reattachId]);
+
+  /**
+   * Poll the row when reattached. We only enable this query while the
+   * modal is open *and* we have a row id we didn't kick off ourselves
+   * — once the streaming `run()` path takes over, those events drive
+   * the UI faster than 1.5s polling could.
+   */
+  const reattachQuery = trpc.studio.byId.useQuery(
+    { id: reattachId ?? "00000000-0000-0000-0000-000000000000" },
+    {
+      enabled: open && !!reattachId,
+      refetchInterval: (query) => {
+        const data = query.state.data;
+        if (!data) return 1500;
+        if (data.status === "generating") return 1500;
+        return false;
+      },
+    },
+  );
+
+  useEffect(() => {
+    if (!reattachId) return;
+    const row = reattachQuery.data;
+    if (!row) return;
+
+    // Reconstruct the modal state from the persisted snapshot.
+    if (row.status === "ready" && row.assetUrl) {
+      setStage("done");
+      setStageMsg("Done!");
+      setAudioUrl(row.assetUrl);
+      const c = row.content as { script?: ScriptLine[] } | null;
+      if (c?.script) setScript(c.script);
+      utils.studio.list.invalidate({ notebookId });
+      return;
+    }
+    if (row.status === "error") {
+      setStage("error");
+      const c = row.content as { error?: string } | null;
+      setErrMsg(c?.error ?? "Generation failed.");
+      return;
+    }
+    if (row.status === "cancelled") {
+      setStage("cancelled");
+      return;
+    }
+    // Still generating — translate the persisted progress snapshot
+    // into the same Stage/stageMsg/ttsProgress state shape that the
+    // streaming run() path uses, so the existing UI components don't
+    // need a second code path.
+    const p = row.progress as ProgressSnapshot | null;
+    if (!p) return;
+    const stageMap: Record<string, Stage> = {
+      starting: "generating-script",
+      script: "generating-script",
+      "converting-tts": "converting-tts",
+      combine: "combining",
+      upload: "uploading",
+    };
+    const mapped = p.stage ? stageMap[p.stage] : undefined;
+    if (mapped) setStage(mapped);
+    if (p.message) setStageMsg(p.message);
+    if (typeof p.ttsCompleted === "number" && typeof p.ttsTotal === "number") {
+      setTtsProgress({ index: p.ttsCompleted, total: p.ttsTotal });
+    }
+  }, [reattachId, reattachQuery.data, utils, notebookId]);
 
   const run = useCallback(async () => {
     reset();
@@ -273,12 +405,57 @@ export function AudioOverviewModal({ open, onClose, notebookId }: Props) {
           notebookId,
           length,
           focus: focus.trim() || undefined,
+          ttsProvider,
         }),
         signal: ctrl.signal,
       });
 
       if (!res.ok || !res.body) {
-        throw new Error(`HTTP ${res.status}`);
+        // We can only consume the body once. Read it as text first so we
+        // *always* have something to show — then opportunistically try to
+        // parse JSON for the structured `{ error, available }` shape the
+        // server returns from provider-config failures.
+        const rawBody = await res.text().catch(() => "");
+        let parsedError: string | null = null;
+        let parsedAvailable: TtsProvider[] | undefined;
+        try {
+          const body = JSON.parse(rawBody) as {
+            error?: string;
+            available?: TtsProvider[];
+          };
+          if (body?.error) {
+            parsedError = body.error;
+            parsedAvailable = body.available;
+          }
+        } catch {
+          // not JSON — `rawBody` carries whatever the server sent.
+        }
+
+        // Always log the full response to the console so devtools shows
+        // the actual server message even if the modal only renders a
+        // short summary.
+        // biome-ignore lint/suspicious/noConsole: error diagnostics
+        console.error("[audio-overview] HTTP %d:", res.status, {
+          statusText: res.statusText,
+          body: rawBody,
+          parsedError,
+          parsedAvailable,
+        });
+
+        if (parsedError) {
+          const avail = parsedAvailable?.length
+            ? ` Available: ${parsedAvailable.join(", ")}.`
+            : "";
+          throw new Error(`${parsedError}${avail}`);
+        }
+        // No structured error — surface whatever the body said, falling
+        // back to the status code so the user never sees a bare "HTTP 400".
+        const detail = rawBody.trim().slice(0, 240);
+        throw new Error(
+          detail
+            ? `HTTP ${res.status}: ${detail}`
+            : `HTTP ${res.status} ${res.statusText || ""}`.trim(),
+        );
       }
 
       const reader = res.body.getReader();
@@ -309,6 +486,14 @@ export function AudioOverviewModal({ open, onClose, notebookId }: Props) {
 
     function handleEvent(evt: { type: string; data: unknown }) {
       switch (evt.type) {
+        case "started": {
+          // The server tells us the row id immediately so we can wire
+          // the Cancel button against it.
+          const d = evt.data as { id: string };
+          setJobId(d.id);
+          utils.studio.list.invalidate({ notebookId });
+          break;
+        }
         case "stage": {
           const d = evt.data as { stage: string; message: string };
           const stageMap: Record<string, Stage> = {
@@ -335,9 +520,35 @@ export function AudioOverviewModal({ open, onClose, notebookId }: Props) {
           break;
         }
         case "tts": {
-          const d = evt.data as { index: number; total: number };
-          setTtsProgress({ index: d.index + 1, total: d.total });
-          setStageMsg(`Converting to audio (${d.index + 1}/${d.total})...`);
+          // Server emits {completed, total, index} now that segments
+          // run on a sliding-window pool — the order of completion
+          // doesn't match the order in the script. Show the count of
+          // completed segments, not the index of the just-finished
+          // one (which can jump around).
+          const d = evt.data as {
+            index: number;
+            completed?: number;
+            total: number;
+          };
+          const completed = d.completed ?? d.index + 1;
+          setTtsProgress({ index: completed, total: d.total });
+          setStageMsg(
+            `Converting to audio (${completed}/${d.total})...`,
+          );
+          break;
+        }
+        case "tts-retry": {
+          // A segment failed and is being retried. Surface so the
+          // user knows progress hasn't stalled — it's deliberately
+          // backing off and re-trying.
+          const d = evt.data as {
+            index: number;
+            attempt: number;
+            total: number;
+          };
+          setStageMsg(
+            `Retrying segment ${d.index + 1}/${d.total} (attempt ${d.attempt})...`,
+          );
           break;
         }
         case "done": {
@@ -352,11 +563,40 @@ export function AudioOverviewModal({ open, onClose, notebookId }: Props) {
           const d = evt.data as { message: string };
           setStage("error");
           setErrMsg(d.message);
+          utils.studio.list.invalidate({ notebookId });
+          break;
+        }
+        case "cancelled": {
+          setStage("cancelled");
+          setStageMsg("Cancelled");
+          utils.studio.list.invalidate({ notebookId });
           break;
         }
       }
     }
-  }, [notebookId, length, focus, reset, utils]);
+  }, [notebookId, length, focus, ttsProvider, reset, utils]);
+
+  /**
+   * Tell the server to cancel the in-flight job. We don't abort the
+   * fetch here — the server itself will write the `cancelled` row
+   * state and emit a `cancelled` event over the stream, after which
+   * we (the modal) terminate naturally.
+   */
+  const cancelJob = useCallback(async () => {
+    if (!jobId || cancelling) return;
+    setCancelling(true);
+    try {
+      await fetch("/api/studio/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: jobId }),
+      });
+    } catch {
+      // Best-effort. The server might fail to receive the request,
+      // in which case the polling loop in StudioPanel still sees the
+      // row stuck on `generating` until the next reaper cycle.
+    }
+  }, [jobId, cancelling]);
 
   if (!open) return null;
 
@@ -384,7 +624,15 @@ export function AudioOverviewModal({ open, onClose, notebookId }: Props) {
         aria-label="Close"
         className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
         onClick={() => {
+          // Aborting only severs the streaming response — the server-
+          // side handler already ignores `req.signal` for the heavy
+          // work (script + TTS), so the audio still finishes and the
+          // studio_outputs row flips to "ready" in the background.
+          // Invalidating the studio list here makes the panel re-poll
+          // so the "Generating..." indicator becomes a playable item
+          // as soon as the row updates.
           abortRef.current?.abort();
+          utils.studio.list.invalidate({ notebookId });
           onClose();
         }}
       />
@@ -447,6 +695,39 @@ export function AudioOverviewModal({ open, onClose, notebookId }: Props) {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* TTS provider selector */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                  Voice engine
+                </label>
+                <div className="flex gap-2">
+                  {TTS_OPTIONS.map((opt) => {
+                    const active = ttsProvider === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setTtsProvider(opt.value)}
+                        title={opt.hint}
+                        className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-medium transition-all border flex items-center justify-center gap-2 ${
+                          active
+                            ? "bg-indigo-50 dark:bg-indigo-500/15 border-indigo-300 dark:border-indigo-500/40 text-indigo-700 dark:text-indigo-300 shadow-sm"
+                            : "bg-element-light dark:bg-element-dark border-border-light dark:border-border-dark text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-base">
+                          {opt.icon}
+                        </span>
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                  {TTS_OPTIONS.find((o) => o.value === ttsProvider)?.hint}
+                </p>
               </div>
 
               {/* Custom focus */}
@@ -556,6 +837,45 @@ export function AudioOverviewModal({ open, onClose, notebookId }: Props) {
                   </p>
                 </div>
               )}
+
+              {/* Cancel button — only available once the server has
+                  acknowledged the request with a row id. Closing the
+                  modal alone doesn't kill the work; this button does
+                  (cooperatively, between segments). */}
+              {jobId && (
+                <button
+                  type="button"
+                  onClick={cancelJob}
+                  disabled={cancelling}
+                  className="w-full py-2.5 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-700 dark:text-red-300 text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-base">
+                    {cancelling ? "progress_activity" : "stop_circle"}
+                  </span>
+                  {cancelling ? "Cancelling..." : "Cancel generation"}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Cancelled state */}
+          {stage === "cancelled" && (
+            <div className="space-y-4">
+              <div className="flex flex-col items-center justify-center py-6 gap-3">
+                <span className="material-symbols-outlined text-4xl text-gray-400">
+                  cancel
+                </span>
+                <p className="text-sm text-gray-700 dark:text-gray-300 text-center">
+                  Generation cancelled.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={reset}
+                className="w-full py-2.5 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
+              >
+                Try Again
+              </button>
             </div>
           )}
 
@@ -566,9 +886,14 @@ export function AudioOverviewModal({ open, onClose, notebookId }: Props) {
                 <span className="material-symbols-outlined text-4xl text-red-400">
                   error
                 </span>
-                <p className="text-sm text-red-600 dark:text-red-400 text-center">
+                <p className="text-sm text-red-600 dark:text-red-400 text-center max-w-full break-words whitespace-pre-wrap max-h-48 overflow-y-auto">
                   {errMsg || "An error occurred during generation."}
                 </p>
+                {errMsg && (
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center">
+                    See the developer console for the full server response.
+                  </p>
+                )}
               </div>
               <button
                 type="button"

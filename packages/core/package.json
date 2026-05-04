@@ -27,6 +27,10 @@
     "./storage/supabase": "./src/storage/supabase.ts",
     "./storage/r2": "./src/storage/r2.ts",
     "./storage/types": "./src/storage/types.ts",
+    "./tts": "./src/tts/index.ts",
+    "./tts/types": "./src/tts/types.ts",
+    "./concurrency": "./src/concurrency/index.ts",
+    "./jobs": "./src/jobs/index.ts",
     "./crypto": "./src/crypto/secret.ts",
     "./crypto/secret": "./src/crypto/secret.ts",
     "./env": "./src/env.ts",
@@ -53,6 +57,7 @@
     "@anthropic-ai/claude-agent-sdk": "^0.2.126",
     "@aws-sdk/client-s3": "^3.1033.0",
     "@aws-sdk/s3-request-presigner": "^3.1033.0",
+    "@huggingface/transformers": "^3.5.1",
     "@mozilla/readability": "^0.6.0",
     "@neondatabase/serverless": "^1.0.2",
     "ai": "catalog:",
@@ -70,5 +75,8 @@
     "@types/node": "catalog:",
     "@types/ws": "^8.18.1",
     "typescript": "catalog:"
+  },
+  "optionalDependencies": {
+    "kokoro-js": "^1.2.1"
   }
 }

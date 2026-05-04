@@ -1,8 +1,13 @@
 import { sql } from "drizzle-orm";
 import { googleEmbedAdapter } from "../ai/embed/google";
 import { getEmbedFn } from "../ai/factory";
-import { isSupportedDim, type SupportedEmbedDim } from "../ai/providers";
 import {
+  isSupportedDim,
+  SUPPORTED_EMBED_DIMS,
+  type SupportedEmbedDim,
+} from "../ai/providers";
+import {
+  chunkEmbeddings384,
   chunkEmbeddings768,
   chunkEmbeddings1024,
   chunkEmbeddings1536,
@@ -20,6 +25,8 @@ import { coreDb } from "../runtime";
  */
 export function embeddingTableForDim(dim: SupportedEmbedDim) {
   switch (dim) {
+    case 384:
+      return chunkEmbeddings384;
     case 768:
       return chunkEmbeddings768;
     case 1024:
@@ -57,7 +64,7 @@ export async function embedTexts(
   const handle = await getEmbedFn(userId);
   if (!isSupportedDim(handle.dim)) {
     throw new Error(
-      `Embedding dim ${handle.dim} is not supported. Pick a model that produces a vector of size ${[768, 1024, 1536, 3072].join(", ")}.`,
+      `Embedding dim ${handle.dim} is not supported. Pick a model that produces a vector of size ${SUPPORTED_EMBED_DIMS.join(", ")}.`,
     );
   }
   const vectors = await handle.embed(texts);

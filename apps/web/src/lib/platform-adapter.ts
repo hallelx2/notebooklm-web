@@ -17,6 +17,17 @@ export const webAdapter: PlatformAdapter = {
       process.env.BETTER_AUTH_URL ??
       "http://localhost:3000",
     DEEPGRAM_API_KEY: process.env.DEEPGRAM_API_KEY,
+    KOKORO_BASE_URL: process.env.KOKORO_BASE_URL,
+    KOKORO_API_KEY: process.env.KOKORO_API_KEY,
+    KOKORO_MODEL: process.env.KOKORO_MODEL,
+    // We DON'T force-disable the in-process kokoro-js backend here. The
+    // import is lazy — it only runs when a user actually hits the
+    // audio-overview endpoint with the Kokoro provider selected. Local
+    // `next dev` runs Just Work, and on Vercel the dep would either
+    // import-fail (informative error) or run slowly. If you're deploying
+    // to a serverless host where you'd rather force only Deepgram or
+    // Kokoro-FastAPI, set KOKORO_DISABLE_LOCAL=1 explicitly.
+    KOKORO_DISABLE_LOCAL: process.env.KOKORO_DISABLE_LOCAL,
     EXA_API_KEY: process.env.EXA_API_KEY,
     TAVILY_API_KEY: process.env.TAVILY_API_KEY,
     SERPAPI_KEY: process.env.SERPAPI_KEY,

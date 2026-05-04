@@ -1,17 +1,29 @@
-# Self-hosted SearxNG for notebooklm-web's deep-research provider.
+# Bundled side-car services notebooklm-web auto-starts on first launch.
 #
-# Bring up:    docker compose up -d
-# Tear down:   docker compose down
-# Logs:        docker compose logs -f searxng
-# Update:      docker compose pull && docker compose up -d
+#   - searxng:   meta-search backend for /api/deep-research
+#   - kokoro:    optional Kokoro-FastAPI TTS server. Only needed if you
+#                want a remote TTS service the web deployment can hit;
+#                the desktop app prefers the in-process kokoro-js
+#                library and doesn't need this container.
 #
-# After `up`, set SEARXNG_URL=http://localhost:${SEARXNG_PORT:-8888} in
-# your environment (apps/web/.env or apps/desktop/.env). The desktop
-# app's stub-adapter detects this folder on first launch and runs
-# `docker compose up -d` automatically when:
+# Bring up everything:        docker compose up -d
+# Just searxng:               docker compose up -d searxng
+# Just kokoro:                docker compose up -d kokoro
+# Tear down:                  docker compose down
+# Logs:                       docker compose logs -f <service>
+# Update:                     docker compose pull && docker compose up -d
+#
+# Wire-up (apps/web/.env or apps/desktop/.env):
+#   SEARXNG_URL=http://localhost:${SEARXNG_PORT:-8888}
+#   KOKORO_BASE_URL=http://localhost:${KOKORO_PORT:-8880}/v1
+#
+# The desktop app's stub-adapter detects this folder on first launch and
+# runs `docker compose up -d` automatically for searxng when:
 #   - SEARXNG_URL isn't already set
 #   - Docker is available on PATH
 #   - NOTEBOOKLM_SEARXNG_AUTOSTART != "0"
+# Kokoro is NOT auto-started on desktop because the in-process kokoro-js
+# library covers that use case without Docker.
 #
 # When the desktop auto-starts SearxNG, it copies this compose file
 # (along with settings.yml) to <NOTEBOOKLM_DATA_DIR>/searxng/ so each
@@ -67,6 +79,67 @@ services:
         max-size: "1m"
         max-file: "1"
 
+  # ────────────────────────────────────────────────────────────────────
+  # Kokoro-FastAPI — optional cloud-style TTS server.
+  #
+  # Only needed when you want a server the audio-overview handler can
+  # POST to over HTTP (typically the web deployment, where in-process
+  # kokoro-js doesn't fit Vercel's cold-start budget).
+  #
+  # CPU image is the default — works on any host with ~2GB RAM headroom
+  # but is slow (~real-time 1x). For GPU, swap the `image:` line for the
+  # GPU build below and uncomment the `deploy:` block.
+  # ────────────────────────────────────────────────────────────────────
+  kokoro:
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:latest
+    # GPU alternative (NVIDIA + nvidia-container-toolkit required):
+    # image: ghcr.io/remsky/kokoro-fastapi-gpu:latest
+    container_name: notebooklm-kokoro
+    restart: unless-stopped
+    profiles:
+      # Tagging the service with a profile keeps it OUT of the default
+      # `docker compose up` invocation searxng-manager.ts runs. Bring it
+      # up explicitly with `docker compose --profile tts up -d kokoro`
+      # when you want it.
+      - tts
+    ports:
+      - "${KOKORO_PORT:-8880}:8880"
+    volumes:
+      # Persist HF cache across container recreates so the model only
+      # downloads once.
+      - kokoro-cache:/root/.cache/huggingface
+    environment:
+      # Optional: bearer token for the OpenAI-compatible endpoint.
+      # Leave unset to disable auth (fine for localhost-only access).
+      - API_KEY=${KOKORO_API_KEY:-}
+    healthcheck:
+      # The kokoro-fastapi-cpu image is a slim Python base — wget/curl
+      # aren't on PATH. Use Python's stdlib for a hermetic probe.
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8880/health',timeout=4).status==200 else 1)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    # GPU access — uncomment alongside the GPU image above:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "1"
+
 volumes:
   searxng-cache:
     name: notebooklm-searxng-cache
+  kokoro-cache:
+    name: notebooklm-kokoro-cache

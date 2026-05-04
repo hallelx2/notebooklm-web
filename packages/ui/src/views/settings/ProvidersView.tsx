@@ -1,9 +1,9 @@
 "use client";
 
-import type { inferRouterOutputs } from "@trpc/server";
-import { useState } from "react";
 import type { AppRouter } from "@notebooklm/server";
 import { trpc } from "@notebooklm/ui/trpc/client";
+import type { inferRouterOutputs } from "@trpc/server";
+import { useState } from "react";
 import { SettingsSection } from "./SettingsSection";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -134,7 +134,14 @@ function ProviderCard({
             ) : null}
           </div>
           <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
-            {saved ? (
+            {provider.authType === "none" ? (
+              <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
+                <span className="material-symbols-outlined text-[12px]">
+                  check_circle
+                </span>
+                Built-in · no setup
+              </span>
+            ) : saved ? (
               statusBadge
             ) : (
               <span className="inline-flex items-center gap-1">
@@ -147,7 +154,9 @@ function ProviderCard({
           </div>
         </div>
       </button>
-      {isOpen ? (
+      {isOpen && provider.authType === "none" ? (
+        <BuiltInInfo provider={provider} onClose={onClose} />
+      ) : isOpen ? (
         <CredentialForm
           provider={provider}
           saved={saved}
@@ -155,6 +164,48 @@ function ProviderCard({
           onChange={onChange}
         />
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Card body shown when a `authType: "none"` provider is opened. There's
+ * nothing to configure -- it just describes what the provider does and
+ * why no key is needed.
+ */
+function BuiltInInfo({
+  provider,
+  onClose,
+}: {
+  provider: ProviderCatalog;
+  onClose: () => void;
+}) {
+  const embedModelCount = provider.models.filter((m) =>
+    m.capabilities.includes("embed"),
+  ).length;
+  return (
+    <div className="p-5 border-t border-slate-200 dark:border-white/10 space-y-3 bg-slate-50/50 dark:bg-white/[0.02] text-sm text-slate-700 dark:text-zinc-300">
+      <p>
+        Runs sentence-transformers ONNX models inside the app process — no API
+        key, no GPU, no Docker, no Ollama install. Models download once on first
+        use (~30 MB for the smallest) and are cached locally for offline use
+        afterwards.
+      </p>
+      <p className="text-xs text-slate-500 dark:text-zinc-500">
+        Pick one of the {embedModelCount} bundled models from the Models tab to
+        start using {provider.label}. The default (BGE Small EN v1.5) works well
+        on any laptop CPU.
+      </p>
+      <div className="flex justify-end pt-1">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center justify-center w-11 h-11 border border-transparent text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
+          aria-label="Close"
+        >
+          <span className="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
     </div>
   );
 }

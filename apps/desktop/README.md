@@ -39,6 +39,7 @@ Everything per-install lives under `<dataDir>` (default `~/.notebooklm`):
 ├── config.json           # encryption key + auth secret (mode 0600)
 ├── pglite/               # embedded Postgres data (PGlite)
 ├── storage/              # uploaded PDFs, generated audio, etc.
+├── models/               # cached ONNX weights for the built-in local embedder
 └── window-state.json     # last-used window position + size
 ```
 

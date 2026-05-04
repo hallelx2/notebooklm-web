@@ -1,8 +1,8 @@
 "use client";
 
 import { Link } from "@notebooklm/ui/contexts";
-import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTheme } from "@notebooklm/ui/components/ThemeProvider";
 import { ThemeToggle } from "@notebooklm/ui/components/ThemeToggle";
 import { ConstellationBackground } from "@notebooklm/ui/components/landing/ConstellationBackground";
 import { Footer } from "@notebooklm/ui/components/landing/Footer";
