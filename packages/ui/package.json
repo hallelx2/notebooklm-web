@@ -37,7 +37,8 @@
     "./views/settings/AppearanceView": "./src/views/settings/AppearanceView.tsx",
     "./views/settings/ModelsView": "./src/views/settings/ModelsView.tsx",
     "./views/settings/ProvidersView": "./src/views/settings/ProvidersView.tsx",
-    "./views/settings/ProfileView": "./src/views/settings/ProfileView.tsx"
+    "./views/settings/ProfileView": "./src/views/settings/ProfileView.tsx",
+    "./views/settings/WebSearchView": "./src/views/settings/WebSearchView.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -47,9 +48,12 @@
     "react-dom": "catalog:"
   },
   "dependencies": {
+    "@ai-sdk/react": "catalog:",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@notebooklm/core": "workspace:*",
     "@notebooklm/server": "workspace:*",
-    "@ai-sdk/react": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@trpc/client": "catalog:",
     "@trpc/react-query": "catalog:",

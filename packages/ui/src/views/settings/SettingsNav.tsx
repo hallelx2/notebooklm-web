@@ -12,6 +12,7 @@ const SECTIONS = [
   { href: "/settings/profile", label: "Profile", icon: "person" },
   { href: "/settings/providers", label: "Providers", icon: "key" },
   { href: "/settings/models", label: "Models", icon: "smart_toy" },
+  { href: "/settings/web-search", label: "Web Search", icon: "travel_explore" },
   { href: "/settings/appearance", label: "Appearance", icon: "palette" },
 ] as const;
 
