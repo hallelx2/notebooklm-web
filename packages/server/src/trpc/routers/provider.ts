@@ -1,7 +1,3 @@
-import { generateText } from "ai";
-import { and, desc, eq } from "drizzle-orm";
-import { z } from "zod";
-import { userProviderCredentials } from "@notebooklm/core/db/schema";
 import {
   buildChatModelFromParams,
   buildEmbedHandleFromParams,
@@ -18,6 +14,10 @@ import {
   encryptSecret,
   maskApiKey,
 } from "@notebooklm/core/crypto/secret";
+import { userProviderCredentials } from "@notebooklm/core/db/schema";
+import { generateText } from "ai";
+import { and, desc, eq } from "drizzle-orm";
+import { z } from "zod";
 import { protectedProcedure, router } from "../context";
 import {
   IdResultSchema,
@@ -77,13 +77,13 @@ export const providerRouter = router({
   list: protectedProcedure
     .output(z.array(ProviderCredentialMaskedSchema))
     .query(async ({ ctx }) => {
-    const rows = await ctx.adapter.db
-      .select()
-      .from(userProviderCredentials)
-      .where(eq(userProviderCredentials.userId, ctx.user.id))
-      .orderBy(desc(userProviderCredentials.updatedAt));
-    return rows.map(maskedRow);
-  }),
+      const rows = await ctx.adapter.db
+        .select()
+        .from(userProviderCredentials)
+        .where(eq(userProviderCredentials.userId, ctx.user.id))
+        .orderBy(desc(userProviderCredentials.updatedAt));
+      return rows.map(maskedRow);
+    }),
 
   /** Insert or update a credential. Re-saves the encrypted API key. */
   upsert: protectedProcedure
@@ -164,7 +164,11 @@ export const providerRouter = router({
         return maskedRow(updated);
       }
 
-      if (!apiKeyFields && def.authType !== "base_url_only") {
+      if (
+        !apiKeyFields &&
+        def.authType !== "base_url_only" &&
+        def.authType !== "none"
+      ) {
         throw new Error(`${def.label} requires an API key.`);
       }
 

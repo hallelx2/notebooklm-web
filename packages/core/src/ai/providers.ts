@@ -27,9 +27,20 @@ export type ProviderId =
   | "openrouter"
   | "together"
   | "xai"
-  | "openai_compatible";
+  | "openai_compatible"
+  | "local";
 
-export type AuthType = "api_key" | "api_key_and_base_url" | "base_url_only";
+/**
+ * `none` is the special case for in-process providers that need no
+ * credentials at all (e.g. the bundled `local` provider that runs
+ * sentence-transformers via @huggingface/transformers). UI hides the
+ * credential form entirely; the aiConfig router skips the credential check.
+ */
+export type AuthType =
+  | "api_key"
+  | "api_key_and_base_url"
+  | "base_url_only"
+  | "none";
 
 export interface ModelDef {
   id: string;
@@ -531,6 +542,53 @@ export const PROVIDERS: ProviderDef[] = [
     supportsCustomModels: true,
     models: [],
   },
+  {
+    /**
+     * Built-in local embedder. Runs sentence-transformers ONNX models
+     * inside the host process via @huggingface/transformers. CPU-only,
+     * no GPU required, no API keys, no Docker, no Ollama install.
+     *
+     * Models download once to <NOTEBOOKLM_DATA_DIR>/models/ on first use
+     * and are cached forever. After that everything runs offline.
+     *
+     * This is the recommended default for the desktop app — it's the only
+     * provider that works with literally zero setup. Power users can
+     * still swap to OpenAI/Cohere/Ollama/etc. for speed or scale.
+     */
+    id: "local",
+    label: "Built-in (local, no setup)",
+    logo: "/providers/local.svg",
+    authType: "none",
+    baseUrlRequired: false,
+    apiKeyDocsUrl: undefined,
+    selfHostedOnly: true,
+    models: [
+      {
+        id: "Xenova/bge-small-en-v1.5",
+        label: "BGE Small EN v1.5 (~30 MB, fastest)",
+        capabilities: ["embed"],
+        embedDim: 384,
+        description:
+          "MTEB ~62 — competitive with text-embedding-3-small. ~250 chunks/sec on a 4-core CPU. Recommended default.",
+      },
+      {
+        id: "Xenova/bge-base-en-v1.5",
+        label: "BGE Base EN v1.5 (~110 MB, balanced)",
+        capabilities: ["embed"],
+        embedDim: 768,
+        description:
+          "MTEB ~63.5 — same dim as Gemini's truncated default. ~80 chunks/sec on CPU.",
+      },
+      {
+        id: "Xenova/bge-large-en-v1.5",
+        label: "BGE Large EN v1.5 (~330 MB, best quality)",
+        capabilities: ["embed"],
+        embedDim: 1024,
+        description:
+          "MTEB ~64.2 — top-of-the-line for English retrieval. ~25 chunks/sec on CPU; recommended only on capable hardware.",
+      },
+    ],
+  },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -589,8 +647,11 @@ export function embedModels(providerId: ProviderId): ModelDef[] {
 /**
  * The set of pgvector dimensions we have storage tables for.
  * If a model's dimension is not in this set, we cannot use it.
+ *
+ * 384-dim is the home of small CPU-friendly sentence-transformers
+ * (bge-small, MiniLM, etc.) used by the built-in `local` provider.
  */
-export const SUPPORTED_EMBED_DIMS = [768, 1024, 1536, 3072] as const;
+export const SUPPORTED_EMBED_DIMS = [384, 768, 1024, 1536, 3072] as const;
 export type SupportedEmbedDim = (typeof SUPPORTED_EMBED_DIMS)[number];
 
 export function isSupportedDim(n: number): n is SupportedEmbedDim {

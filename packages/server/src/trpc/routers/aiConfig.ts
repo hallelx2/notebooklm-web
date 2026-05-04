@@ -108,11 +108,14 @@ export const aiConfigRouter = router({
       }
 
       // Confirm credentials exist for any provider being selected.
+      // `authType: "none"` providers (built-in local) need no credential.
       for (const [field, providerId] of [
         ["chat", input.chatProvider],
         ["embedding", input.embeddingProvider],
       ] as const) {
         if (!providerId) continue;
+        const def = getProvider(providerId as ProviderId);
+        if (def?.authType === "none") continue;
         const [cred] = await ctx.adapter.db
           .select()
           .from(userProviderCredentials)
@@ -171,19 +174,19 @@ export const aiConfigRouter = router({
   reembedStatus: protectedProcedure
     .output(ReembedStatusSchema)
     .query(async ({ ctx }) => {
-    const cfg = await ensureRow(ctx.adapter, ctx.user.id);
-    const userSources = await ctx.adapter.db
-      .select({
-        id: sources.id,
-        notebookId: sources.notebookId,
-        title: sources.title,
-        embeddingModel: sources.metadata,
-      })
-      .from(sources);
-    void userSources;
-    return {
-      currentModel: cfg.embeddingModel,
-      currentDim: cfg.embeddingDim,
-    };
-  }),
+      const cfg = await ensureRow(ctx.adapter, ctx.user.id);
+      const userSources = await ctx.adapter.db
+        .select({
+          id: sources.id,
+          notebookId: sources.notebookId,
+          title: sources.title,
+          embeddingModel: sources.metadata,
+        })
+        .from(sources);
+      void userSources;
+      return {
+        currentModel: cfg.embeddingModel,
+        currentDim: cfg.embeddingDim,
+      };
+    }),
 });

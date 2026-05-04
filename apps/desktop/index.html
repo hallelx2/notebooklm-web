@@ -4,6 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NotebookLM Desktop</title>
+    <!--
+      Theme bootstrap — runs before React mounts so the first paint has
+      the right `dark` / `light` class on <html> and there's no flash.
+      Keep the storage key + class names in sync with
+      packages/ui/src/components/ThemeProvider.tsx (FOUC_PREVENTION_SCRIPT).
+    -->
+    <script>
+      (function () {
+        try {
+          var k = "notebooklm-theme";
+          var s = localStorage.getItem(k);
+          var sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var r = s === "light" ? "light" : s === "dark" ? "dark" : sysDark ? "dark" : "light";
+          var h = document.documentElement;
+          h.classList.add(r);
+          h.classList.remove(r === "dark" ? "light" : "dark");
+          h.style.colorScheme = r;
+        } catch (_) {}
+      })();
+    </script>
     <link
       href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap"
       rel="stylesheet"

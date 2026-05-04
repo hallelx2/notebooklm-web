@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "next-themes";
+import { useTheme } from "@notebooklm/ui/components/ThemeProvider";
 import { useCallback, useEffect, useRef } from "react";
 
 // Cluster colors for dark and light themes

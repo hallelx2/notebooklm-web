@@ -1,10 +1,10 @@
 "use client";
 
-import type { inferRouterOutputs } from "@trpc/server";
-import { Link } from "@notebooklm/ui/contexts";
-import { useEffect, useRef, useState } from "react";
 import type { AppRouter } from "@notebooklm/server";
+import { Link } from "@notebooklm/ui/contexts";
 import { trpc } from "@notebooklm/ui/trpc/client";
+import type { inferRouterOutputs } from "@trpc/server";
+import { useEffect, useRef, useState } from "react";
 import { SettingsSection } from "./SettingsSection";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -36,15 +36,20 @@ export function ModelsView() {
   const credentials = listQ.data ?? [];
   const configuredProviders = new Set(credentials.map((c) => c.provider));
 
+  // `authType: "none"` providers (built-in local) need no credentials
+  // and are always available in the dropdowns.
+  const isAvailable = (p: ProviderCatalog) =>
+    p.authType === "none" || configuredProviders.has(p.id);
+
   const chatOptions = catalog.filter(
     (p) =>
-      configuredProviders.has(p.id) &&
+      isAvailable(p) &&
       (p.supportsCustomModels ||
         p.models.some((m) => m.capabilities.includes("chat"))),
   );
   const embedOptions = catalog.filter(
     (p) =>
-      configuredProviders.has(p.id) &&
+      isAvailable(p) &&
       (p.supportsCustomModels ||
         p.models.some((m) => m.capabilities.includes("embed"))),
   );
@@ -78,7 +83,12 @@ export function ModelsView() {
     }
   }
 
-  const noCredentials = credentials.length === 0;
+  // No credentials AND no built-in providers means there's literally no way
+  // to pick a chat model -- show the "add a key" warning. If a `none`-auth
+  // provider exists (built-in local embedder), at least embedding is usable
+  // without any setup, so we don't disable the Save button on its account.
+  const hasNoneAuthProvider = catalog.some((p) => p.authType === "none");
+  const noCredentials = credentials.length === 0 && !hasNoneAuthProvider;
   const ready = !!cfgQ.data?.isOnboarded;
   const currentEmbedDimChanged =
     cfgQ.data?.embeddingModel !== embedModel ||

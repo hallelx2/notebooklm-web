@@ -258,6 +258,15 @@ export const studioOutputs = pgTable(
     content: jsonb("content"),
     assetUrl: text("asset_url"),
     status: text("status").notNull().default("ready"),
+    /**
+     * Live progress snapshot for in-flight generations. Updated by the
+     * handler at every stage / segment so a re-opened modal can
+     * "reattach" by polling. Cleared (set to null) when the job
+     * terminates so completed rows don't accumulate stale state.
+     *
+     * Shape: { stage, message, ttsCompleted, ttsTotal, updatedAt }
+     */
+    progress: jsonb("progress"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [index("studio_outputs_notebook_idx").on(table.notebookId)],
@@ -337,6 +346,20 @@ export const userAiConfig = pgTable("user_ai_config", {
 /*  non-destructive: old rows in other dim tables stay around.          */
 /*  HNSW cosine indexes are created via src/db/migrate-vector-indexes.ts*/
 /* ------------------------------------------------------------------ */
+
+export const chunkEmbeddings384 = pgTable(
+  "chunk_embeddings_384",
+  {
+    chunkId: uuid("chunk_id")
+      .primaryKey()
+      .references(() => sourceChunks.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    embedding: vector("embedding", { dimensions: 384 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("chunk_embeddings_384_model_idx").on(t.model)],
+);
 
 export const chunkEmbeddings768 = pgTable(
   "chunk_embeddings_768",

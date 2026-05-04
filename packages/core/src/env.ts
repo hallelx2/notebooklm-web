@@ -67,6 +67,21 @@ const envSchema = z.object({
 
   // Audio
   DEEPGRAM_API_KEY: z.string().optional(),
+  // Kokoro TTS has two backends, selected automatically:
+  //   - in-process via the kokoro-js library (no env config needed —
+  //     just install `kokoro-js`. Default for desktop.)
+  //   - HTTP via a Kokoro-FastAPI server (set KOKORO_BASE_URL).
+  // The KOKORO_LOCAL_* knobs only apply to the in-process backend.
+  KOKORO_BASE_URL: z.string().url().optional(),
+  KOKORO_API_KEY: z.string().optional(),
+  KOKORO_MODEL: z.string().optional(),
+  KOKORO_LOCAL_MODEL_ID: z.string().optional(),
+  KOKORO_LOCAL_DTYPE: z
+    .enum(["fp32", "fp16", "q8", "q4", "q4f16"])
+    .optional(),
+  KOKORO_LOCAL_DEVICE: z.enum(["cpu", "webgpu", "wasm"]).optional(),
+  /** Set to "1" to disable the in-process kokoro-js backend explicitly. */
+  KOKORO_DISABLE_LOCAL: z.string().optional(),
 
   // Vercel
   VERCEL_URL: z.string().optional(),

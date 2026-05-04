@@ -40,9 +40,10 @@ import { ensureSearxng } from "./searxng-manager";
 let cachedAdapter: PlatformAdapter | null = null;
 
 const MEMORY_MODE = process.env.NOTEBOOKLM_DATA_DIR === "memory:";
-const DATA_DIR = process.env.NOTEBOOKLM_DATA_DIR && !MEMORY_MODE
-  ? process.env.NOTEBOOKLM_DATA_DIR
-  : join(homedir(), ".notebooklm");
+const DATA_DIR =
+  process.env.NOTEBOOKLM_DATA_DIR && !MEMORY_MODE
+    ? process.env.NOTEBOOKLM_DATA_DIR
+    : join(homedir(), ".notebooklm");
 
 type DesktopConfig = {
   encryptionKey: string;
@@ -62,7 +63,9 @@ function loadOrCreateConfig(): DesktopConfig {
 
   if (existsSync(configPath)) {
     try {
-      const raw = JSON.parse(readFileSync(configPath, "utf8")) as Partial<DesktopConfig>;
+      const raw = JSON.parse(
+        readFileSync(configPath, "utf8"),
+      ) as Partial<DesktopConfig>;
       if (raw.encryptionKey && raw.betterAuthSecret) {
         return raw as DesktopConfig;
       }
@@ -85,9 +88,19 @@ function loadOrCreateConfig(): DesktopConfig {
 }
 
 function ensureRuntimeEnv(cfg: DesktopConfig) {
-  if (!process.env.ENCRYPTION_KEY) process.env.ENCRYPTION_KEY = cfg.encryptionKey;
+  if (!process.env.ENCRYPTION_KEY)
+    process.env.ENCRYPTION_KEY = cfg.encryptionKey;
   if (!process.env.BETTER_AUTH_SECRET)
     process.env.BETTER_AUTH_SECRET = cfg.betterAuthSecret;
+
+  // Built-in `local` embed provider stores ONNX model files here. Point it
+  // at the desktop data dir so models live alongside PGlite + storage and
+  // survive app upgrades. First-use download is ~30 MB for bge-small.
+  if (!process.env.NOTEBOOKLM_MODEL_CACHE_DIR && !MEMORY_MODE) {
+    const modelDir = join(DATA_DIR, "models");
+    if (!existsSync(modelDir)) mkdirSync(modelDir, { recursive: true });
+    process.env.NOTEBOOKLM_MODEL_CACHE_DIR = modelDir;
+  }
 }
 
 function buildStorage(): StorageProvider {
@@ -118,6 +131,7 @@ export async function getStubAdapter(): Promise<PlatformAdapter> {
   bindCoreRuntime({ db });
 
   await initSchema(db);
+  await reapOrphanedJobs(db);
 
   // Fire-and-forget: spawn SearxNG in the background so deep-research
   // has an OSS web search backend without paid keys. Idempotent — picks
@@ -134,9 +148,7 @@ export async function getStubAdapter(): Promise<PlatformAdapter> {
             `[NotebookLM Desktop] searxng auto-started at ${status.url} (config: ${status.configDir})`,
           );
         } else if (status.state === "already-running") {
-          console.log(
-            `[NotebookLM Desktop] searxng reused at ${status.url}`,
-          );
+          console.log(`[NotebookLM Desktop] searxng reused at ${status.url}`);
         } else if (status.state === "user-configured") {
           console.log(
             `[NotebookLM Desktop] searxng using user-configured ${status.url}`,
@@ -170,12 +182,68 @@ export async function getStubAdapter(): Promise<PlatformAdapter> {
     env: {
       APP_URL: "http://localhost:5173",
       DEEPGRAM_API_KEY: process.env.DEEPGRAM_API_KEY,
+      KOKORO_BASE_URL: process.env.KOKORO_BASE_URL,
+      KOKORO_API_KEY: process.env.KOKORO_API_KEY,
+      KOKORO_MODEL: process.env.KOKORO_MODEL,
+      KOKORO_LOCAL_MODEL_ID: process.env.KOKORO_LOCAL_MODEL_ID,
+      KOKORO_LOCAL_DTYPE: process.env.KOKORO_LOCAL_DTYPE as
+        | "fp32"
+        | "fp16"
+        | "q8"
+        | "q4"
+        | "q4f16"
+        | undefined,
+      KOKORO_LOCAL_DEVICE: process.env.KOKORO_LOCAL_DEVICE as
+        | "cpu"
+        | "webgpu"
+        | "wasm"
+        | undefined,
+      KOKORO_DISABLE_LOCAL: process.env.KOKORO_DISABLE_LOCAL,
       EXA_API_KEY: process.env.EXA_API_KEY,
       TAVILY_API_KEY: process.env.TAVILY_API_KEY,
       SERPAPI_KEY: process.env.SERPAPI_KEY,
     },
   };
   return cachedAdapter;
+}
+
+/**
+ * Mark every long-running job that's still in `generating` state as
+ * `error` on launch. These are orphans — the only thing that could
+ * legitimately leave a row in `generating` is an in-flight request
+ * handler, and the previous process is by definition dead by the time
+ * we boot. Without this, the studio panel's polling loop sees a stale
+ * "Generating..." pill that never resolves.
+ *
+ * Runs once per launch, after the schema is up. Safe on a fresh DB
+ * because the UPDATE matches zero rows.
+ */
+async function reapOrphanedJobs(db: ReturnType<typeof drizzle>) {
+  const reaped = await db.execute(sql`
+    UPDATE "studio_outputs"
+       SET "status" = 'error',
+           "content" = jsonb_build_object(
+             'error',
+             'Interrupted — the desktop app was closed or crashed before this finished.'
+           )
+     WHERE "status" = 'generating'
+     RETURNING "id"
+  `);
+  const drRows = await db.execute(sql`
+    UPDATE "deep_research_runs"
+       SET "status" = 'error',
+           "error" = 'Interrupted — the desktop app was closed or crashed before this finished.'
+     WHERE "status" = 'running'
+     RETURNING "id"
+  `);
+  const total =
+    ((reaped.rows ?? reaped) as unknown[]).length +
+    ((drRows.rows ?? drRows) as unknown[]).length;
+  if (total > 0) {
+    console.log(
+      `[NotebookLM Desktop] reaped ${total} orphaned job(s) from a previous session`,
+    );
+  }
 }
 
 /**
@@ -359,9 +427,16 @@ async function initSchema(db: ReturnType<typeof drizzle>) {
       "content" jsonb,
       "asset_url" text,
       "status" text DEFAULT 'ready' NOT NULL,
+      "progress" jsonb,
       "created_at" timestamp DEFAULT now() NOT NULL
     )
   `);
+  // Additive migration: existing installs already have studio_outputs,
+  // so CREATE TABLE IF NOT EXISTS is a no-op. ALTER TABLE ADD COLUMN
+  // IF NOT EXISTS handles upgrading them in place.
+  await db.execute(
+    sql`ALTER TABLE "studio_outputs" ADD COLUMN IF NOT EXISTS "progress" jsonb`,
+  );
   await db.execute(
     sql`CREATE INDEX IF NOT EXISTS "studio_outputs_notebook_idx" ON "studio_outputs" ("notebook_id")`,
   );
@@ -409,10 +484,13 @@ async function initSchema(db: ReturnType<typeof drizzle>) {
   `);
 
   // ── Multi-dimension embedding tables ───────────────────────────
-  for (const dim of [768, 1024, 1536, 3072] as const) {
+  // 384 = home of bge-small / MiniLM via the built-in `local` provider.
+  // 768/1024/1536/3072 = the rest of the supported pgvector dims.
+  for (const dim of [384, 768, 1024, 1536, 3072] as const) {
     const tableName = `chunk_embeddings_${dim}`;
     const idxName = `chunk_embeddings_${dim}_model_idx`;
-    await db.execute(sql.raw(`
+    await db.execute(
+      sql.raw(`
       CREATE TABLE IF NOT EXISTS "${tableName}" (
         "chunk_id" uuid PRIMARY KEY REFERENCES "source_chunks"("id") ON DELETE CASCADE,
         "provider" text NOT NULL,
@@ -420,9 +498,12 @@ async function initSchema(db: ReturnType<typeof drizzle>) {
         "embedding" vector(${dim}) NOT NULL,
         "created_at" timestamp DEFAULT now() NOT NULL
       )
-    `));
+    `),
+    );
     await db.execute(
-      sql.raw(`CREATE INDEX IF NOT EXISTS "${idxName}" ON "${tableName}" ("model")`),
+      sql.raw(
+        `CREATE INDEX IF NOT EXISTS "${idxName}" ON "${tableName}" ("model")`,
+      ),
     );
   }
 }

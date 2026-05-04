@@ -12,6 +12,14 @@ import type { Database } from "./index";
  * per fresh deploy.
  */
 export async function createVectorIndexes(db: Database) {
+  // chunk_embeddings_384 (built-in local sentence-transformers like bge-small)
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS chunk_embeddings_384_hnsw_idx
+    ON chunk_embeddings_384
+    USING hnsw (embedding vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64)
+  `);
+
   // chunk_embeddings_768
   await db.execute(sql`
     CREATE INDEX IF NOT EXISTS chunk_embeddings_768_hnsw_idx

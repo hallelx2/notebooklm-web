@@ -14,6 +14,8 @@ type StudioOutput = {
   content: unknown;
   assetUrl: string | null;
   status: string;
+  /** Live progress snapshot for in-flight rows (audio overview only). */
+  progress: unknown;
   createdAt: Date | string;
 };
 
@@ -144,12 +146,31 @@ export function StudioPanel({
     null,
   );
   const [audioModalOpen, setAudioModalOpen] = useState(false);
+  // When set, the audio modal opens in "reattach" mode and polls this
+  // row's progress instead of POSTing a new audio-overview job. Cleared
+  // on close so the next "Generate" click goes through the fresh-job
+  // configuration form as usual.
+  const [audioReattachId, setAudioReattachId] = useState<string | null>(null);
   const [quizModalOpen, setQuizModalOpen] = useState(false);
 
-  const hasGenerating = generatingKind !== null;
+  // Poll every 2s while EITHER (a) the user just kicked off a non-
+  // streaming studio output via the `generate` mutation (`generatingKind`
+  // is set until that mutation resolves) OR (b) any row in the latest
+  // payload still has status "generating". Case (b) is what catches
+  // audio overview — it streams over its own /api/studio/audio-overview
+  // endpoint and never touches `generatingKind`, so without this the
+  // panel would never re-fetch and the row would be stuck on
+  // "Generating..." forever.
   const listQ = trpc.studio.list.useQuery(
     { notebookId },
-    { refetchInterval: hasGenerating ? 2000 : false },
+    {
+      refetchInterval: (query) => {
+        const data = query.state.data as StudioOutput[] | undefined;
+        if (generatingKind !== null) return 2000;
+        if (data?.some((o) => o.status === "generating")) return 2000;
+        return false;
+      },
+    },
   );
   const outputs = (listQ.data ?? []) as StudioOutput[];
 
@@ -177,6 +198,27 @@ export function StudioPanel({
 
   function handleDelete(id: string) {
     deleteMut.mutate({ id });
+  }
+
+  /**
+   * Cancel an in-flight generating job. POSTs to /api/studio/cancel
+   * directly (not tRPC) so the existing audio-overview handler's
+   * job registry can pick it up via shared in-process state. After
+   * the request resolves we invalidate the list to pick up the new
+   * `cancelled` row state.
+   */
+  async function handleCancel(id: string) {
+    try {
+      await fetch("/api/studio/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+    } catch {
+      // best effort — the polling loop will pick up the new state
+      // either way
+    }
+    utils.studio.list.invalidate({ notebookId });
   }
 
   // ─── Detail View ──────────────────────────────────────────────────
@@ -400,10 +442,44 @@ export function StudioPanel({
                   "bg-gray-100 dark:bg-gray-500/15 text-gray-600 dark:text-gray-400";
 
                 if (output.status === "generating") {
+                  // Only audio overviews have a re-openable progress
+                  // modal — other studio outputs go through the synchronous
+                  // `studio.generate` mutation that doesn't expose live
+                  // progress. So the wrapper is only an interactive
+                  // <button> for audio-overview rows; everything else
+                  // stays a plain <div>.
+                  const isReattachable = output.kind === "audio-overview";
+                  const Wrapper = isReattachable ? "button" : "div";
+                  // Read the persisted progress snapshot so the pill
+                  // can show "Converting 5/12" instead of just
+                  // "Generating..." when the user has already passed
+                  // the script stage.
+                  const p = output.progress as {
+                    message?: string;
+                    ttsCompleted?: number;
+                    ttsTotal?: number;
+                  } | null;
+                  const subline =
+                    p?.ttsTotal && p.ttsTotal > 0
+                      ? `Audio ${p.ttsCompleted ?? 0}/${p.ttsTotal}`
+                      : (p?.message ?? "Generating...");
+                  const widthPct =
+                    p?.ttsTotal && p.ttsTotal > 0
+                      ? Math.round(((p.ttsCompleted ?? 0) / p.ttsTotal) * 100)
+                      : null;
                   return (
-                    <div
+                    <Wrapper
                       key={output.id}
-                      className="mindmap-generating-card rounded-xl border border-indigo-200 dark:border-indigo-500/20 bg-gradient-to-r from-indigo-50/80 to-purple-50/80 dark:from-indigo-500/5 dark:to-purple-500/5 p-3"
+                      type={isReattachable ? "button" : undefined}
+                      onClick={
+                        isReattachable
+                          ? () => {
+                              setAudioReattachId(output.id);
+                              setAudioModalOpen(true);
+                            }
+                          : undefined
+                      }
+                      className={`w-full text-left mindmap-generating-card rounded-xl border border-indigo-200 dark:border-indigo-500/20 bg-gradient-to-r from-indigo-50/80 to-purple-50/80 dark:from-indigo-500/5 dark:to-purple-500/5 p-3 ${isReattachable ? "hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-500/10 dark:hover:to-purple-500/10 transition-colors cursor-pointer" : ""}`}
                     >
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
@@ -415,20 +491,40 @@ export function StudioPanel({
                           <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 truncate">
                             {output.title}
                           </p>
-                          <p className="text-[10px] text-indigo-500/70 dark:text-indigo-400/70">
-                            Generating...
+                          <p className="text-[10px] text-indigo-500/70 dark:text-indigo-400/70 truncate">
+                            {subline}
                           </p>
                         </div>
+                        <button
+                          type="button"
+                          aria-label="Cancel generation"
+                          title="Cancel"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCancel(output.id);
+                          }}
+                          className="shrink-0 w-7 h-7 rounded-md flex items-center justify-center text-indigo-500/70 dark:text-indigo-400/70 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">
+                            close
+                          </span>
+                        </button>
                       </div>
                       <div className="mt-2 h-1 w-full rounded-full bg-indigo-100 dark:bg-indigo-500/10 overflow-hidden">
                         <div
-                          className="h-full w-1/3 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400"
-                          style={{
-                            animation: "shimmer 1.5s ease-in-out infinite",
-                          }}
+                          className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 transition-[width] duration-500"
+                          style={
+                            widthPct != null
+                              ? { width: `${Math.max(5, widthPct)}%` }
+                              : {
+                                  width: "33%",
+                                  animation:
+                                    "shimmer 1.5s ease-in-out infinite",
+                                }
+                          }
                         />
                       </div>
-                    </div>
+                    </Wrapper>
                   );
                 }
 
@@ -462,6 +558,14 @@ export function StudioPanel({
                             Error
                           </span>
                         )}
+                        {output.status === "cancelled" && (
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[10px]">
+                              cancel
+                            </span>
+                            Cancelled
+                          </span>
+                        )}
                       </div>
                     </div>
                     <span className="material-symbols-outlined text-[16px] text-gray-300 dark:text-gray-600 group-hover/item:text-gray-500 dark:group-hover/item:text-gray-400 transition-colors">
@@ -479,9 +583,11 @@ export function StudioPanel({
         open={audioModalOpen}
         onClose={() => {
           setAudioModalOpen(false);
+          setAudioReattachId(null);
           utils.studio.list.invalidate({ notebookId });
         }}
         notebookId={notebookId}
+        reattachId={audioReattachId}
       />
 
       <QuizConfigModal

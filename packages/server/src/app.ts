@@ -12,6 +12,7 @@ import { deepResearchHandler } from "./handlers/deep-research";
 import { filesHandler } from "./handlers/files";
 import { reembedHandler } from "./handlers/reembed";
 import { audioOverviewHandler } from "./handlers/studio/audio-overview";
+import { studioCancelHandler } from "./handlers/studio/cancel";
 import { quizSummaryHandler } from "./handlers/studio/quiz-summary";
 import { uploadHandler } from "./handlers/upload";
 import { appRouter, createContext } from "./trpc";
@@ -71,6 +72,9 @@ export function createApp(adapter: PlatformAdapter) {
   app.post("/api/reembed", (c) => reembedHandler(c.req.raw, c.var.adapter));
   app.post("/api/studio/audio-overview", (c) =>
     audioOverviewHandler(c.req.raw, c.var.adapter),
+  );
+  app.post("/api/studio/cancel", (c) =>
+    studioCancelHandler(c.req.raw, c.var.adapter),
   );
   app.post("/api/studio/quiz-summary", (c) =>
     quizSummaryHandler(c.req.raw, c.var.adapter),

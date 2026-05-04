@@ -1,6 +1,7 @@
 import type { ProviderId } from "../providers";
 import { cohereEmbedAdapter } from "./cohere";
 import { googleEmbedAdapter } from "./google";
+import { localEmbedAdapter } from "./local";
 import { mistralEmbedAdapter } from "./mistral";
 import { ollamaEmbedAdapter } from "./ollama";
 import { openaiEmbedAdapter } from "./openai";
@@ -32,6 +33,8 @@ export function getEmbedAdapter(provider: ProviderId): EmbedAdapter | null {
       return togetherEmbedAdapter;
     case "openai_compatible":
       return openaiCompatibleEmbedAdapter;
+    case "local":
+      return localEmbedAdapter;
     case "anthropic":
     case "groq":
     case "openrouter":

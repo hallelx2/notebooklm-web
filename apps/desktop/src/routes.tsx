@@ -107,6 +107,20 @@ const settingsLayoutRoute = createRoute({
   ),
 });
 
+// Bare `/settings` -- shared UI components (gear icon in NotebooksView,
+// onboarding redirects, etc.) link here without picking a sub-tab. The
+// web app handles this with a Next.js page at `apps/web/src/app/settings/page.tsx`
+// that redirects to `/settings/profile`; the desktop equivalent lives here.
+// Without this route, clicking the gear icon hits TanStack Router's
+// notFoundError because no /settings/* path matches "/settings" exactly.
+const settingsIndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings",
+  beforeLoad: () => {
+    throw redirect({ to: "/settings/profile" });
+  },
+});
+
 const settingsProfileRoute = createRoute({
   getParentRoute: () => settingsLayoutRoute,
   path: "/settings/profile",
@@ -143,6 +157,7 @@ const routeTree = rootRoute.addChildren([
   signUpRoute,
   notebooksRoute,
   notebookRoute,
+  settingsIndexRoute,
   settingsLayoutRoute.addChildren([
     settingsProfileRoute,
     settingsProvidersRoute,

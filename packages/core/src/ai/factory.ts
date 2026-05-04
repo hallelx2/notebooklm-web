@@ -13,11 +13,7 @@ import { decryptSecret } from "../crypto/secret";
 import { userAiConfig, userProviderCredentials } from "../db/schema";
 import { coreDb } from "../runtime";
 import { getEmbedAdapter } from "./embed";
-import {
-  getProvider,
-  isValidProviderId,
-  type ProviderId,
-} from "./providers";
+import { getProvider, isValidProviderId, type ProviderId } from "./providers";
 
 /* ------------------------------------------------------------------ */
 /*  Errors                                                             */
