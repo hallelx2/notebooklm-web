@@ -24,7 +24,7 @@ export function createNotebookMcpServer(opts: {
     version: "0.1.0",
     tools: [
       retrieveSourcesTool(opts),
-      webSearchTool,
+      webSearchTool({ userId: opts.userId }),
       parseLinkTool,
     ],
     alwaysLoad: true,

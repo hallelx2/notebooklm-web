@@ -1,16 +1,41 @@
-import type { SearchProvider, WebResult } from "./types";
+import type {
+  SearchProvider,
+  SearchProviderDescriptor,
+  WebResult,
+} from "./types";
+
+const descriptor: SearchProviderDescriptor = {
+  id: "tavily",
+  label: "Tavily",
+  description:
+    "AI-tuned web search optimised for retrieval-augmented generation. Paid; free tier available at tavily.com.",
+  homepage: "https://tavily.com",
+  envVars: { apiKey: "TAVILY_API_KEY" },
+  fields: [
+    {
+      key: "apiKey",
+      label: "API key",
+      type: "password",
+      placeholder: "tvly-…",
+      required: true,
+      hint: "Find or create at https://app.tavily.com/home",
+    },
+  ],
+};
 
 export const tavilyProvider: SearchProvider = {
   name: "tavily",
-  available() {
-    return !!process.env.TAVILY_API_KEY;
-  },
-  async search(query, mode, limit) {
+  descriptor,
+  async search(query, mode, limit, creds) {
+    const apiKey = creds.apiKey;
+    if (!apiKey) {
+      throw new Error("Tavily: missing apiKey");
+    }
     const res = await fetch("https://api.tavily.com/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        api_key: process.env.TAVILY_API_KEY,
+        api_key: apiKey,
         query,
         max_results: limit,
         search_depth: mode === "deep" ? "advanced" : "basic",

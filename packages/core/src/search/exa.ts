@@ -1,16 +1,41 @@
-import type { SearchProvider, WebResult } from "./types";
+import type {
+  SearchProvider,
+  SearchProviderDescriptor,
+  WebResult,
+} from "./types";
+
+const descriptor: SearchProviderDescriptor = {
+  id: "exa",
+  label: "Exa",
+  description:
+    "Neural + keyword web search with full-text retrieval. Paid; sign up at exa.ai.",
+  homepage: "https://exa.ai",
+  envVars: { apiKey: "EXA_API_KEY" },
+  fields: [
+    {
+      key: "apiKey",
+      label: "API key",
+      type: "password",
+      placeholder: "exa_…",
+      required: true,
+      hint: "Find or create at https://dashboard.exa.ai/api-keys",
+    },
+  ],
+};
 
 export const exaProvider: SearchProvider = {
   name: "exa",
-  available() {
-    return !!process.env.EXA_API_KEY;
-  },
-  async search(query, mode, limit) {
+  descriptor,
+  async search(query, mode, limit, creds) {
+    const apiKey = creds.apiKey;
+    if (!apiKey) {
+      throw new Error("Exa: missing apiKey");
+    }
     const res = await fetch("https://api.exa.ai/search", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.EXA_API_KEY ?? "",
+        "x-api-key": apiKey,
       },
       body: JSON.stringify({
         query,
