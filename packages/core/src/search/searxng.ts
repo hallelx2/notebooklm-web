@@ -1,41 +1,37 @@
-import type { SearchProvider, WebResult } from "./types";
+import type {
+  SearchProvider,
+  SearchProviderDescriptor,
+  WebResult,
+} from "./types";
 
-/**
- * SearxNG — open-source, self-hostable meta-search engine that aggregates
- * Google, Bing, DuckDuckGo, Wikipedia and dozens of other sources behind a
- * single JSON API. Slots in alongside the paid providers (Exa, Tavily) so
- * users without API keys can still run deep-research.
- *
- * Configuration:
- *   - SEARXNG_URL — base URL of a SearxNG instance (no trailing slash).
- *     Examples: `http://localhost:8080`, `https://searx.your-host.com`.
- *     Required — `available()` returns false without it. We deliberately
- *     don't ship a public-instance default; public instances rate-limit
- *     unpredictably and we'd be putting their hostname in our request
- *     path without the operator's blessing. Self-host for production
- *     workloads (single docker compose: https://docs.searxng.org/admin/installation.html).
- *
- * Mode behaviour:
- *   - fast: lets the instance use its default engine list — faster, fewer
- *     network calls.
- *   - deep: forces a multi-engine query (google, bing, duckduckgo,
- *     wikipedia) so we get cross-source coverage even on instances tuned
- *     for speed.
- */
+const descriptor: SearchProviderDescriptor = {
+  id: "searxng",
+  label: "SearxNG",
+  description:
+    "Open-source, self-hostable meta-search aggregating Google / Bing / DuckDuckGo / Wikipedia. No API key — point at your own instance.",
+  homepage: "https://docs.searxng.org",
+  envVars: { baseUrl: "SEARXNG_URL" },
+  fields: [
+    {
+      key: "baseUrl",
+      label: "Instance URL",
+      type: "url",
+      placeholder: "http://localhost:8888",
+      required: true,
+      hint: "Self-host with `docker compose up -d` from docker/searxng/, or point at any instance you trust.",
+    },
+  ],
+};
+
 export const searxngProvider: SearchProvider = {
   name: "searxng",
-  available() {
-    return !!process.env.SEARXNG_URL;
-  },
-  async search(query, mode, limit) {
-    const base = (process.env.SEARXNG_URL ?? "").replace(/\/+$/, "");
+  descriptor,
+  async search(query, mode, limit, creds) {
+    const base = (creds.baseUrl ?? "").replace(/\/+$/, "");
     if (!base) {
-      throw new Error("SEARXNG_URL is not configured");
+      throw new Error("SearxNG: missing baseUrl");
     }
 
-    // POST + form-encoded body matches `searx-cli` and is the most
-    // compatible across instance versions. `format=json` is required —
-    // without it, SearxNG returns HTML and the JSON.parse below fails.
     const params = new URLSearchParams();
     params.set("q", query);
     params.set("format", "json");

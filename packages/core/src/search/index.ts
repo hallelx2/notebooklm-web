@@ -1,14 +1,33 @@
+import {
+  isSearchProviderAvailable,
+  resolveSearchCredential,
+  searchProviderDescriptors,
+} from "./credentials";
 import { exaProvider } from "./exa";
 import { searxngProvider } from "./searxng";
 import { tavilyProvider } from "./tavily";
 import type {
   SearchMode,
   SearchProvider,
+  SearchProviderDescriptor,
   SearchProviderName,
   WebResult,
 } from "./types";
 
-export type { SearchMode, WebResult } from "./types";
+export type {
+  ResolvedSearchCredential,
+  SearchMode,
+  SearchProviderDescriptor,
+  SearchProviderField,
+  SearchProviderName,
+  WebResult,
+} from "./types";
+
+export {
+  isSearchProviderAvailable,
+  resolveSearchCredential,
+  searchProviderDescriptors,
+} from "./credentials";
 
 const PROVIDERS: Record<SearchProviderName, SearchProvider> = {
   exa: exaProvider,
@@ -23,15 +42,21 @@ function isValidName(s: string): s is SearchProviderName {
 }
 
 /**
- * Order is: paid providers first (where keys are configured), SearxNG as
- * the OSS fallback. `availableProviders()` filters out anything that
- * isn't actually configured — so a user with only `SEARXNG_URL` set
- * sees just SearxNG, a user with both Exa and SearxNG sees Exa first
- * (better quality on most queries) then SearxNG, etc.
+ * Static descriptor list — used by the settings UI to render one row
+ * per provider with its configured fields.
+ */
+export function listSearchProviderDescriptors(): SearchProviderDescriptor[] {
+  return Object.values(searchProviderDescriptors);
+}
+
+/**
+ * Default fallback order when the user hasn't set
+ * `userAiConfig.preferences.search.order`. Paid providers first
+ * (better quality on most queries) with the OSS fallback last;
+ * `availableProviders()` filters out anything not configured.
  *
  * Override via `SEARCH_PROVIDER_ORDER` env var, e.g.
  *   SEARCH_PROVIDER_ORDER=searxng,exa,tavily
- * to bias toward the OSS option.
  */
 function resolveOrder(): SearchProviderName[] {
   const raw = process.env.SEARCH_PROVIDER_ORDER;
@@ -43,26 +68,55 @@ function resolveOrder(): SearchProviderName[] {
   return parts.length ? parts : ["exa", "tavily", "searxng"];
 }
 
-export function availableProviders(): SearchProviderName[] {
-  return resolveOrder().filter((n) => PROVIDERS[n].available());
+/**
+ * Resolved fallback chain — providers whose required credential fields
+ * are populated for this user. The expensive part is the DB lookup
+ * inside `isSearchProviderAvailable`; we run them in parallel.
+ *
+ * `ctx.userId` is optional: when omitted, only env-var creds are
+ * considered (legacy operator-managed config).
+ */
+export async function availableProviders(ctx?: {
+  userId?: string;
+}): Promise<SearchProviderName[]> {
+  const order = resolveOrder();
+  const checks = await Promise.all(
+    order.map(async (name) => ({
+      name,
+      ok: await isSearchProviderAvailable(ctx?.userId, name),
+    })),
+  );
+  return checks.filter((c) => c.ok).map((c) => c.name);
 }
 
+/**
+ * Run a web search through the user's configured provider chain.
+ * Returns the first non-empty, non-error result; throws when all
+ * providers fail.
+ *
+ * `ctx.userId` should be passed by callers that have a session in
+ * scope (handlers, agent runtimes) so per-user credentials win over
+ * env-var fallback. Calls without `ctx` (e.g. CLI smoke tests) keep
+ * working in env-only mode.
+ */
 export async function webSearch(
   query: string,
   mode: SearchMode = "fast",
   limit = 8,
+  ctx?: { userId?: string },
 ): Promise<WebResult[]> {
-  const order = resolveOrder().filter((n) => PROVIDERS[n].available());
+  const order = await availableProviders(ctx);
   if (order.length === 0) {
     throw new Error(
-      "No web search provider configured (set EXA_API_KEY, TAVILY_API_KEY, and/or SEARXNG_URL).",
+      "No web search provider configured. Add a key in Settings → Web Search, or set EXA_API_KEY / TAVILY_API_KEY / SEARXNG_URL in the environment.",
     );
   }
 
   const errors: string[] = [];
   for (const name of order) {
     try {
-      const results = await PROVIDERS[name].search(query, mode, limit);
+      const creds = await resolveSearchCredential(ctx?.userId, name);
+      const results = await PROVIDERS[name].search(query, mode, limit, creds);
       if (results.length === 0) {
         errors.push(`${name}: no results`);
         continue;

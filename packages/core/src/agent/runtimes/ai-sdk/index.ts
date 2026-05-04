@@ -365,7 +365,7 @@ async function* runResearch(
     data: { count: subqueries.length },
   };
   const searchResults = await Promise.allSettled(
-    subqueries.map((sub) => webSearch(sub, mode, perQuery)),
+    subqueries.map((sub) => webSearch(sub, mode, perQuery, { userId })),
   );
   for (const [i, result] of searchResults.entries()) {
     if (result.status === "fulfilled") {
@@ -663,7 +663,9 @@ async function* runResearch(
           data: { gapCount: gaps.gaps.length },
         };
         const gapResults = await Promise.allSettled(
-          gaps.gaps.map((g) => webSearch(g.searchQuery, "fast", 3)),
+          gaps.gaps.map((g) =>
+            webSearch(g.searchQuery, "fast", 3, { userId }),
+          ),
         );
         const newSources: FetchedSource[] = [];
         for (const result of gapResults) {

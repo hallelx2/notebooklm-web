@@ -13,7 +13,9 @@ export const searchRouter = router({
       }),
     )
     .output(z.array(WebResultSchema))
-    .mutation(async ({ input }) => {
-      return webSearch(input.query, input.mode, input.limit);
+    .mutation(async ({ input, ctx }) => {
+      return webSearch(input.query, input.mode, input.limit, {
+        userId: ctx.user.id,
+      });
     }),
 });
