@@ -115,3 +115,51 @@ export async function availableProviders(ctx?: {
 }): Promise<SearchProviderName[]> {
   return resolveSearchChain(ctx?.userId);
 }
+
+/**
+ * Run a one-off search through a specific provider with explicit
+ * credentials, bypassing the user's preference chain. Used by the
+ * Settings → Web Search "Test connection" button: the user clicks
+ * Test, the UI sends the proposed creds (which may not be saved
+ * yet), the server runs a `limit=1` query and returns either a
+ * sample result + latency, or the error string.
+ *
+ * Never throws — wraps everything in `{ ok: false, error }` so the
+ * UI can render a friendly message without try/catch.
+ */
+export type TestSearchProviderResult =
+  | {
+      ok: true;
+      latencyMs: number;
+      sample: { url: string; title: string };
+    }
+  | { ok: false; error: string };
+
+export async function testSearchProvider(
+  providerId: SearchProviderName,
+  creds: { apiKey?: string; baseUrl?: string },
+): Promise<TestSearchProviderResult> {
+  const start = Date.now();
+  try {
+    const results = await PROVIDERS[providerId].search(
+      "openai gpt",
+      "fast",
+      1,
+      creds,
+    );
+    if (results.length === 0) {
+      return { ok: false, error: "Provider returned no results" };
+    }
+    const r = results[0];
+    return {
+      ok: true,
+      latencyMs: Date.now() - start,
+      sample: { url: r.url, title: r.title },
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
