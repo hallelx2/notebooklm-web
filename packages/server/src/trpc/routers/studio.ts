@@ -1,5 +1,6 @@
 import { getChatModel, NoAiConfigError } from "@notebooklm/core/ai/factory";
 import { notebooks, sources, studioOutputs } from "@notebooklm/core/db/schema";
+import { isReadable } from "@notebooklm/core/ingest/parse";
 import { generateText } from "ai";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -218,18 +219,30 @@ export const studioRouter = router({
             ),
           );
 
+        // Defense-in-depth: even rows marked status="ready" can carry
+        // mojibake if they were ingested before the parse-time guard
+        // landed (or by a parallel path that bypassed it). Filter those
+        // out HERE so they can't poison the studio prompt with binary
+        // junk and steer the model toward off-topic output.
+        let skipped = 0;
         let combinedContent = "";
         for (const s of readySources) {
-          if (s.content) {
-            combinedContent += s.content + "\n\n";
+          if (!s.content) continue;
+          const check = isReadable(s.content);
+          if (!check.ok) {
+            skipped++;
+            continue;
           }
+          combinedContent += s.content + "\n\n";
           if (combinedContent.length >= 20000) break;
         }
         combinedContent = combinedContent.slice(0, 20000);
 
         if (!combinedContent.trim()) {
           throw new Error(
-            "No source content available. Add sources to the notebook first.",
+            skipped > 0
+              ? `No readable source content available. ${skipped} source${skipped === 1 ? " was" : "s were"} skipped because text extraction produced unreadable content (likely image-only PDFs or encrypted streams). Try re-ingesting with OCR, or add a different source.`
+              : "No source content available. Add sources to the notebook first.",
           );
         }
 
