@@ -59,3 +59,17 @@ engines:
 
   - name: brave
     disabled: false
+
+  # ── Explicitly disable the engines that ship enabled-by-default but
+  # spam errors at boot:
+  #   - ahmia / torch require a Tor proxy we don't run.
+  #   - wikidata has a long-running upstream parse bug (KeyError 'name')
+  #     that disables it on init anyway; muting it cleans up the logs.
+  - name: ahmia
+    disabled: true
+
+  - name: torch
+    disabled: true
+
+  - name: wikidata
+    disabled: true
