@@ -10,6 +10,7 @@ import { ProfileView } from "@notebooklm/ui/views/settings/ProfileView";
 import { ProvidersView } from "@notebooklm/ui/views/settings/ProvidersView";
 import { SettingsChrome } from "@notebooklm/ui/views/settings/SettingsChrome";
 import { SettingsNav } from "@notebooklm/ui/views/settings/SettingsNav";
+import { WebSearchView } from "@notebooklm/ui/views/settings/WebSearchView";
 import {
   createRootRoute,
   createRoute,
@@ -130,6 +131,12 @@ const settingsAppearanceRoute = createRoute({
   component: AppearanceView,
 });
 
+const settingsWebSearchRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/settings/web-search",
+  component: WebSearchView,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   signInRoute,
@@ -140,6 +147,7 @@ const routeTree = rootRoute.addChildren([
     settingsProfileRoute,
     settingsProvidersRoute,
     settingsModelsRoute,
+    settingsWebSearchRoute,
     settingsAppearanceRoute,
   ]),
 ]);
