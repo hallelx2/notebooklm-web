@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useRouter } from "../../contexts";
 import { trpc } from "../../trpc/client";
 import { showToast } from "./Toast";
 
@@ -30,9 +31,30 @@ export function DeepResearchModal({
   notebookId,
   initialQuery,
 }: Props) {
+  const router = useRouter();
   const [query, setQuery] = useState(initialQuery ?? "");
   const [mode, setMode] = useState<"fast" | "deep">("deep");
   const [stage, setStage] = useState<Stage>("idle");
+
+  // Web-search provider state — drives the "no providers active" banner
+  // above the search input. Hydrated only when the modal is open so we
+  // don't fire the query on every notebook view mount.
+  const searchConfigQ = trpc.searchConfig.list.useQuery(undefined, {
+    enabled: open,
+  });
+  const enabledAndConfiguredCount = useMemo(() => {
+    const providers = searchConfigQ.data?.providers ?? [];
+    return providers.filter(
+      (p) =>
+        p.enabled &&
+        ((p.configured?.hasKey ?? false) ||
+          p.envFallback.apiKey ||
+          !!p.configured?.baseUrl ||
+          p.envFallback.baseUrl),
+    ).length;
+  }, [searchConfigQ.data?.providers]);
+  const noProvidersActive =
+    !searchConfigQ.isLoading && enabledAndConfiguredCount === 0;
   const [stageMsg, setStageMsg] = useState("");
   const [plan, setPlan] = useState<string[]>([]);
   const [logs, setLogs] = useState<string[]>([]);
@@ -257,6 +279,41 @@ export function DeepResearchModal({
           </div>
         </div>
 
+        {/* No-providers warning. Surfaces here so the user finds out
+            BEFORE hitting Research with a 60-second wait. */}
+        {noProvidersActive ? (
+          <div className="mx-4 sm:mx-6 mt-4 mb-0 p-4 border border-amber-300 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 rounded-xl">
+            <div className="flex items-start gap-3">
+              <span className="material-symbols-outlined text-[20px] mt-0.5">
+                warning
+              </span>
+              <div className="flex-1 text-sm">
+                <div className="font-medium mb-1">
+                  No web search providers active
+                </div>
+                <p className="text-xs leading-relaxed mb-3">
+                  Deep research needs at least one provider (Exa, Tavily, or
+                  SearxNG) to fetch sources from the web. Add a key in
+                  Settings, or enable a provider you've already configured.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    router.push("/settings/web-search");
+                  }}
+                  className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 bg-amber-900 dark:bg-amber-200 text-amber-50 dark:text-amber-950 hover:bg-amber-800 dark:hover:bg-amber-100 transition-colors rounded-md"
+                >
+                  <span className="material-symbols-outlined text-[14px]">
+                    settings
+                  </span>
+                  Configure providers
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {/* Search bar area */}
         <div className="px-4 sm:px-6 py-4 border-y border-gray-100 dark:border-gray-800 shrink-0 bg-gray-50/50 dark:bg-gray-900/30">
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
@@ -312,10 +369,13 @@ export function DeepResearchModal({
               <button
                 type="button"
                 onClick={() => (running ? abortRef.current?.abort() : run())}
+                disabled={!running && noProvidersActive}
                 className={`px-6 py-3 rounded-xl text-sm font-semibold transition-all shadow-sm ${
                   running
                     ? "bg-red-600 hover:bg-red-700 text-white shadow-red-500/25"
-                    : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/25"
+                    : noProvidersActive
+                      ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                      : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/25"
                 }`}
               >
                 {running ? (
