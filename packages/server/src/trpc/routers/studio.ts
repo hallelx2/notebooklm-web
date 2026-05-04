@@ -37,52 +37,74 @@ const STRUCTURED_KINDS = new Set(["mind-map", "flashcards", "quiz"]);
 function buildPrompt(
   kind: string,
   sourceContent: string,
-  opts?: { questionCount?: number },
+  opts: {
+    topic: string;
+    description?: string | null;
+    questionCount?: number;
+  },
 ): string {
-  const base = `You are an expert content creator. Based on the following source material, generate the requested output.\n\nSource Material:\n${sourceContent}\n\n`;
+  const topic = opts.topic.trim() || "this notebook";
+  const description = opts.description?.trim();
+
+  // Topic-grounded preamble. Anchors the model to what the notebook is
+  // ABOUT — not just whatever happens to fill the first 20 KB of source
+  // text. Without this, mind-maps over heterogeneous sources (or sources
+  // containing generic boilerplate) drift into off-topic structures
+  // (e.g. summarising the PDF *file format* when the notebook is about
+  // metaheuristic optimisation).
+  const base = `You are an expert content creator helping a user produce study artefacts about a specific topic.
+
+Topic: ${topic}${description ? `\nTopic context: ${description}` : ""}
+
+Stay anchored to the topic above. Treat the source material as evidence for the topic, not as a subject in itself. Skip incidental content that isn't relevant to the topic — file-format boilerplate, document-structure metadata, page footers, references sections, or anything else that's about HOW the source is presented rather than what it teaches.
+
+Source Material:
+${sourceContent}
+
+`;
 
   switch (kind) {
     case "audio-overview":
       return (
         base +
-        "Generate a podcast-style script with host dialogue. Include natural conversational transitions, an introduction, key discussion points, and a conclusion. Format it as a script with speaker labels."
+        `Generate a podcast-style script about "${topic}" with two hosts in dialogue. Include natural conversational transitions, an introduction that establishes the topic, key discussion points drawn from the source material, and a conclusion. Format it as a script with speaker labels.`
       );
     case "study-guide":
       return (
         base +
-        "Generate a comprehensive study guide with key concepts, definitions, review questions, and summaries for each major topic. Organize it with clear headings and bullet points."
+        `Generate a comprehensive study guide for "${topic}" with key concepts, definitions, review questions, and summaries for each major sub-topic. Organize it with clear headings and bullet points.`
       );
     case "briefing-doc":
       return (
         base +
-        "Generate an executive briefing document. Include an executive summary, key findings, analysis, implications, and recommended actions. Keep it concise and professional."
+        `Generate an executive briefing document on "${topic}". Include an executive summary, key findings, analysis, implications, and recommended actions. Keep it concise and professional.`
       );
     case "faq":
       return (
         base +
-        "Generate a FAQ with 10-15 questions and detailed answers based on the source material. Cover the most important topics and common points of confusion."
+        `Generate a FAQ about "${topic}" with 10-15 questions and detailed answers grounded in the source material. Cover the most important sub-topics and common points of confusion.`
       );
     case "timeline":
       return (
         base +
-        "Generate a chronological timeline of key events and developments mentioned in the source material. Include dates (or relative ordering) and brief descriptions for each entry."
+        `Generate a chronological timeline of key events and developments related to "${topic}" mentioned in the source material. Include dates (or relative ordering) and brief descriptions for each entry. Skip events that are about the source documents themselves (publication dates, revisions) unless they're directly relevant to the topic.`
       );
     case "mind-map":
       return (
         base +
-        `Generate a mind map in Markdown heading format for use with the markmap library.
+        `Generate a mind map about "${topic}" in Markdown heading format for use with the markmap library.
 
 Rules:
-- Use a single # heading for the central topic.
-- Use ## for main branches (aim for 4-7 branches).
-- Use ### for sub-topics under each branch (2-5 per branch).
-- Use #### for further details where appropriate (1-3 per sub-topic).
+- The single \`#\` root MUST be "${topic}" (or a tighter rephrasing of it). Do NOT pick a different central node.
+- Use \`##\` for main branches that decompose "${topic}" into 4-7 sub-areas.
+- Use \`###\` for sub-topics under each branch (2-5 per branch).
+- Use \`####\` for further details where appropriate (1-3 per sub-topic).
 - Keep each node text concise (max 6-8 words).
-- Cover ALL the major concepts from the source material.
+- Every node must be ABOUT the topic. Do NOT include generic file-format terms (PDF objects, document structure, headers, content streams, annotations, cross-reference tables, etc.) unless those concepts are themselves central to "${topic}".
 - Do NOT include any fenced code blocks, do NOT wrap in backticks.
 - Return ONLY the markdown, nothing else.
 
-Example format:
+Example shape (for a hypothetical topic "Artificial Intelligence"):
 # Artificial Intelligence
 ## Machine Learning
 ### Supervised Learning
@@ -96,18 +118,19 @@ Example format:
     case "flashcards":
       return (
         base +
-        'Generate flashcards as a JSON array with the following structure: [{ "front": "question or term", "back": "answer or definition" }]. Create 15-25 flashcards covering the key concepts. Return ONLY valid JSON, no other text.'
+        `Generate flashcards about "${topic}" as a JSON array with the following structure: [{ "front": "question or term", "back": "answer or definition" }]. Create 15-25 flashcards covering the key concepts of the topic. Return ONLY valid JSON, no other text.`
       );
     case "quiz": {
       const count = opts?.questionCount ?? 10;
       return (
         base +
-        `Generate a quiz as a JSON array with the following structure: [{ "question": "question text", "options": ["option A", "option B", "option C", "option D"], "answer": 0 }] where answer is the zero-based index of the correct option. Create exactly ${count} questions. Return ONLY valid JSON, no other text.`
+        `Generate a quiz about "${topic}" as a JSON array with the following structure: [{ "question": "question text", "options": ["option A", "option B", "option C", "option D"], "answer": 0 }] where answer is the zero-based index of the correct option. Create exactly ${count} questions, all about "${topic}". Return ONLY valid JSON, no other text.`
       );
     }
     default:
       return (
-        base + "Generate a helpful summary and analysis of the source material."
+        base +
+        `Generate a helpful summary and analysis about "${topic}", grounded in the source material.`
       );
   }
 }
@@ -149,7 +172,16 @@ export const studioRouter = router({
     )
     .output(StudioOutputSchema)
     .mutation(async ({ input, ctx }) => {
-      await assertOwnsNotebook(ctx.adapter, input.notebookId, ctx.user.id);
+      // Capture the notebook record so we can use its title + description
+      // as the *topic* the studio prompts ground on. Without this anchor,
+      // the model can drift onto whatever pattern wins by token count in
+      // the source content (notably: PDF format internals when a source
+      // happens to mention them) instead of the user's actual subject.
+      const nb = await assertOwnsNotebook(
+        ctx.adapter,
+        input.notebookId,
+        ctx.user.id,
+      );
 
       const title = KIND_TITLES[input.kind] ?? input.kind;
 
@@ -202,6 +234,8 @@ export const studioRouter = router({
         }
 
         const prompt = buildPrompt(input.kind, combinedContent, {
+          topic: nb.title,
+          description: nb.description,
           questionCount: input.questionCount,
         });
 
