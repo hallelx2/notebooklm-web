@@ -4,6 +4,7 @@ import { messageRouter } from "./routers/message";
 import { notebookRouter } from "./routers/notebook";
 import { providerRouter } from "./routers/provider";
 import { searchRouter } from "./routers/search";
+import { searchConfigRouter } from "./routers/searchConfig";
 import { sourceRouter } from "./routers/source";
 import { studioRouter } from "./routers/studio";
 
@@ -12,6 +13,7 @@ export const appRouter = router({
   source: sourceRouter,
   message: messageRouter,
   search: searchRouter,
+  searchConfig: searchConfigRouter,
   studio: studioRouter,
   provider: providerRouter,
   aiConfig: aiConfigRouter,
