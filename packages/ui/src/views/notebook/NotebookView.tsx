@@ -11,7 +11,7 @@ import { showToast, Toast } from "@notebooklm/ui/components/notebook/Toast";
 import { UploadModal } from "@notebooklm/ui/components/notebook/UploadModal";
 import { Link, useAuth, useRouter } from "@notebooklm/ui/contexts";
 import { trpc } from "@notebooklm/ui/trpc/client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export function NotebookView({ id }: { id: string }) {
   // ── Hooks (stable order on every render — Rules of Hooks) ──
@@ -36,7 +36,38 @@ export function NotebookView({ id }: { id: string }) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [deepOpen, setDeepOpen] = useState(false);
   const [deepQuery, setDeepQuery] = useState<string | undefined>(undefined);
-  const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
+  // Source selection model — track EXCLUSIONS, derive selected from the
+  // current source list. Default state (no exclusions) means "every source
+  // is part of the chat's RAG scope"; the user toggles a checkbox off to
+  // remove a source from the chat's retrieval. Sources added later (via
+  // upload, link ingest, deep-research) auto-join the selection because
+  // they aren't in the excluded set. A source the user explicitly excluded
+  // stays excluded across source-list refetches — survives polling, new
+  // uploads, etc. — until they re-toggle it.
+  const [excludedSourceIds, setExcludedSourceIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const allSourceIds = useMemo(
+    () => (sourcesQ.data ?? []).map((s) => s.id),
+    [sourcesQ.data],
+  );
+  const selectedSourceIds = useMemo(
+    () => allSourceIds.filter((id) => !excludedSourceIds.has(id)),
+    [allSourceIds, excludedSourceIds],
+  );
+  // Adapter: SourcesPanel's checkbox handler still calls
+  // setSelectedSourceIds(newIds). Translate that new selection back into
+  // the excluded set we actually persist. ChatPanel keeps reading
+  // `sourceIds={selectedSourceIds}` unchanged.
+  const setSelectedSourceIds = useCallback(
+    (newIds: string[]) => {
+      const selected = new Set(newIds);
+      setExcludedSourceIds(
+        new Set(allSourceIds.filter((id) => !selected.has(id))),
+      );
+    },
+    [allSourceIds],
+  );
   const [chatPrompt, setChatPrompt] = useState<string | null>(null);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);

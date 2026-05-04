@@ -226,6 +226,13 @@ function buildChatModel(
       throw new Error(
         "Voyage AI does not support chat -- pick a different chat provider.",
       );
+    case "local":
+      // The built-in `local` provider is embed-only (sentence-
+      // transformers via @huggingface/transformers). Mirrors the
+      // voyage case above — exhaustiveness sentinel for ProviderId.
+      throw new Error(
+        "The built-in local provider is embed-only -- pick a different chat provider.",
+      );
   }
 }
 
@@ -271,13 +278,21 @@ export async function getEmbedFn(userId: string): Promise<EmbedHandle> {
     );
   }
 
-  const credential = await loadCredential(userId, cfg.embeddingProvider);
   const provider = cfg.embeddingProvider;
+  const providerDef = getProvider(provider);
   const model = cfg.embeddingModel;
   const dim = cfg.embeddingDim;
 
+  // `authType: "none"` providers (currently just the built-in `local`
+  // sentence-transformers adapter) need no credentials at all -- skip
+  // the credential lookup entirely so they work pre-onboarding.
+  const credential =
+    providerDef?.authType === "none"
+      ? { apiKey: undefined, baseUrl: null }
+      : await loadCredential(userId, provider);
+
   // Resolve final baseUrl: explicit credential overrides provider default.
-  const fallbackBase = getProvider(provider)?.defaultBaseUrl;
+  const fallbackBase = providerDef?.defaultBaseUrl;
   const finalBaseUrl = credential.baseUrl ?? fallbackBase ?? undefined;
 
   const handle: EmbedHandle = {
@@ -338,7 +353,8 @@ export function buildEmbedHandleFromParams(params: {
       `Provider "${params.provider}" does not support embeddings.`,
     );
   }
-  const fallbackBase = getProvider(params.provider)?.defaultBaseUrl;
+  const providerDef = getProvider(params.provider);
+  const fallbackBase = providerDef?.defaultBaseUrl;
   const finalBaseUrl = params.baseUrl ?? fallbackBase ?? undefined;
 
   return {
