@@ -4,6 +4,12 @@ import {
   searchProviderDescriptors,
 } from "./credentials";
 import { exaProvider } from "./exa";
+import {
+  loadSearchPreferences,
+  resolveSearchChain,
+  SearchPreferencesSchema,
+  setSearchPreferences,
+} from "./preferences";
 import { searxngProvider } from "./searxng";
 import { tavilyProvider } from "./tavily";
 import type {
@@ -29,17 +35,19 @@ export {
   searchProviderDescriptors,
 } from "./credentials";
 
+export {
+  loadSearchPreferences,
+  resolveSearchChain,
+  type SearchPreferences,
+  SearchPreferencesSchema,
+  setSearchPreferences,
+} from "./preferences";
+
 const PROVIDERS: Record<SearchProviderName, SearchProvider> = {
   exa: exaProvider,
   tavily: tavilyProvider,
   searxng: searxngProvider,
 };
-
-const VALID_NAMES = new Set<SearchProviderName>(["exa", "tavily", "searxng"]);
-
-function isValidName(s: string): s is SearchProviderName {
-  return VALID_NAMES.has(s as SearchProviderName);
-}
 
 /**
  * Static descriptor list — used by the settings UI to render one row
@@ -50,54 +58,17 @@ export function listSearchProviderDescriptors(): SearchProviderDescriptor[] {
 }
 
 /**
- * Default fallback order when the user hasn't set
- * `userAiConfig.preferences.search.order`. Paid providers first
- * (better quality on most queries) with the OSS fallback last;
- * `availableProviders()` filters out anything not configured.
+ * Run a single web search through the user's configured provider
+ * chain. Returns the first non-empty, non-error result; throws with
+ * an aggregated reason when every provider in the chain fails.
  *
- * Override via `SEARCH_PROVIDER_ORDER` env var, e.g.
- *   SEARCH_PROVIDER_ORDER=searxng,exa,tavily
- */
-function resolveOrder(): SearchProviderName[] {
-  const raw = process.env.SEARCH_PROVIDER_ORDER;
-  if (!raw) return ["exa", "tavily", "searxng"];
-  const parts = raw
-    .split(",")
-    .map((p) => p.trim().toLowerCase())
-    .filter(isValidName);
-  return parts.length ? parts : ["exa", "tavily", "searxng"];
-}
-
-/**
- * Resolved fallback chain — providers whose required credential fields
- * are populated for this user. The expensive part is the DB lookup
- * inside `isSearchProviderAvailable`; we run them in parallel.
- *
- * `ctx.userId` is optional: when omitted, only env-var creds are
- * considered (legacy operator-managed config).
- */
-export async function availableProviders(ctx?: {
-  userId?: string;
-}): Promise<SearchProviderName[]> {
-  const order = resolveOrder();
-  const checks = await Promise.all(
-    order.map(async (name) => ({
-      name,
-      ok: await isSearchProviderAvailable(ctx?.userId, name),
-    })),
-  );
-  return checks.filter((c) => c.ok).map((c) => c.name);
-}
-
-/**
- * Run a web search through the user's configured provider chain.
- * Returns the first non-empty, non-error result; throws when all
- * providers fail.
- *
- * `ctx.userId` should be passed by callers that have a session in
- * scope (handlers, agent runtimes) so per-user credentials win over
- * env-var fallback. Calls without `ctx` (e.g. CLI smoke tests) keep
- * working in env-only mode.
+ * Chain resolution lives in `preferences.ts -> resolveSearchChain`:
+ *   - With `ctx.userId`: per-user `userAiConfig.preferences.search`
+ *     decides order + enabled flags; per-user creds in
+ *     `userProviderCredentials` (encrypted) win over env vars.
+ *   - Without `ctx.userId`: legacy `SEARCH_PROVIDER_ORDER` env order +
+ *     env-var creds — what the web app's operator-managed Vercel env
+ *     has always done. Zero behaviour change for that path.
  */
 export async function webSearch(
   query: string,
@@ -105,7 +76,7 @@ export async function webSearch(
   limit = 8,
   ctx?: { userId?: string },
 ): Promise<WebResult[]> {
-  const order = await availableProviders(ctx);
+  const order = await resolveSearchChain(ctx?.userId);
   if (order.length === 0) {
     throw new Error(
       "No web search provider configured. Add a key in Settings → Web Search, or set EXA_API_KEY / TAVILY_API_KEY / SEARXNG_URL in the environment.",
@@ -129,4 +100,18 @@ export async function webSearch(
     }
   }
   throw new Error(`All search providers failed — ${errors.join(" | ")}`);
+}
+
+/**
+ * Back-compat shim. Older code (and any imports that didn't update
+ * yet) called `availableProviders()` synchronously off env. The new
+ * resolver is async + per-user; this wrapper returns the user-aware
+ * chain for callers that still expect a list of provider names.
+ *
+ * @deprecated Use `resolveSearchChain(userId)` directly.
+ */
+export async function availableProviders(ctx?: {
+  userId?: string;
+}): Promise<SearchProviderName[]> {
+  return resolveSearchChain(ctx?.userId);
 }
