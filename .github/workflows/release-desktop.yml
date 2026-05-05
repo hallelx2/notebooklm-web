@@ -74,17 +74,23 @@ jobs:
         # empty UI shell.
         run: bun "--filter=@notebooklm/desktop" run build
 
-      # All three publish steps below set `npm_config_user_agent: npm/10`.
-      # Reason: when bun invokes a script it exports
-      # `npm_config_user_agent=bun/...`, and electron-builder's
-      # "install production dependencies" step uses that env var to
-      # detect the package manager. It then tries to run
-      # `node /path/to/bun`, but `bun` is a native ELF/Mach-O/PE binary
-      # — not a JS file — so Node errors with `Invalid or unexpected
-      # token` (the binary's first byte: `ELF` on Linux, magic bytes on
-      # macOS, `MZ` on Windows). Forcing the user-agent to npm makes
-      # electron-builder fall back to npm (preinstalled on every
-      # GH runner), which works fine.
+      # The publish steps below invoke electron-builder via `npx`, NOT
+      # `bun x`. Reason: `bun x` exports `npm_config_user_agent=bun/...`
+      # for the child process, which makes electron-builder's "install
+      # production dependencies" step think bun is the package manager.
+      # It then spawns `node /path/to/bun`, but `bun` is a native
+      # ELF/Mach-O/PE binary — not a JS file — and Node errors with
+      # `Invalid or unexpected token` on the binary's first byte. We
+      # tried setting `npm_config_user_agent=npm/10` at the shell-env
+      # level, but `bun x` overrides it for the spawned process, so
+      # the override never reaches electron-builder.
+      #
+      # `npx` (which ships with Node, preinstalled on every GH runner)
+      # sets `npm_config_user_agent=npm/...` itself, so electron-builder
+      # picks npm and the prod-deps install works. We still install
+      # the workspace with `bun install --frozen-lockfile` above for
+      # speed; only the electron-builder invocation uses npx.
+      #
       # Tracking: https://github.com/electron-userland/electron-builder/issues/8208
 
       - name: Build & publish (macOS)
@@ -97,13 +103,12 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          npm_config_user_agent: "npm/10.0.0"
         run: |
           cd apps/desktop
           # --publish always — uploads to the GH Release and writes
           # latest-mac.yml. electron-builder picks the GitHub provider
           # from package.json's `build.publish` config.
-          bun x electron-builder --mac --publish always
+          npx --no-install electron-builder --mac --publish always
 
       - name: Build & publish (Windows)
         if: matrix.os == 'windows-2022'
@@ -111,19 +116,17 @@ jobs:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          npm_config_user_agent: "npm/10.0.0"
         run: |
           cd apps/desktop
-          bun x electron-builder --win --publish always
+          npx --no-install electron-builder --win --publish always
 
       - name: Build & publish (Linux)
         if: matrix.os == 'ubuntu-22.04'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          npm_config_user_agent: "npm/10.0.0"
         run: |
           cd apps/desktop
-          bun x electron-builder --linux --publish always
+          npx --no-install electron-builder --linux --publish always
 
       - name: Upload artifacts (debugging fallback)
         # Even when --publish succeeds, also stash the artifacts on the
