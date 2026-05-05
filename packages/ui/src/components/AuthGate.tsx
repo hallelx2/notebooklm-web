@@ -11,7 +11,7 @@ import { LoadingScreen } from "./LoadingScreen";
  *
  *   - session still loading        → show LoadingScreen
  *   - unauthenticated              → redirect to /auth/sign-in
- *   - authenticated but not onboarded → redirect to /settings/providers?onboarding=1
+ *   - authenticated but not onboarded → redirect to /onboarding
  *
  * Set `requireOnboarding={false}` for routes the user must reach BEFORE
  * onboarding is complete (the settings tree, sign-out flows). Otherwise the
@@ -54,7 +54,7 @@ export function AuthGate({
     if (auth.status !== "authenticated") return;
     if (aiConfigQuery.isPending) return;
     if (aiConfigQuery.data && !aiConfigQuery.data.isOnboarded) {
-      router.replace("/settings/providers?onboarding=1");
+      router.replace("/onboarding");
     }
   }, [
     auth.status,

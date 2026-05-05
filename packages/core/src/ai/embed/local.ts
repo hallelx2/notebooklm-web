@@ -5,21 +5,24 @@
  * @huggingface/transformers. No GPU, no API key, no Docker, no Ollama
  * install — the truly plug-and-play option for the desktop app.
  *
- * Models download once to <env.cacheDir>/<modelId>/ on first use and are
- * cached forever. After that everything is offline.
+ * Resolution priority for model files:
+ *   1. NOTEBOOKLM_BUNDLED_MODELS_DIR/embed/<org>/<repo>/  (packaged
+ *      installer ships the ONNX next to the executable; transformers.js
+ *      reads from disk and never touches HF Hub)
+ *   2. NOTEBOOKLM_MODEL_CACHE_DIR (desktop adapter points this at
+ *      <NOTEBOOKLM_DATA_DIR>/models)
+ *   3. transformers.js default (~/.cache/huggingface/hub or
+ *      <cwd>/node_modules/.cache/...)
  *
  * Defaults:
  *   - dtype: "q8" — 8-bit quantized weights. ~4× smaller, ~2× faster on
  *     CPU than fp32, with ≤1 MTEB-point quality loss.
  *   - pooling: "mean" + normalize: true — the standard sentence-transformer
  *     output shape for cosine retrieval.
- *
- * The cache directory comes from `NOTEBOOKLM_MODEL_CACHE_DIR` or, failing
- * that, transformers.js's default (`<cwd>/node_modules/.cache/...`). The
- * desktop app sets `NOTEBOOKLM_MODEL_CACHE_DIR=<NOTEBOOKLM_DATA_DIR>/models`
- * so models live alongside PGlite + storage in `~/.notebooklm/`.
  */
 
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
   assertVectorShape,
   batchedEmbed,
@@ -53,12 +56,26 @@ async function getPipeline(modelId: string): Promise<PipelineFn> {
     const transformers = await import("@huggingface/transformers");
     const { pipeline, env } = transformers;
 
-    // Wire the cache directory up once, the first time we load anything.
-    // env is a singleton in the transformers module — setting it here
-    // governs every subsequent pipeline() call.
-    const desiredCacheDir = process.env.NOTEBOOKLM_MODEL_CACHE_DIR;
-    if (desiredCacheDir && env.cacheDir !== desiredCacheDir) {
-      env.cacheDir = desiredCacheDir;
+    // 1. Prefer bundled model files when present — that's the packaged-
+    //    installer path. transformers.js reads from disk, never tries
+    //    HF Hub, never tries to write a cache.
+    const bundledRoot = process.env.NOTEBOOKLM_BUNDLED_MODELS_DIR;
+    const bundledModelDir = bundledRoot
+      ? join(bundledRoot, "embed", ...modelId.split("/"))
+      : null;
+    if (bundledModelDir && existsSync(bundledModelDir)) {
+      env.allowLocalModels = true;
+      env.localModelPath = join(bundledRoot as string, "embed");
+      env.allowRemoteModels = false;
+    } else {
+      // 2. Otherwise use the desktop adapter's data dir (or whatever
+      //    NOTEBOOKLM_MODEL_CACHE_DIR points at) and let HF Hub fill it
+      //    in on first use.
+      const desiredCacheDir = process.env.NOTEBOOKLM_MODEL_CACHE_DIR;
+      if (desiredCacheDir && env.cacheDir !== desiredCacheDir) {
+        env.cacheDir = desiredCacheDir;
+      }
+      env.allowRemoteModels = true;
     }
 
     const pipe = await pipeline("feature-extraction", modelId, {

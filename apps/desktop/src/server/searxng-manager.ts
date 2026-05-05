@@ -49,8 +49,18 @@ export async function ensureSearxng(dataDir: string): Promise<SearxngStatus> {
   if (process.env.SEARXNG_URL) {
     return { state: "user-configured", url: process.env.SEARXNG_URL };
   }
-  if (process.env.NOTEBOOKLM_SEARXNG_AUTOSTART === "0") {
-    return { state: "skipped", reason: "NOTEBOOKLM_SEARXNG_AUTOSTART=0" };
+  // SearxNG auto-spawn is now OPT-IN. The default search chain is
+  // Tavily → Exa, both of which are HTTP APIs with free / paid tiers
+  // and need no Docker. SearxNG is for advanced users who self-host
+  // their own meta-search instance — they have to flip this flag on
+  // explicitly. This keeps the desktop install Docker-free out of
+  // the box.
+  if (process.env.NOTEBOOKLM_SEARXNG_AUTOSTART !== "1") {
+    return {
+      state: "skipped",
+      reason:
+        "searxng auto-start is opt-in (set NOTEBOOKLM_SEARXNG_AUTOSTART=1 to enable). Tavily / Exa cover the default chain.",
+    };
   }
   if (!isDockerAvailable()) {
     return {

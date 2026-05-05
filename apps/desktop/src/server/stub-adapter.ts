@@ -1,7 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { vector } from "@electric-sql/pglite/vector";
 import { createAuth } from "@notebooklm/core/auth";
@@ -100,6 +101,31 @@ function ensureRuntimeEnv(cfg: DesktopConfig) {
     const modelDir = join(DATA_DIR, "models");
     if (!existsSync(modelDir)) mkdirSync(modelDir, { recursive: true });
     process.env.NOTEBOOKLM_MODEL_CACHE_DIR = modelDir;
+  }
+
+  // Bundled-models directory — set by `bun run build:models` at packaging
+  // time. In a packaged Electron build it lives under the app's resources
+  // dir; in dev it sits at apps/desktop/resources/. The TTS + embeddings
+  // providers prefer this over a runtime HF Hub download when present, so
+  // a fresh installation has no model-fetch step on first use.
+  if (!process.env.NOTEBOOKLM_BUNDLED_MODELS_DIR) {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const candidates: string[] = [];
+    // Packaged Electron — process.resourcesPath is set by Electron's main
+    // process. We guard the access because the desktop adapter may also
+    // be imported from non-Electron scripts (typecheck, demo harnesses).
+    // biome-ignore lint/suspicious/noExplicitAny: process.resourcesPath is Electron-only
+    const rp = (process as { resourcesPath?: string }).resourcesPath;
+    if (typeof rp === "string" && existsSync(rp)) candidates.push(rp);
+    // Dev — repo-relative, same path the prebuild script writes to.
+    // src/server/ → up 2 → apps/desktop, then resources/.
+    candidates.push(resolve(here, "..", "..", "resources"));
+    for (const c of candidates) {
+      if (existsSync(join(c, "kokoro")) || existsSync(join(c, "embed"))) {
+        process.env.NOTEBOOKLM_BUNDLED_MODELS_DIR = c;
+        break;
+      }
+    }
   }
 }
 

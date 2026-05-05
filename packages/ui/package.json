@@ -38,7 +38,8 @@
     "./views/settings/ModelsView": "./src/views/settings/ModelsView.tsx",
     "./views/settings/ProvidersView": "./src/views/settings/ProvidersView.tsx",
     "./views/settings/ProfileView": "./src/views/settings/ProfileView.tsx",
-    "./views/settings/WebSearchView": "./src/views/settings/WebSearchView.tsx"
+    "./views/settings/WebSearchView": "./src/views/settings/WebSearchView.tsx",
+    "./views/onboarding/OnboardingView": "./src/views/onboarding/OnboardingView.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

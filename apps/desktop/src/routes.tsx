@@ -4,6 +4,7 @@ import { SignInView } from "@notebooklm/ui/views/auth/SignInView";
 import { SignUpView } from "@notebooklm/ui/views/auth/SignUpView";
 import { NotebookView } from "@notebooklm/ui/views/notebook/NotebookView";
 import { NotebooksView } from "@notebooklm/ui/views/notebooks/NotebooksView";
+import { OnboardingView } from "@notebooklm/ui/views/onboarding/OnboardingView";
 import { AppearanceView } from "@notebooklm/ui/views/settings/AppearanceView";
 import { ModelsView } from "@notebooklm/ui/views/settings/ModelsView";
 import { ProfileView } from "@notebooklm/ui/views/settings/ProfileView";
@@ -63,6 +64,20 @@ const signUpRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/auth/sign-up",
   component: SignUpView,
+});
+
+// First-launch wizard. AuthGate redirects every authenticated-but-not-
+// onboarded user here. We use `requireOnboarding={false}` because, by
+// definition, the user IS not onboarded yet — the wizard's job is to
+// flip that flag.
+const onboardingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/onboarding",
+  component: () => (
+    <AuthGate requireOnboarding={false}>
+      <OnboardingView />
+    </AuthGate>
+  ),
 });
 
 // AuthGate enforces "must be signed in AND onboarded" before notebook
@@ -155,6 +170,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   signInRoute,
   signUpRoute,
+  onboardingRoute,
   notebooksRoute,
   notebookRoute,
   settingsIndexRoute,
