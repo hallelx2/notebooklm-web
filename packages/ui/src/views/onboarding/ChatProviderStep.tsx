@@ -2,19 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { trpc } from "../../trpc/client";
+import { CodingAgentSubStep } from "./CodingAgentSubStep";
 
 /**
- * Wizard step #2 — pick a chat AI provider.
+ * Wizard step #2 — pick how the user wants to provide AI.
  *
- * The full Settings → Providers page exposes ~12 providers + custom
- * OpenAI-compatible endpoints. The wizard surfaces a curated 5-pack
- * (Google, OpenAI, Anthropic, Groq, Ollama) covering "free cloud",
- * "premium cloud", and "fully local" — the three buckets a normal user
- * actually thinks in. Anything else is one click away in Settings
- * after onboarding completes.
+ * Two top-level paths:
  *
- * Required step — the user MUST configure something here, otherwise
- * chat / studio / deep research can't run.
+ *   1. **Model path** (this file's main body) — pick a chat provider
+ *      (Google, OpenAI, Anthropic, Groq, Ollama). Paste an API key,
+ *      we encrypt + save it, set chatProvider/chatModel on the user.
+ *
+ *   2. **Coding-agent path** (`CodingAgentSubStep`) — route through
+ *      a CLI subprocess the user already has authenticated:
+ *      `claude`, `codex`, or `gh copilot`. No API key on our side;
+ *      we just save the runtime preference.
+ *
+ * The split exists because a developer who already has Claude Code
+ * or Codex installed has effectively already paid for an AI provider
+ * — making them paste another API key is friction with no benefit.
+ *
+ * Required step — the user MUST pick something, otherwise chat /
+ * studio / deep research can't run.
  */
 
 type CuratedProvider = {
@@ -88,11 +97,14 @@ const CURATED: CuratedProvider[] = [
   },
 ];
 
+type Path = "model" | "coding-agent" | null;
+
 export function ChatProviderStep({
   onContinue,
 }: {
   onContinue: () => void;
 }) {
+  const [path, setPath] = useState<Path>(null);
   const [selected, setSelected] = useState<CuratedProvider["id"] | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("http://localhost:11434");
@@ -109,12 +121,16 @@ export function ChatProviderStep({
   const testConn = trpc.provider.test.useMutation();
   const setAiConfig = trpc.aiConfig.update.useMutation();
   const aiConfigQ = trpc.aiConfig.get.useQuery();
-  // Detect a running Ollama on first paint. Cheap (~50ms locally,
-  // ~2.5s timeout when not present), so we just fire it once.
-  const ollamaQ = trpc.runtimes.detectOllama.useQuery(undefined, {
+  // Detect installed runtimes on first paint. Cheap when nothing's
+  // there (parallel timeouts ~2.5s) and useful enough that we just
+  // fire it once and reuse the result for both paths.
+  const detectQ = trpc.runtimes.detectAvailable.useQuery(undefined, {
     staleTime: Number.POSITIVE_INFINITY,
     refetchOnWindowFocus: false,
   });
+  // Ollama-shaped subset, kept under the old name for the rest of
+  // this component's body (model card path).
+  const ollamaQ = { data: detectQ.data?.ollama, refetch: detectQ.refetch };
   const utils = trpc.useUtils();
 
   const provider = selected ? CURATED.find((c) => c.id === selected) : null;
@@ -188,12 +204,147 @@ export function ChatProviderStep({
     }
   }
 
+  // Path-picker — runs before the actual provider grid. Shown until
+  // the user picks a top-level approach.
+  if (path === null) {
+    const codingAgentDetected =
+      detectQ.data?.claude.ok ||
+      detectQ.data?.codex.ok ||
+      detectQ.data?.ghCopilot.ok;
+    return (
+      <div className="space-y-6">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-3">
+            Step 2 · Required
+          </p>
+          <h1 className="text-3xl sm:text-4xl font-medium tracking-tighter mb-2">
+            How do you want to provide AI?
+          </h1>
+          <p className="text-slate-600 dark:text-zinc-400 text-sm leading-relaxed max-w-xl">
+            Two ways. Pick the one that matches what you already have —
+            either way you can switch later in Settings.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setPath("model")}
+            className="text-left rounded-xl border border-slate-200 dark:border-white/10 hover:border-slate-400 dark:hover:border-white/30 bg-slate-50/40 dark:bg-white/[0.02] p-5 transition-all group"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="material-symbols-outlined text-[20px] text-indigo-500 dark:text-indigo-400">
+                hub
+              </span>
+              <h3 className="text-base font-medium">Use a model directly</h3>
+            </div>
+            <p className="text-[12px] text-slate-600 dark:text-zinc-400 leading-relaxed mb-3">
+              Cloud (Google, OpenAI, Anthropic, Groq) or fully local
+              (Ollama). Paste an API key once and we encrypt it on disk.
+            </p>
+            <ul className="text-[11px] text-slate-500 dark:text-zinc-400 space-y-1">
+              <li>· Free tiers available (Google, Groq)</li>
+              <li>· Works for chat, audio summaries, deep research</li>
+              {detectQ.data?.ollama.ok && (
+                <li className="text-emerald-700 dark:text-emerald-300">
+                  · Ollama detected on this machine
+                </li>
+              )}
+            </ul>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPath("coding-agent")}
+            className={`text-left rounded-xl border p-5 transition-all group ${
+              codingAgentDetected
+                ? "border-emerald-300 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 bg-emerald-50/30 dark:bg-emerald-500/5"
+                : "border-slate-200 dark:border-white/10 hover:border-slate-400 dark:hover:border-white/30 bg-slate-50/40 dark:bg-white/[0.02]"
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="material-symbols-outlined text-[20px] text-indigo-500 dark:text-indigo-400">
+                terminal
+              </span>
+              <h3 className="text-base font-medium">Use my coding agent</h3>
+              {codingAgentDetected && (
+                <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                  Detected
+                </span>
+              )}
+            </div>
+            <p className="text-[12px] text-slate-600 dark:text-zinc-400 leading-relaxed mb-3">
+              Route through Claude Code, OpenAI Codex, or
+              `gh copilot`. Uses your existing CLI auth — no API key
+              on our side.
+            </p>
+            <ul className="text-[11px] text-slate-500 dark:text-zinc-400 space-y-1">
+              <li
+                className={
+                  detectQ.data?.claude.ok
+                    ? "text-emerald-700 dark:text-emerald-300"
+                    : ""
+                }
+              >
+                · Claude Code{detectQ.data?.claude.ok ? " — installed" : ""}
+              </li>
+              <li
+                className={
+                  detectQ.data?.codex.ok
+                    ? "text-emerald-700 dark:text-emerald-300"
+                    : ""
+                }
+              >
+                · OpenAI Codex{detectQ.data?.codex.ok ? " — installed" : ""}
+              </li>
+              <li
+                className={
+                  detectQ.data?.ghCopilot.ok
+                    ? "text-emerald-700 dark:text-emerald-300"
+                    : ""
+                }
+              >
+                · GitHub Copilot
+                {detectQ.data?.ghCopilot.ok ? " — installed" : ""}
+              </li>
+            </ul>
+          </button>
+        </div>
+
+        {detectQ.isPending && (
+          <p className="text-[11px] text-slate-500 dark:text-zinc-500 text-center">
+            Probing your machine for installed runtimes...
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // Coding-agent branch: dispatched out to its own component.
+  if (path === "coding-agent") {
+    return (
+      <CodingAgentSubStep
+        onBack={() => setPath(null)}
+        onContinue={onContinue}
+      />
+    );
+  }
+
+  // Model branch — the existing rich provider grid + Ollama
+  // detection banner + configure form.
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-3">
-          Step 2 · Required
-        </p>
+        <button
+          type="button"
+          onClick={() => setPath(null)}
+          className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors mb-3 inline-flex items-center gap-1"
+        >
+          <span className="material-symbols-outlined text-[14px]">
+            arrow_back
+          </span>
+          Choose a different path
+        </button>
         <h1 className="text-3xl sm:text-4xl font-medium tracking-tighter mb-2">
           Pick your AI provider
         </h1>

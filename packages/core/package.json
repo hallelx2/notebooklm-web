@@ -77,6 +77,7 @@
     "typescript": "catalog:"
   },
   "optionalDependencies": {
-    "kokoro-js": "^1.2.1"
+    "kokoro-js": "^1.2.1",
+    "@openai/codex-sdk": "^0.128.0"
   }
 }

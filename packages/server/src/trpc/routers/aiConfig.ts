@@ -66,6 +66,21 @@ export const aiConfigRouter = router({
         embeddingProvider: ProviderIdSchema.optional().nullable(),
         embeddingModel: z.string().min(1).optional().nullable(),
         embeddingDim: z.number().int().positive().optional().nullable(),
+        /**
+         * Per-task runtime preferences. Setting `chat: ["claude-agent-sdk"]`
+         * (or "codex-cli" / "copilot-cli") routes the user's chat through
+         * a CLI subprocess that handles its own auth — no provider /
+         * model required on our side. The wizard's coding-agent path
+         * uses this to flip onboarding without forcing an API key.
+         */
+        runtimePreferences: z
+          .object({
+            chat: z.array(z.string()).optional(),
+            rerank: z.array(z.string()).optional(),
+            research: z.array(z.string()).optional(),
+            studio: z.array(z.string()).optional(),
+          })
+          .optional(),
       }),
     )
     .output(UserAiConfigUpdateResultSchema)
@@ -144,6 +159,22 @@ export const aiConfigRouter = router({
         if (input[k] !== undefined) updates[k] = input[k];
       }
 
+      // Merge runtime preferences into the existing jsonb blob rather
+      // than replacing — that way the wizard's chat-runtime write
+      // doesn't clobber a user's previously-tuned `research` chain.
+      if (input.runtimePreferences) {
+        const [existing] = await ctx.adapter.db
+          .select({ preferences: userAiConfig.preferences })
+          .from(userAiConfig)
+          .where(eq(userAiConfig.userId, ctx.user.id))
+          .limit(1);
+        const merged = {
+          ...((existing?.preferences as Record<string, unknown> | null) ?? {}),
+          ...input.runtimePreferences,
+        };
+        updates.preferences = merged;
+      }
+
       // If both chat and embedding are now configured, mark onboarded.
       const [merged] = await ctx.adapter.db
         .update(userAiConfig)
@@ -151,9 +182,24 @@ export const aiConfigRouter = router({
         .where(eq(userAiConfig.userId, ctx.user.id))
         .returning();
 
+      // Two valid "chat is configured" shapes:
+      //   1. Direct model: chatProvider + chatModel are set (cloud
+      //      provider, Ollama, etc.)
+      //   2. Coding-agent runtime: preferences.chat[0] points at a
+      //      runtime that runs a CLI subprocess (claude-agent-sdk,
+      //      codex-cli) which provides its own auth — no provider /
+      //      model on our side.
+      const prefs = (merged.preferences as { chat?: string[] } | null) ?? {};
+      const codingAgentRuntimes = new Set(["claude-agent-sdk", "codex-cli"]);
+      const hasCodingAgentChat =
+        Array.isArray(prefs.chat) &&
+        prefs.chat.length > 0 &&
+        codingAgentRuntimes.has(prefs.chat[0]!);
+      const chatConfigured =
+        (!!merged.chatProvider && !!merged.chatModel) || hasCodingAgentChat;
+
       const fullyConfigured =
-        !!merged.chatProvider &&
-        !!merged.chatModel &&
+        chatConfigured &&
         !!merged.embeddingProvider &&
         !!merged.embeddingModel &&
         !!merged.embeddingDim;
