@@ -76,12 +76,22 @@ export type AgentRuntimeId =
   | "ai-sdk"
   | "claude-agent-sdk"
   | "openai-agents-sdk"
+  | "codex-cli"
   | "copilot-cli";
 
 export type AgentRuntime =
   | { id: "ai-sdk" }
   | { id: "claude-agent-sdk" }
   | { id: "openai-agents-sdk" }
+  /**
+   * OpenAI Codex CLI (`@openai/codex` on npm). The adapter spawns
+   * `codex exec --model <model> -` with the prompt on stdin and
+   * streams stdout back as text-delta events. Inherits the user's
+   * existing Codex auth — no API key plumbing on our side. Today
+   * supports `chat` only; `studio` / `research` need MCP-shaped
+   * tools that Codex doesn't expose cleanly via CLI yet.
+   */
+  | { id: "codex-cli"; binPath?: string; model?: string }
   | { id: "copilot-cli"; binPath?: string };
 
 /**
