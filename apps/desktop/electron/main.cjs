@@ -77,6 +77,14 @@ function platformWindowOptions() {
   return {};
 }
 
+// Brand icon used for the running window (taskbar/dock/Linux WM). The
+// installer applies its own packaged icon at install time, but without
+// this, dev runs and Linux at runtime show Electron's default icon.
+// macOS reads the dock icon from the .icns inside the .app bundle, so
+// `BrowserWindow({ icon })` is a no-op there — we still set it for
+// parity with `app.dock.setIcon` callers further down the line.
+const APP_ICON_PATH = path.join(__dirname, "..", "build", "icon.png");
+
 function createWindow() {
   const state = createWindowState();
   const win = new BrowserWindow({
@@ -88,6 +96,7 @@ function createWindow() {
     minHeight: 600,
     backgroundColor: "#050505",
     title: "NotebookLM",
+    icon: APP_ICON_PATH,
     ...platformWindowOptions(),
     webPreferences: {
       contextIsolation: true,

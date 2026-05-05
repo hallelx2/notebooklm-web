@@ -11,7 +11,7 @@
     "build": "vite build",
     "build:icon": "node scripts/build-icon.mjs",
     "build:models": "node scripts/fetch-bundled-models.mjs",
-    "build:electron": "bun run build:models && vite build && electron-builder",
+    "build:electron": "bun run build:icon && bun run build:models && vite build && electron-builder",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
@@ -45,6 +45,7 @@
     "concurrently": "^9.1.0",
     "electron": "^33.2.0",
     "electron-builder": "^25.1.0",
+    "png2icons": "^2.0.1",
     "sharp": "^0.34.5",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
@@ -81,17 +82,52 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "build/icon.png"
+      "icon": "build/icon.ico",
+      "publisherName": "NotebookLM"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NotebookLM",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "uninstallDisplayName": "NotebookLM",
+      "deleteAppDataOnUninstall": false
     },
     "mac": {
       "target": "dmg",
       "category": "public.app-category.productivity",
-      "icon": "build/icon.png"
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "darkModeSupport": true
+    },
+    "dmg": {
+      "title": "NotebookLM ${version}",
+      "icon": "build/icon.icns",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        { "x": 140, "y": 200, "type": "file" },
+        { "x": 400, "y": 200, "type": "link", "path": "/Applications" }
+      ]
     },
     "linux": {
-      "target": "AppImage",
+      "target": ["AppImage", "deb"],
       "category": "Office",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "maintainer": "NotebookLM <noreply@notebooklm.local>",
+      "synopsis": "Local-first NotebookLM clone — chat, research, and audio over your sources.",
+      "desktop": {
+        "Name": "NotebookLM",
+        "StartupWMClass": "NotebookLM"
+      }
     }
   }
 }

@@ -1,37 +1,130 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <!--
-    NotebookLM desktop app icon — placeholder brand mark.
-    Stylised open book in white on a blue→indigo gradient plate, mirroring
-    the in-app SettingsChrome / NotebooksHeader logo so the dock/taskbar
-    icon and the in-window brand mark look like the same product.
+    NotebookLM-clone desktop app icon.
 
-    Replace this SVG (and re-run `bun run build:icon`) when a real logo lands.
+    The mark tells the product story in two halves of an open book:
+
+      • Left page  — raw source.   Four short lines stand in for the
+                                   text the user pours into a notebook
+                                   (PDFs, web pages, transcripts).
+      • Right page — synthesised   A bright amber sparkle backed by a
+                     insight.      soft halo, with a smaller secondary
+                                   sparkle below it. The two-sparkle
+                                   composition reads as "many sources →
+                                   one bigger insight + supporting
+                                   ideas" rather than a single decoration.
+
+    The plate is a deep blue→indigo gradient, lit slightly from the
+    top-left, so the icon catches light the way a real app icon does on
+    macOS / Windows 11. The amber accent matches the sparkle in
+    apps/web/src/app/icon.tsx so the favicon and dock icon read as the
+    same brand.
+
+    1024×1024 source. Re-run `bun run build:icon` whenever you edit
+    this file — the script regenerates icon.png, icon.ico, and icon.icns
+    in the same directory.
   -->
   <defs>
+    <!-- Plate gradient: bright blue → indigo, with a deep stop in the
+         bottom-right to add weight without darkening the overall feel. -->
     <linearGradient id="plate" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#3b82f6"/>
-      <stop offset="1" stop-color="#4f46e5"/>
+      <stop offset="0.55" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#4338ca"/>
+    </linearGradient>
+
+    <!-- Soft amber halo behind the main sparkle. Bleeds slightly past
+         the page edge on purpose — implies the insight is radiating
+         out of the notebook, not just sitting on it. -->
+    <radialGradient id="sparkle-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fbbf24" stop-opacity="0.65"/>
+      <stop offset="0.45" stop-color="#fbbf24" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#fbbf24" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Faint top-left sheen on the plate. Keeps the icon from looking
+         like a flat sticker at large sizes; vanishes harmlessly at
+         small sizes. -->
+    <linearGradient id="plate-sheen" x1="0" y1="0" x2="0.7" y2="0.7">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </linearGradient>
   </defs>
 
-  <!-- Rounded-square plate. ~20% corner radius matches macOS Big Sur-era app icons. -->
+  <!-- Rounded-square plate. ~20% corner radius matches macOS Big-Sur-era
+       app icons and Windows 11 app tiles. -->
   <rect width="1024" height="1024" rx="200" ry="200" fill="url(#plate)"/>
+  <rect width="1024" height="1024" rx="200" ry="200" fill="url(#plate-sheen)"/>
 
-  <!-- Open book glyph centred on the plate. -->
+  <!-- Open book glyph centred on the plate. The two pages are drawn
+       as trapezoids tilted outward at the spine and SEPARATED by a
+       narrow gap. The gap shows the plate gradient through the fold —
+       which is what makes this read as an open book seen from above
+       rather than as a closed 3D box. -->
   <g transform="translate(512, 512)">
-    <!-- Left page (slightly tilted up at the spine). -->
-    <path d="M -260 -210 L -20 -250 L -20 230 L -260 190 Z" fill="#ffffff"/>
-    <!-- Right page. -->
-    <path d="M 260 -210 L 20 -250 L 20 230 L 260 190 Z" fill="#ffffff"/>
+    <!-- Subtle shadow under the book so it lifts off the plate. Kept
+         soft and narrow — too dark and the icon stops looking flat. -->
+    <ellipse cx="0" cy="248" rx="248" ry="14" fill="#000000" opacity="0.22"/>
 
-    <!-- Decorative page lines. Light slate, low contrast — they add detail without
-         turning the glyph into a face from afar (which monochrome books often do). -->
-    <line x1="-220" y1="-130" x2="-60" y2="-160" stroke="#cbd5f5" stroke-width="6" stroke-linecap="round"/>
-    <line x1="-220" y1="-60"  x2="-60" y2="-90"  stroke="#cbd5f5" stroke-width="6" stroke-linecap="round"/>
-    <line x1="-220" y1="10"   x2="-60" y2="-20"  stroke="#cbd5f5" stroke-width="6" stroke-linecap="round"/>
+    <!-- Left page (raw source). The slight outward tilt at the spine
+         (top y=-250 vs bottom y=230 vs outer edge -210/190) implies the
+         page is rising toward the camera at the fold. -->
+    <path d="M -260 -210 L -28 -250 L -28 230 L -260 190 Z" fill="#ffffff"/>
+    <!-- Right page (synthesised insight). -->
+    <path d="M 260 -210 L 28 -250 L 28 230 L 260 190 Z" fill="#ffffff"/>
 
-    <line x1="60" y1="-160" x2="220" y2="-130" stroke="#cbd5f5" stroke-width="6" stroke-linecap="round"/>
-    <line x1="60" y1="-90"  x2="220" y2="-60"  stroke="#cbd5f5" stroke-width="6" stroke-linecap="round"/>
-    <line x1="60" y1="-20"  x2="220" y2="10"   stroke="#cbd5f5" stroke-width="6" stroke-linecap="round"/>
+    <!-- Inner page-edge shading: a thin sliver along each page's spine
+         edge, slightly cooler than the rest of the page. Implies depth
+         (the paper has thickness) without filling the spine gap. -->
+    <path d="M -28 -250 L -28 230 L -38 220 L -38 -242 Z" fill="#cbd5f5" opacity="0.55"/>
+    <path d="M 28 -250 L 28 230 L 38 220 L 38 -242 Z" fill="#cbd5f5" opacity="0.55"/>
+
+    <!-- Left page: four source lines. The slight downward tilt mirrors
+         the page's perspective so they look like text on a tilted
+         surface, not stickers floating above it. -->
+    <line x1="-225" y1="-135" x2="-65" y2="-167" stroke="#cbd5f5" stroke-width="12" stroke-linecap="round"/>
+    <line x1="-225" y1="-65"  x2="-65" y2="-97"  stroke="#cbd5f5" stroke-width="12" stroke-linecap="round"/>
+    <line x1="-225" y1="5"    x2="-65" y2="-27"  stroke="#cbd5f5" stroke-width="12" stroke-linecap="round"/>
+    <line x1="-225" y1="75"   x2="-135" y2="57"  stroke="#cbd5f5" stroke-width="12" stroke-linecap="round"/>
+
+    <!-- Right page: the AI insight.
+
+         A 4-point amber sparkle (synthesis), backed by a radial halo,
+         and a smaller secondary sparkle suggesting the insight isn't
+         singular — it has supporting ideas. -->
+
+    <!-- Halo first so it sits behind the sparkle. -->
+    <circle cx="140" cy="-30" r="135" fill="url(#sparkle-glow)"/>
+
+    <!-- Primary sparkle — 4-point star, ~200px tall.
+         Built as a single closed path going T → top-right notch →
+         R → bottom-right notch → B → bottom-left notch → L →
+         top-left notch → Z. The notches at 18px from centre give the
+         classic "diamond squeeze" silhouette. -->
+    <path d="M 140 -130
+             L 162 -52
+             L 240 -30
+             L 162 -8
+             L 140 70
+             L 118 -8
+             L 40 -30
+             L 118 -52 Z"
+          fill="#fbbf24"/>
+
+    <!-- Tiny inner highlight on the primary sparkle — a half-tone
+         dot the eye reads as glint. -->
+    <circle cx="138" cy="-32" r="9" fill="#fff8e1" opacity="0.85"/>
+
+    <!-- Secondary sparkle below-right of the main one. Smaller and
+         dimmer so the eye treats it as a satellite, not a peer. -->
+    <path d="M 200 110
+             L 209 134
+             L 234 142
+             L 209 150
+             L 200 174
+             L 191 150
+             L 166 142
+             L 191 134 Z"
+          fill="#fbbf24" opacity="0.85"/>
   </g>
 </svg>

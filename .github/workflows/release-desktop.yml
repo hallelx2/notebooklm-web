@@ -56,8 +56,23 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Regenerate icons (PNG/ICO/ICNS from SVG)
+        # Cheap and idempotent — guarantees electron-builder finds an
+        # icon set matching the current SVG even if someone forgot to
+        # commit the regenerated binaries.
+        # `--filter=<name>` (with `=`) is the form bun parses
+        # consistently across platforms; the space-separated form is
+        # silently a no-op on some bun versions.
+        run: bun "--filter=@notebooklm/desktop" run build:icon
+
       - name: Fetch bundled models (Kokoro + BGE-Small)
-        run: bun --filter @notebooklm/desktop run build:models
+        run: bun "--filter=@notebooklm/desktop" run build:models
+
+      - name: Build renderer (vite)
+        # electron-builder packages whatever's already on disk under
+        # `dist/` — without this step the installer would ship an
+        # empty UI shell.
+        run: bun "--filter=@notebooklm/desktop" run build
 
       - name: Build & publish (macOS)
         if: matrix.os == 'macos-14'
@@ -106,6 +121,7 @@ jobs:
             apps/desktop/release/**/*.exe
             apps/desktop/release/**/*.dmg
             apps/desktop/release/**/*.AppImage
+            apps/desktop/release/**/*.deb
             apps/desktop/release/**/*.yml
             apps/desktop/release/**/*.blockmap
           if-no-files-found: ignore
