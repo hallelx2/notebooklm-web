@@ -75,6 +75,9 @@ jobs:
         # the workspaces field, and tries to process every workspace
         # member (which is why the resolver also strips the workspaces
         # field, but defence-in-depth doesn't hurt).
+        # `shell: bash` is required so windows-2022 runs Git Bash
+        # instead of PowerShell — the script uses set/[ ]/grep -E.
+        shell: bash
         run: |
           set -euo pipefail
           remaining=$(grep -rEln '"(workspace|catalog):' \
@@ -142,6 +145,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd apps/desktop
+          # When the CSC_LINK secret isn't set, GitHub Actions still
+          # passes CSC_LINK="" to the step env. electron-builder
+          # treats any defined CSC_LINK as a path it must read,
+          # resolves the empty string against cwd (apps/desktop),
+          # then errors with `apps/desktop not a file`. Unset both
+          # vars and tell electron-builder not to auto-discover an
+          # identity in the keychain so it produces an unsigned dmg
+          # instead of bombing out.
+          if [ -z "$CSC_LINK" ]; then
+            unset CSC_LINK CSC_KEY_PASSWORD
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            echo "macOS signing cert not configured — building unsigned dmg."
+          fi
           # --publish always — uploads to the GH Release and writes
           # latest-mac.yml. electron-builder picks the GitHub provider
           # from package.json's `build.publish` config.
@@ -149,12 +165,23 @@ jobs:
 
       - name: Build & publish (Windows)
         if: matrix.os == 'windows-2022'
+        # Force bash so the `if [ -z ... ]` guard below works the same
+        # way it does on the macOS step. windows-2022's default shell
+        # is PowerShell, which can't parse POSIX test syntax.
+        shell: bash
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd apps/desktop
+          # Same empty-CSC_LINK guard as the macOS step — without it,
+          # electron-builder treats CSC_LINK="" as a missing pfx path
+          # and errors during NSIS signing.
+          if [ -z "$CSC_LINK" ]; then
+            unset CSC_LINK CSC_KEY_PASSWORD
+            echo "Windows signing cert not configured — building unsigned NSIS installer."
+          fi
           npx --no-install electron-builder --win --publish always
 
       - name: Build & publish (Linux)
