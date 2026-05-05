@@ -1,7 +1,9 @@
 {
   "name": "@notebooklm/desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
+  "description": "Local-first NotebookLM clone — chat, research, and audio overviews over your sources.",
+  "author": "NotebookLM <noreply@notebooklm.local>",
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "concurrently -k -n vite,electron -c \"cyan,magenta\" \"bun run dev:vite\" \"wait-on -t 180000 -i 500 http-get://localhost:5173 && bun run dev:electron\"",
@@ -55,6 +57,7 @@
   "build": {
     "appId": "com.notebooklm.desktop",
     "productName": "NotebookLM",
+    "electronVersion": "33.2.0",
     "directories": {
       "output": "release",
       "buildResources": "build"
