@@ -1,0 +1,112 @@
+# Desktop release pipeline.
+#
+# Trigger: push of a tag matching `v*.*.*` (e.g. `v0.2.0`). The tag must
+# point at a commit on `main` whose `apps/desktop/package.json` version
+# matches the tag — electron-builder reads the version from there and
+# refuses to publish a mismatch.
+#
+# Outputs per platform: signed installer + electron-updater manifest
+# (latest.yml / latest-mac.yml / latest-linux.yml). All assets uploaded
+# to a GitHub Release named after the tag.
+#
+# Code signing — provided via repo secrets, all optional:
+#   Windows:
+#     CSC_LINK                — base64-encoded .pfx Authenticode cert
+#     CSC_KEY_PASSWORD        — passphrase for the .pfx
+#   macOS:
+#     CSC_LINK_MAC            — base64-encoded Developer ID cert (.p12)
+#     CSC_KEY_PASSWORD_MAC    — passphrase
+#     APPLE_ID                — Apple ID for notarization
+#     APPLE_APP_SPECIFIC_PASSWORD — app-specific password for notarytool
+#     APPLE_TEAM_ID           — your team id, e.g. "XXXXXXXXXX"
+#
+# Without signing secrets the build still succeeds — the artifact just
+# isn't trustable by electron-updater on the client side, so users
+# would have to install upgrades manually until secrets land.
+
+name: release-desktop
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch: # let us kick off ad-hoc test releases without tagging
+
+permissions:
+  contents: write # required so electron-builder can create the GH Release
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Fetch bundled models (Kokoro + BGE-Small)
+        run: bun --filter @notebooklm/desktop run build:models
+
+      - name: Build & publish (macOS)
+        if: matrix.os == 'macos-14'
+        env:
+          # Apple signing + notarization — see header comment.
+          CSC_LINK: ${{ secrets.CSC_LINK_MAC }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD_MAC }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd apps/desktop
+          # --publish always — uploads to the GH Release and writes
+          # latest-mac.yml. electron-builder picks the GitHub provider
+          # from package.json's `build.publish` config.
+          bun x electron-builder --mac --publish always
+
+      - name: Build & publish (Windows)
+        if: matrix.os == 'windows-2022'
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd apps/desktop
+          bun x electron-builder --win --publish always
+
+      - name: Build & publish (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd apps/desktop
+          bun x electron-builder --linux --publish always
+
+      - name: Upload artifacts (debugging fallback)
+        # Even when --publish succeeds, also stash the artifacts on the
+        # workflow run so we can grab them without hitting the
+        # Releases page if a publish step glitches.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}
+          path: |
+            apps/desktop/release/**/*.exe
+            apps/desktop/release/**/*.dmg
+            apps/desktop/release/**/*.AppImage
+            apps/desktop/release/**/*.yml
+            apps/desktop/release/**/*.blockmap
+          if-no-files-found: ignore
+          retention-days: 14

@@ -11,6 +11,7 @@ import {
   audioFileExtension,
   availableTtsProviders,
   concatAudio,
+  resolveTtsCredential,
   resolveTtsProvider,
   type TtsAudioContentType,
   type TtsProvidersConfig,
@@ -70,12 +71,19 @@ function resolveConcurrency(
 
 const TTS_RETRIES = 3;
 
-function buildTtsConfig(
+async function buildTtsConfig(
   env: PlatformAdapter["env"],
-): TtsProvidersConfig {
+  userId: string | undefined,
+): Promise<TtsProvidersConfig> {
   const cfg: TtsProvidersConfig = {};
-  if (env.DEEPGRAM_API_KEY) {
-    cfg.deepgram = { apiKey: env.DEEPGRAM_API_KEY };
+
+  // Per-user Deepgram credential wins over env. The wizard's audio
+  // step writes here; env-var stays as the legacy fallback for
+  // server-style deployments where there's a single shared key.
+  const savedDeepgram = await resolveTtsCredential(userId, "deepgram");
+  const deepgramKey = savedDeepgram.apiKey ?? env.DEEPGRAM_API_KEY;
+  if (deepgramKey) {
+    cfg.deepgram = { apiKey: deepgramKey };
   }
 
   // Kokoro is configured if either backend is reachable:
@@ -131,7 +139,7 @@ export async function audioOverviewHandler(
 
   // Resolve the TTS provider up front so the user gets a clean 4xx
   // before we burn LLM tokens on the script.
-  const ttsConfig = buildTtsConfig(adapter.env);
+  const ttsConfig = await buildTtsConfig(adapter.env, session.user.id);
   let ttsProvider: ReturnType<typeof resolveTtsProvider>;
   try {
     ttsProvider = resolveTtsProvider(ttsConfig, body.ttsProvider);
