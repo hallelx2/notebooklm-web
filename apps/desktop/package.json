@@ -1,6 +1,6 @@
 {
   "name": "@notebooklm/desktop",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": true,
   "description": "Local-first NotebookLM clone — chat, research, and audio overviews over your sources.",
   "author": "NotebookLM <noreply@notebooklm.local>",
@@ -150,7 +150,8 @@
       "desktop": {
         "Name": "NotebookLM",
         "StartupWMClass": "NotebookLM"
-      }
+      },
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     }
   }
 }
