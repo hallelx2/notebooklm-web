@@ -121,4 +121,54 @@ for (const wsDir of [
 // Then the desktop app itself.
 rewrite("apps/desktop");
 
+// Also rewrite any copy of a workspace package that bun may have
+// materialised into node_modules. On platforms / bun versions that
+// symlink, fs.writeFileSync follows the link to packages/* (which we
+// already wrote, so this is a no-op). On platforms where bun COPIES
+// the workspace package into node_modules, the copy carries the
+// original `workspace:*` / `catalog:` refs and must be patched
+// separately or npm will choke when it walks the dep tree.
+//
+// We touch every plausible location: the hoisted root, and the
+// per-app node_modules under apps/desktop (which can also receive
+// copies depending on bun's linker mode).
+const NODE_MODULE_PARENTS = ["node_modules", "apps/desktop/node_modules"];
+const SCOPE = "@notebooklm";
+for (const parent of NODE_MODULE_PARENTS) {
+  const scopeDir = path.join(ROOT, parent, SCOPE);
+  if (!fs.existsSync(scopeDir)) continue;
+  for (const name of fs.readdirSync(scopeDir)) {
+    const dir = path.join(scopeDir, name);
+    // If the entry is a symlink to packages/<name>, skip — writing
+    // through it would overwrite the source with relative paths
+    // computed from this node_modules location, which point to the
+    // wrong place. The source rewrite earlier in this script already
+    // covered it.
+    let entryStat;
+    try {
+      entryStat = fs.lstatSync(dir);
+    } catch {
+      continue;
+    }
+    if (entryStat.isSymbolicLink()) {
+      console.log(
+        `resolve-monorepo-refs: ${parent}/${SCOPE}/${name} is a symlink — skipping (source already covered)`,
+      );
+      continue;
+    }
+    const pkgFile = path.join(dir, "package.json");
+    if (!fs.existsSync(pkgFile)) continue;
+    let pkg;
+    try {
+      pkg = JSON.parse(fs.readFileSync(pkgFile, "utf8"));
+    } catch {
+      continue;
+    }
+    resolveCatalog(pkg, pkgFile);
+    resolveWorkspace(pkg, pkgFile, dir);
+    fs.writeFileSync(pkgFile, `${JSON.stringify(pkg, null, 2)}\n`);
+    console.log(`resolve-monorepo-refs: patched ${parent}/${SCOPE}/${name}/package.json`);
+  }
+}
+
 console.log("resolve-monorepo-refs: done.");
