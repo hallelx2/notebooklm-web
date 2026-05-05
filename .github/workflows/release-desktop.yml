@@ -74,6 +74,19 @@ jobs:
         # empty UI shell.
         run: bun "--filter=@notebooklm/desktop" run build
 
+      # All three publish steps below set `npm_config_user_agent: npm/10`.
+      # Reason: when bun invokes a script it exports
+      # `npm_config_user_agent=bun/...`, and electron-builder's
+      # "install production dependencies" step uses that env var to
+      # detect the package manager. It then tries to run
+      # `node /path/to/bun`, but `bun` is a native ELF/Mach-O/PE binary
+      # — not a JS file — so Node errors with `Invalid or unexpected
+      # token` (the binary's first byte: `ELF` on Linux, magic bytes on
+      # macOS, `MZ` on Windows). Forcing the user-agent to npm makes
+      # electron-builder fall back to npm (preinstalled on every
+      # GH runner), which works fine.
+      # Tracking: https://github.com/electron-userland/electron-builder/issues/8208
+
       - name: Build & publish (macOS)
         if: matrix.os == 'macos-14'
         env:
@@ -84,6 +97,7 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_user_agent: "npm/10.0.0"
         run: |
           cd apps/desktop
           # --publish always — uploads to the GH Release and writes
@@ -97,6 +111,7 @@ jobs:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_user_agent: "npm/10.0.0"
         run: |
           cd apps/desktop
           bun x electron-builder --win --publish always
@@ -105,6 +120,7 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_user_agent: "npm/10.0.0"
         run: |
           cd apps/desktop
           bun x electron-builder --linux --publish always
