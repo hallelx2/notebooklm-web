@@ -227,7 +227,15 @@ jobs:
             unset CSC_LINK CSC_KEY_PASSWORD
             echo "Windows signing cert not configured — building unsigned NSIS installer."
           fi
-          npx --no-install electron-builder --win --publish always
+          # On windows-2022, `npx --no-install electron-builder` fails
+          # because bun's install lays down `electron-builder.bunx` /
+          # `.exe` in node_modules/.bin instead of the npm-style `.cmd`
+          # wrappers that npx looks for, and npx then tries to fetch
+          # the latest electron-builder from the registry (and bails
+          # under --no-install). Linux/macOS find the bash-shim wrapper
+          # fine. Side-step the bin lookup entirely by invoking the JS
+          # entry point with node directly.
+          node ../../node_modules/electron-builder/cli.js --win --publish always
 
       - name: Build & publish (Linux)
         if: matrix.os == 'ubuntu-22.04'
