@@ -13,6 +13,7 @@ import { SettingsChrome } from "@notebooklm/ui/views/settings/SettingsChrome";
 import { SettingsNav } from "@notebooklm/ui/views/settings/SettingsNav";
 import { WebSearchView } from "@notebooklm/ui/views/settings/WebSearchView";
 import {
+  createHashHistory,
   createRootRoute,
   createRoute,
   createRouter,
@@ -183,7 +184,19 @@ const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({ routeTree });
+// Hash history (`#/notebooks` etc.) instead of browser history. Required
+// for the packaged build: Electron loads the renderer via `loadFile`, so
+// `window.location` is `file:///.../dist/index.html`, and the router would
+// otherwise try to match `/C:/.../dist/index.html` against the route tree
+// and 404 ("Not Found"). Hash history puts the route after `#`, which the
+// file:// loader leaves untouched.
+//
+// In dev (`loadURL('http://localhost:5173')`) hash history still works —
+// just shows up as `localhost:5173/#/notebooks` in the address bar. No
+// effect on apps/web, which is its own Next.js app.
+const hashHistory = createHashHistory();
+
+export const router = createRouter({ routeTree, history: hashHistory });
 
 declare module "@tanstack/react-router" {
   interface Register {
