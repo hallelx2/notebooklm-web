@@ -24,15 +24,23 @@ import type { SearchProviderName } from "./types";
  *   the month and want to fall through to SearxNG without deleting the
  *   key). Default behaviour is enabled — only `false` excludes.
  */
+/**
+ * Defaults are tuned for the desktop installer flow: Tavily first
+ * (free tier covers most users out of the box, OpenAI-compatible API,
+ * fast), Exa second (paid but stronger neural search — used as a
+ * fallback when Tavily quota is exhausted or returns nothing useful),
+ * SearxNG last (advanced opt-in for users who self-host their own
+ * meta-search instance).
+ */
 export const SearchPreferencesSchema = z.object({
-  order: z.array(z.string()).default(["exa", "tavily", "searxng"]),
+  order: z.array(z.string()).default(["tavily", "exa", "searxng"]),
   enabled: z.record(z.string(), z.boolean()).default({}),
 });
 
 export type SearchPreferences = z.infer<typeof SearchPreferencesSchema>;
 
 const DEFAULT_PREFS: SearchPreferences = {
-  order: ["exa", "tavily", "searxng"],
+  order: ["tavily", "exa", "searxng"],
   enabled: {},
 };
 

@@ -121,21 +121,51 @@ async function loadModel(
     // `throw new Error("Unable to get model file path or buffer.")`
     // branch. Symptom is a stuck retry loop with that exact message.
     //
-    // We resolve a real directory in this priority:
-    //   1. KOKORO_LOCAL_CACHE_DIR — explicit override
-    //   2. NOTEBOOKLM_MODEL_CACHE_DIR — set by the desktop adapter
-    //   3. ~/.cache/huggingface (mirrors the canonical HF default)
+    // Resolution priority — first hit wins:
+    //   1. NOTEBOOKLM_BUNDLED_MODELS_DIR — packaged installer, resources
+    //      shipped alongside the executable (no HF download).
+    //   2. KOKORO_LOCAL_CACHE_DIR — explicit override
+    //   3. NOTEBOOKLM_MODEL_CACHE_DIR — set by the desktop adapter
+    //   4. ~/.cache/huggingface (canonical HF default — dev mode)
     let cacheDir = "(unresolved)";
+    let bundledMode = false;
     try {
       // biome-ignore lint/suspicious/noExplicitAny: same optional-dep dance
       const tx = mod.env ?? (mod.default && mod.default.env);
       const tjs = (await import("@huggingface/transformers")) as {
-        env: { cacheDir?: string; allowRemoteModels?: boolean };
+        env: {
+          cacheDir?: string;
+          allowRemoteModels?: boolean;
+          allowLocalModels?: boolean;
+          localModelPath?: string;
+        };
       };
       const env = tx ?? tjs.env;
-      cacheDir = resolveCacheDir();
-      env.cacheDir = cacheDir;
-      env.allowRemoteModels = true;
+
+      // If a bundled-models dir is set AND it actually contains the
+      // weights for our model id, use it as a *local model path* rather
+      // than as a cache dir. This is the packaged-installer path:
+      // transformers.js never reaches out to HF Hub, never tries to
+      // write to a cache, just reads from disk.
+      const bundledRoot = process.env.NOTEBOOKLM_BUNDLED_MODELS_DIR;
+      // Match the on-disk layout the prebuild script wrote:
+      // <bundled>/kokoro/<org>/<repo>/...  — keep the slashes intact
+      // because that's the layout transformers.js looks up when
+      // localModelPath is set.
+      const expected = bundledRoot
+        ? join(bundledRoot, "kokoro", ...cfg.modelId.split("/"))
+        : null;
+      if (expected && existsSync(expected)) {
+        env.allowLocalModels = true;
+        env.localModelPath = join(bundledRoot as string, "kokoro");
+        env.allowRemoteModels = false;
+        cacheDir = `bundled:${expected}`;
+        bundledMode = true;
+      } else {
+        cacheDir = resolveCacheDir();
+        env.cacheDir = cacheDir;
+        env.allowRemoteModels = true;
+      }
     } catch (err) {
       // We *deliberately* don't rethrow — the load below produces a
       // friendlier error. But leaving this entirely silent is what

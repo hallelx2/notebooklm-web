@@ -21,3 +21,8 @@ drizzle
 # `apps/desktop/build/icon.{svg,png}` are tracked.
 !apps/desktop/build/
 !apps/desktop/build/**
+
+# Bundled ML models — fetched by `bun run build:models` before packaging.
+# Big binary blobs that don't belong in git; the prebuild script and HF
+# Hub are the source of truth.
+apps/desktop/resources/
