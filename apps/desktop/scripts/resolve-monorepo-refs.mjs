@@ -121,6 +121,28 @@ for (const wsDir of [
 // Then the desktop app itself.
 rewrite("apps/desktop");
 
+// And apps/web. We're not building it here, but when npm install runs
+// in apps/desktop it walks up to the repo root, sees the `workspaces`
+// field, and tries to process every member — including apps/web.
+// If apps/web's package.json still has workspace:/catalog: refs, npm
+// chokes with EUNSUPPORTEDPROTOCOL even though we're not installing
+// apps/web's deps.
+rewrite("apps/web");
+
+// Belt-and-braces: also strip the `workspaces` field from the root
+// package.json so npm doesn't try to walk other members at all. Keeps
+// the catalog block intact for parity with the dev source (the runner
+// is ephemeral; the next CI run starts from a clean checkout anyway).
+{
+  const rootFile = path.join(ROOT, "package.json");
+  const rootPkg = JSON.parse(fs.readFileSync(rootFile, "utf8"));
+  if (rootPkg.workspaces) {
+    delete rootPkg.workspaces;
+    fs.writeFileSync(rootFile, `${JSON.stringify(rootPkg, null, 2)}\n`);
+    console.log("resolve-monorepo-refs: stripped 'workspaces' field from root package.json");
+  }
+}
+
 // Also rewrite any copy of a workspace package that bun may have
 // materialised into node_modules. On platforms / bun versions that
 // symlink, fs.writeFileSync follows the link to packages/* (which we

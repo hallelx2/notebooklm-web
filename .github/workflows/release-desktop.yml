@@ -66,15 +66,20 @@ jobs:
         run: node apps/desktop/scripts/resolve-monorepo-refs.mjs
 
       - name: "Verify no bun-specific specifiers leak into the install graph"
-        # Belt-and-braces: if any package.json under node_modules/@notebooklm
-        # or in the source tree still has workspace:/catalog: refs at this
+        # Belt-and-braces: if any package.json that npm could touch when
+        # walking apps/desktop still has workspace:/catalog: refs at this
         # point, electron-builder's npm install would fail with
         # EUNSUPPORTEDPROTOCOL. Fail fast here with a useful error
         # instead of waiting for the cryptic CI error 5 minutes later.
+        # We also check apps/web — npm walks up to the repo root, sees
+        # the workspaces field, and tries to process every workspace
+        # member (which is why the resolver also strips the workspaces
+        # field, but defence-in-depth doesn't hurt).
         run: |
           set -euo pipefail
           remaining=$(grep -rEln '"(workspace|catalog):' \
             apps/desktop/package.json \
+            apps/web/package.json \
             packages/*/package.json \
             node_modules/@notebooklm 2>/dev/null || true)
           if [ -n "$remaining" ]; then
