@@ -56,6 +56,15 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: "Resolve bun catalog / workspace refs for npm"
+        # electron-builder shells out to `npm install --omit=dev` inside
+        # apps/desktop. npm doesn't understand bun's `catalog:` or
+        # `workspace:*` specifiers, so we rewrite them to concrete
+        # versions / file: paths before electron-builder runs. The
+        # rewrite is in-place; the runner is ephemeral so we don't
+        # bother restoring afterwards.
+        run: node apps/desktop/scripts/resolve-monorepo-refs.mjs
+
       - name: Regenerate icons (PNG/ICO/ICNS from SVG)
         # Cheap and idempotent — guarantees electron-builder finds an
         # icon set matching the current SVG even if someone forgot to
