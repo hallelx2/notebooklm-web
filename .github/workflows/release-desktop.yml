@@ -114,6 +114,36 @@ jobs:
         # empty UI shell.
         run: bun "--filter=@notebooklm/desktop" run build
 
+      - name: "Ensure app-builder native binary is present + executable"
+        # electron-builder shells out to a native helper at
+        # node_modules/app-builder-bin/<platform>/<arch>/app-builder.
+        # Two failure modes we've actually hit:
+        #   (a) bun's `--frozen-lockfile` install in some configurations
+        #       leaves the binary on disk WITHOUT the executable bit set,
+        #       so `spawn(...)` fails with ENOENT (which on Linux/macOS
+        #       can mean "file isn't executable" via cross-spawn's error
+        #       remapping — not just "not found").
+        #   (b) the package never extracted at all.
+        # Differentiate the two with a clear error and `chmod +x` so
+        # case (a) just works.
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.os }}" in
+            ubuntu-22.04) bin="node_modules/app-builder-bin/linux/x64/app-builder" ;;
+            macos-14)     bin="node_modules/app-builder-bin/mac/app-builder_arm64" ;;
+            windows-2022) bin="node_modules/app-builder-bin/win/x64/app-builder.exe" ;;
+            *) echo "::error::unhandled matrix os ${{ matrix.os }}" ; exit 1 ;;
+          esac
+          if [ ! -f "$bin" ]; then
+            echo "::error::Expected app-builder binary missing at $bin"
+            echo "node_modules/app-builder-bin tree:"
+            ls -laR node_modules/app-builder-bin || echo "  (directory itself missing)"
+            exit 1
+          fi
+          chmod +x "$bin" || true
+          ls -la "$bin"
+
       # The publish steps below invoke electron-builder via `npx`, NOT
       # `bun x`. Reason: `bun x` exports `npm_config_user_agent=bun/...`
       # for the child process, which makes electron-builder's "install
