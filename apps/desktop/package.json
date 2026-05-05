@@ -1,6 +1,6 @@
 {
   "name": "@notebooklm/desktop",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "private": true,
   "description": "Local-first NotebookLM clone — chat, research, and audio overviews over your sources.",
   "author": "NotebookLM <noreply@notebooklm.local>",
