@@ -129,21 +129,16 @@ rewrite("apps/desktop");
 // apps/web's deps.
 rewrite("apps/web");
 
-// Belt-and-braces: also strip the `workspaces` field from the root
-// package.json so npm doesn't try to walk other members at all. Keeps
-// the catalog block intact for parity with the dev source (the runner
-// is ephemeral; the next CI run starts from a clean checkout anyway).
-{
-  const rootFile = path.join(ROOT, "package.json");
-  const rootPkg = JSON.parse(fs.readFileSync(rootFile, "utf8"));
-  if (rootPkg.workspaces) {
-    delete rootPkg.workspaces;
-    fs.writeFileSync(rootFile, `${JSON.stringify(rootPkg, null, 2)}\n`);
-    console.log("resolve-monorepo-refs: stripped 'workspaces' field from root package.json");
-  }
-}
+// We deliberately KEEP the `workspaces` field on the root package.json.
+// Earlier we tried stripping it as belt-and-braces (so npm wouldn't walk
+// workspace members), but on Linux that broke `bun --filter=...
+// run build` — `vite build` failed with a bare `error: ENOENT` ~8ms in,
+// before vite even started. Symptom only on ubuntu-22.04 / bun 1.2.21;
+// macOS handled the same sequence fine. The apps/web rewrite above is
+// already enough to make `npm install --omit=dev` succeed inside
+// apps/desktop, so the strip wasn't pulling its weight.
 
-// Also rewrite any copy of a workspace package that bun may have
+// Rewrite any copy of a workspace package that bun may have
 // materialised into node_modules. On platforms / bun versions that
 // symlink, fs.writeFileSync follows the link to packages/* (which we
 // already wrote, so this is a no-op). On platforms where bun COPIES
