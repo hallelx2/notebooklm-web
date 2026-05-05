@@ -1,9 +1,10 @@
 // CommonJS — Electron's main process is loaded via Node's CJS loader.
 // The renderer (Vite output) is ESM and lives separately.
-const { app, BrowserWindow, shell } = require("electron");
+const { app, BrowserWindow, dialog, shell } = require("electron");
 const path = require("node:path");
 const { buildMenu } = require("./menu.cjs");
 const { createWindowState } = require("./window-state.cjs");
+const { setupAutoUpdater } = require("./updater.cjs");
 
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.NOTEBOOKLM_DEV_URL ?? "http://localhost:5173";
@@ -149,6 +150,14 @@ app.whenReady().then(() => {
   // (notably macOS where the app stays alive after window-all-closed).
   buildMenu({ isDev });
   createWindow();
+
+  // Production-only auto-update check via electron-updater. In dev the
+  // updater short-circuits because there's no signed installer to
+  // diff against. Errors are surfaced to a dialog rather than thrown
+  // — a failed update check shouldn't kill the app.
+  if (!isDev) {
+    setupAutoUpdater({ dialog });
+  }
 });
 
 // Second-instance handler — runs in the FIRST (still-running) copy when a

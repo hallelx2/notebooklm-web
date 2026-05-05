@@ -123,8 +123,23 @@ function ensureRuntimeEnv(cfg: DesktopConfig) {
     for (const c of candidates) {
       if (existsSync(join(c, "kokoro")) || existsSync(join(c, "embed"))) {
         process.env.NOTEBOOKLM_BUNDLED_MODELS_DIR = c;
+        const which = [
+          existsSync(join(c, "kokoro")) ? "kokoro" : null,
+          existsSync(join(c, "embed")) ? "embed" : null,
+        ]
+          .filter(Boolean)
+          .join(", ");
+        console.log(
+          `[NotebookLM Desktop] bundled models found at ${c} (${which})`,
+        );
         break;
       }
+    }
+    if (!process.env.NOTEBOOKLM_BUNDLED_MODELS_DIR) {
+      console.log(
+        "[NotebookLM Desktop] no bundled models directory found — first-use will download from HF Hub. " +
+          "Run `bun run build:models` from apps/desktop/ to bundle them.",
+      );
     }
   }
 }

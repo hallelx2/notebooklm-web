@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trpc } from "../../trpc/client";
 
 /**
  * Wizard step #4 — audio overview (optional).
@@ -29,29 +30,43 @@ export function AudioStep({
   onSkip: () => void;
 }) {
   const [mode, setMode] = useState<"bundled" | "deepgram">("bundled");
+  const [deepgramKey, setDeepgramKey] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const upsertTtsCred = trpc.ttsConfig.upsertCredential.useMutation();
+  const ttsList = trpc.ttsConfig.list.useQuery();
+  const utils = trpc.useUtils();
+
+  const existingDeepgram = ttsList.data?.find(
+    (c) => c.provider === "deepgram" && c.hasKey,
+  );
 
   async function handleContinue() {
     setError(null);
     setSaving(true);
     try {
-      // Both modes are "no-op" at the persistence layer in this
-      // first-pass:
-      //   - "bundled": Kokoro is the default in the audio handler when
-      //     no Deepgram key / KOKORO_BASE_URL is set; bundled weights
-      //     make it work out of the box.
-      //   - "deepgram": the credential plumbing for non-AI providers
-      //     (TTS) isn't wired through the user_provider_credentials
-      //     table yet — Deepgram still relies on env var. We surface
-      //     the option here so the user knows it exists, with a
-      //     follow-up link to Settings → Audio for the actual key
-      //     entry.
       if (mode === "deepgram") {
-        // Save a hint of the user's intent on `userAiConfig.preferences`
-        // so Settings → Audio can render a "Welcome — paste your
-        // Deepgram key" banner. For now, just pass through.
+        // Allow advancing without re-entering the key when we already
+        // have one saved (resume case). New entries must look at least
+        // plausibly Deepgram-shaped — they all start with a long
+        // hex/base64 string today.
+        if (!deepgramKey.trim() && !existingDeepgram) {
+          setError("Paste your Deepgram API key first.");
+          return;
+        }
+        if (deepgramKey.trim()) {
+          await upsertTtsCred.mutateAsync({
+            provider: "deepgram",
+            apiKey: deepgramKey.trim(),
+          });
+          await utils.ttsConfig.list.invalidate();
+        }
       }
+      // For "bundled" we don't need to write anything — Kokoro is the
+      // default backend in the audio handler when no Deepgram key /
+      // KOKORO_BASE_URL is set, and bundled weights make it work out
+      // of the box.
       onContinue();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -98,20 +113,35 @@ export function AudioStep({
       </div>
 
       {mode === "deepgram" && (
-        <div className="rounded-xl border border-amber-300 dark:border-amber-500/30 p-4 bg-amber-50/60 dark:bg-amber-500/5 text-[12px] leading-relaxed text-amber-900 dark:text-amber-200">
-          <strong>Heads up:</strong> Deepgram key entry isn't wired
-          into the wizard yet. Continue with the bundled model for
-          now — once the app is open, head to <em>Settings → Audio</em>
-          to paste a Deepgram key and switch over. Sign up free at{" "}
-          <a
-            href="https://console.deepgram.com/signup"
-            target="_blank"
-            rel="noreferrer"
-            className="underline hover:text-slate-900 dark:hover:text-white"
-          >
-            console.deepgram.com
-          </a>
-          .
+        <div className="rounded-xl border border-slate-200 dark:border-white/10 p-4 bg-slate-50/40 dark:bg-white/[0.02] space-y-3">
+          <label className="block">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-zinc-300 mb-1">
+              Deepgram API key
+            </div>
+            <input
+              type="password"
+              autoFocus
+              value={deepgramKey}
+              onChange={(e) => setDeepgramKey(e.target.value)}
+              placeholder={
+                existingDeepgram
+                  ? `${existingDeepgram.maskedKey} (saved — paste a new one to replace)`
+                  : "deepgram api key"
+              }
+              className="w-full bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-3 py-2 text-sm rounded focus:border-slate-900 dark:focus:border-white focus:outline-none"
+            />
+            <p className="text-[10px] text-slate-500 dark:text-zinc-500 mt-1">
+              <a
+                href="https://console.deepgram.com/signup"
+                target="_blank"
+                rel="noreferrer"
+                className="underline hover:text-slate-900 dark:hover:text-white"
+              >
+                Sign up free →
+              </a>
+              {" — Deepgram gives $200 of credit on signup, plenty for testing."}
+            </p>
+          </label>
         </div>
       )}
 

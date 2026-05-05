@@ -96,6 +96,9 @@ export function ChatProviderStep({
   const [selected, setSelected] = useState<CuratedProvider["id"] | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("http://localhost:11434");
+  const [pickedOllamaModel, setPickedOllamaModel] = useState<string | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<
     { ok: boolean; latencyMs?: number; message?: string } | null
@@ -106,6 +109,12 @@ export function ChatProviderStep({
   const testConn = trpc.provider.test.useMutation();
   const setAiConfig = trpc.aiConfig.update.useMutation();
   const aiConfigQ = trpc.aiConfig.get.useQuery();
+  // Detect a running Ollama on first paint. Cheap (~50ms locally,
+  // ~2.5s timeout when not present), so we just fire it once.
+  const ollamaQ = trpc.runtimes.detectOllama.useQuery(undefined, {
+    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: false,
+  });
   const utils = trpc.useUtils();
 
   const provider = selected ? CURATED.find((c) => c.id === selected) : null;
@@ -129,6 +138,14 @@ export function ChatProviderStep({
       return;
     }
 
+    // For Ollama, the user picks from a list of pulled models we
+    // auto-detected — that wins over the static `recommendedModel`
+    // because the user can't run a model they haven't pulled.
+    const modelToUse =
+      provider.id === "ollama" && pickedOllamaModel
+        ? pickedOllamaModel
+        : provider.recommendedModel;
+
     try {
       setSaving(true);
       // 1) Save the credential
@@ -144,7 +161,7 @@ export function ChatProviderStep({
       const t = await testConn.mutateAsync({
         provider: provider.id,
         kind: "chat",
-        model: provider.recommendedModel,
+        model: modelToUse,
         apiKey: provider.authType === "api_key" ? apiKey : undefined,
         baseUrl: provider.authType === "base_url_only" ? baseUrl : undefined,
       });
@@ -160,7 +177,7 @@ export function ChatProviderStep({
       // 3) Persist as the user's default chat provider.
       await setAiConfig.mutateAsync({
         chatProvider: provider.id,
-        chatModel: provider.recommendedModel,
+        chatModel: modelToUse,
       });
       await utils.aiConfig.get.invalidate();
       onContinue();
@@ -187,8 +204,80 @@ export function ChatProviderStep({
         </p>
       </div>
 
+      {/* "Detected on this machine" — only renders when Ollama is up. */}
+      {ollamaQ.data?.ok && (
+        <div className="rounded-xl border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-500/5 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-outlined text-[16px] text-emerald-600 dark:text-emerald-400">
+              check_circle
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
+              Detected on this machine — no API key needed
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSelected("ollama");
+              setError(null);
+              setTestResult(null);
+              setBaseUrl(ollamaQ.data?.baseUrl ?? "http://localhost:11434");
+              if (
+                ollamaQ.data?.models &&
+                ollamaQ.data.models.length > 0 &&
+                !pickedOllamaModel
+              ) {
+                setPickedOllamaModel(ollamaQ.data.models[0]?.name ?? null);
+              }
+            }}
+            className={`w-full text-left rounded-lg border p-3 transition-all ${
+              selected === "ollama"
+                ? "border-indigo-500 dark:border-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/10"
+                : "border-emerald-200 dark:border-emerald-500/20 hover:border-emerald-400 dark:hover:border-emerald-500/40 bg-white dark:bg-white/[0.02]"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-medium">Ollama</h3>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                  {ollamaQ.data.models.length > 0
+                    ? `${ollamaQ.data.models.length} model${ollamaQ.data.models.length === 1 ? "" : "s"} pulled · ${ollamaQ.data.baseUrl} · ${ollamaQ.data.latencyMs}ms`
+                    : `Server running at ${ollamaQ.data.baseUrl} — but no models pulled yet. Run \`ollama pull llama3.2\` first.`}
+                </p>
+              </div>
+              <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-emerald-200 dark:bg-emerald-500/30 text-emerald-800 dark:text-emerald-200 shrink-0">
+                Local
+              </span>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {ollamaQ.data && !ollamaQ.data.ok && (
+        <div className="text-[11px] text-slate-500 dark:text-zinc-500 px-1">
+          <span className="material-symbols-outlined text-[12px] align-text-bottom mr-1">
+            info
+          </span>
+          Tip: install <a
+            href="https://ollama.com"
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-slate-900 dark:hover:text-white"
+          >
+            Ollama
+          </a>{" "}
+          for a fully-local, fully-free chat option (no API key needed).
+        </div>
+      )}
+
       <div className="grid sm:grid-cols-2 gap-3">
-        {CURATED.map((c) => {
+        {CURATED.filter((c) =>
+          // Don't show the Ollama card twice — the auto-detected
+          // banner above replaces it when Ollama is up. When Ollama
+          // is NOT up, fall through to the manual card so the user
+          // can still configure it (e.g. Ollama on a LAN box).
+          c.id === "ollama" ? !ollamaQ.data?.ok : true,
+        ).map((c) => {
           const active = selected === c.id;
           return (
             <button
@@ -266,22 +355,68 @@ export function ChatProviderStep({
               />
             </label>
           ) : (
-            <label className="block">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-zinc-300 mb-1">
-                Base URL
-              </div>
-              <input
-                type="text"
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="http://localhost:11434"
-                className="w-full bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-3 py-2 text-sm rounded focus:border-slate-900 dark:focus:border-white focus:outline-none font-mono"
-              />
-              <p className="text-[10px] text-slate-500 dark:text-zinc-500 mt-1">
-                Default Ollama port. Ensure the service is running and a
-                model is pulled.
-              </p>
-            </label>
+            <div className="space-y-3">
+              <label className="block">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-zinc-300 mb-1">
+                  Base URL
+                </div>
+                <input
+                  type="text"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  placeholder="http://localhost:11434"
+                  className="w-full bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-3 py-2 text-sm rounded focus:border-slate-900 dark:focus:border-white focus:outline-none font-mono"
+                />
+                <p className="text-[10px] text-slate-500 dark:text-zinc-500 mt-1">
+                  Default Ollama port. Ensure the service is running and
+                  at least one model is pulled.
+                </p>
+              </label>
+
+              {/* Model picker — populated from `/api/tags`. Falls back
+                  to a freeform input when detection didn't run or returned
+                  zero models so the user can still type a model name. */}
+              <label className="block">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-zinc-300 mb-1">
+                  Model
+                </div>
+                {ollamaQ.data?.ok && ollamaQ.data.models.length > 0 ? (
+                  <select
+                    value={pickedOllamaModel ?? ""}
+                    onChange={(e) => setPickedOllamaModel(e.target.value)}
+                    className="w-full bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-3 py-2 text-sm rounded focus:border-slate-900 dark:focus:border-white focus:outline-none font-mono"
+                  >
+                    {ollamaQ.data.models.map((m) => (
+                      <option key={m.name} value={m.name}>
+                        {m.name}
+                        {m.size
+                          ? ` (${(m.size / 1024 / 1024 / 1024).toFixed(1)}GB)`
+                          : ""}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={pickedOllamaModel ?? ""}
+                    onChange={(e) =>
+                      setPickedOllamaModel(e.target.value || null)
+                    }
+                    placeholder="llama3.2"
+                    className="w-full bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-3 py-2 text-sm rounded focus:border-slate-900 dark:focus:border-white focus:outline-none font-mono"
+                  />
+                )}
+                {ollamaQ.data?.ok && ollamaQ.data.models.length === 0 && (
+                  <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-1">
+                    No models pulled yet — run{" "}
+                    <code className="font-mono bg-amber-100 dark:bg-amber-500/15 px-1 py-0.5 rounded">
+                      ollama pull llama3.2
+                    </code>{" "}
+                    in a terminal, then come back.
+                  </p>
+                )}
+              </label>
+            </div>
           )}
 
           {testResult?.ok && (

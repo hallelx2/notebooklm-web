@@ -29,6 +29,7 @@
     "ai": "catalog:",
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
+    "electron-updater": "^6.3.9",
     "electron-window-state": "^5.0.3",
     "hono": "catalog:",
     "next-themes": "catalog:",
@@ -68,6 +69,14 @@
         "from": "resources/embed",
         "to": "embed",
         "filter": ["**/*"]
+      }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "hallelx2",
+        "repo": "notebooklm-web",
+        "releaseType": "release"
       }
     ],
     "win": {

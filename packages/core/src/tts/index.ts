@@ -1,4 +1,5 @@
 import { audioFileExtension, concatAudio } from "./concat-audio";
+import { resolveTtsCredential } from "./credentials";
 import { createDeepgramTtsProvider } from "./deepgram";
 import { createKokoroHttpTtsProvider } from "./kokoro-http";
 import { createKokoroLocalTtsProvider } from "./kokoro-local";
@@ -14,8 +15,10 @@ export {
   createDeepgramTtsProvider,
   createKokoroHttpTtsProvider,
   createKokoroLocalTtsProvider,
+  resolveTtsCredential,
   TtsProviderUnavailableError,
 };
+export type { ResolvedTtsCredential, TtsCredentialName } from "./credentials";
 export type {
   TtsAudioContentType,
   TtsProvider,
