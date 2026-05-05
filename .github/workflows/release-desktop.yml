@@ -114,18 +114,33 @@ jobs:
         # empty UI shell.
         run: bun "--filter=@notebooklm/desktop" run build
 
-      - name: "Ensure app-builder native binary is present + executable"
-        # electron-builder shells out to a native helper at
-        # node_modules/app-builder-bin/<platform>/<arch>/app-builder.
-        # Two failure modes we've actually hit:
-        #   (a) bun's `--frozen-lockfile` install in some configurations
-        #       leaves the binary on disk WITHOUT the executable bit set,
-        #       so `spawn(...)` fails with ENOENT (which on Linux/macOS
-        #       can mean "file isn't executable" via cross-spawn's error
-        #       remapping — not just "not found").
-        #   (b) the package never extracted at all.
-        # Differentiate the two with a clear error and `chmod +x` so
-        # case (a) just works.
+      - name: "Pre-publish prep: chmod app-builder + strip root workspaces"
+        # Two things have to happen between `bun install` and
+        # electron-builder's first spawn of app-builder, and they're
+        # both subtle:
+        #
+        # 1. `chmod +x` the platform-specific app-builder binary.
+        #    bun's frozen-lockfile install lays the file down on Linux
+        #    and macOS without the executable bit set. cross-spawn
+        #    then surfaces that as ENOENT (not EACCES, despite the
+        #    file being right there). On Windows it's a no-op but
+        #    harmless.
+        #
+        # 2. Strip the `workspaces` field from the root package.json.
+        #    electron-builder runs `npm install --omit=dev` inside
+        #    apps/desktop. With the root workspaces field intact, npm
+        #    walks up, sees the workspace members, decides to
+        #    reconcile root node_modules, and prunes anything it
+        #    considers unnecessary — including the binaries inside
+        #    node_modules/app-builder-bin/. By the time electron-
+        #    builder tries to spawn app-builder a few seconds later,
+        #    the file is gone -> ENOENT. We can't strip earlier
+        #    because `bun --filter=@notebooklm/desktop run build`
+        #    fails with a bare ENOENT on ubuntu-22.04 if the workspaces
+        #    field is missing when vite tries to spawn.
+        #
+        # Result: each platform-specific publish step below runs
+        # against a workspaces-free root + an executable app-builder.
         shell: bash
         run: |
           set -euo pipefail
@@ -137,12 +152,12 @@ jobs:
           esac
           if [ ! -f "$bin" ]; then
             echo "::error::Expected app-builder binary missing at $bin"
-            echo "node_modules/app-builder-bin tree:"
-            ls -laR node_modules/app-builder-bin || echo "  (directory itself missing)"
+            ls -laR node_modules/app-builder-bin || echo "(parent dir missing too)"
             exit 1
           fi
           chmod +x "$bin" || true
           ls -la "$bin"
+          node -e "const fs=require('fs'); const f='package.json'; const p=JSON.parse(fs.readFileSync(f,'utf8')); if(p.workspaces){delete p.workspaces; fs.writeFileSync(f, JSON.stringify(p,null,2)+'\n'); console.log('stripped workspaces from root package.json');} else {console.log('workspaces field already absent');}"
 
       # The publish steps below invoke electron-builder via `npx`, NOT
       # `bun x`. Reason: `bun x` exports `npm_config_user_agent=bun/...`
