@@ -62,6 +62,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "catalog:",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/d3": "^7.4.3",
     "@types/jsdom": "^28.0.1",
     "@types/node": "catalog:",
