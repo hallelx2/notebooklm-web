@@ -340,6 +340,34 @@ function encodeWav(samples: Float32Array, sampleRate: number): Buffer {
   return buf;
 }
 
+/**
+ * Optional RPC hook the desktop main process publishes via
+ * `globalThis.__notebooklmTtsRpc`. When present, we route every
+ * `speak()` through it instead of running ONNX inference inside the
+ * api-server's event loop. The signature is intentionally narrow —
+ * just enough for the worker to do its job. Anything fancier
+ * (cancellation, progress) can live on top.
+ *
+ * Type-only: we never import from the desktop package; the worker is
+ * an injection point, not a dependency.
+ */
+type TtsRpc = (
+  type: "speak",
+  payload: {
+    text: string;
+    voice: string;
+    modelId: string;
+    dtype: "fp32" | "fp16" | "q8" | "q4" | "q4f16";
+    device: "cpu" | "webgpu" | "wasm";
+  },
+) => Promise<{ wav: Uint8Array; samplingRate: number }>;
+
+function getRpc(): TtsRpc | null {
+  // biome-ignore lint/suspicious/noExplicitAny: globalThis bridge from desktop main
+  const fn = (globalThis as any).__notebooklmTtsRpc;
+  return typeof fn === "function" ? (fn as TtsRpc) : null;
+}
+
 export function createKokoroLocalTtsProvider(
   cfg: KokoroLocalTtsConfig = {},
 ): TtsProvider {
@@ -353,18 +381,41 @@ export function createKokoroLocalTtsProvider(
   return {
     name: "kokoro",
     async speak(segment: TtsSegment): Promise<TtsResult> {
-      const tts = await loadModel(resolved);
       const voice = voices[segment.speaker] ?? "af_bella";
-      const out = (await tts.generate(segment.text, { voice })) as KokoroAudioOutput;
 
-      // Newer kokoro-js exposes `toWav()`. Older versions only had the
-      // Float32Array — fall back to our own encoder so this works
-      // against both.
+      // Worker path: when the desktop main process has published a
+      // utility-process bridge, every speak() gets shipped to it
+      // instead of running inference here. Keeps the api-server's
+      // event loop free to pump renderer fetches and Windows IPC
+      // while ONNX is busy. The worker handles its own model load.
+      const rpc = getRpc();
+      if (rpc) {
+        const result = await rpc("speak", {
+          text: segment.text,
+          voice,
+          modelId: resolved.modelId,
+          dtype: resolved.dtype,
+          device: resolved.device,
+        });
+        // The worker already encoded a WAV (using kokoro-js's toWav
+        // when available, our hand-rolled encoder otherwise) — we
+        // just need to wrap the bytes Buffer-style for the rest of
+        // the audio pipeline.
+        return {
+          audio: Buffer.from(result.wav),
+          contentType: "audio/wav",
+        };
+      }
+
+      // In-process path: dev mode under `bun run dev`, tests, server
+      // deployments without a worker host. Same code as the original
+      // synchronous implementation.
+      const tts = await loadModel(resolved);
+      const out = (await tts.generate(segment.text, { voice })) as KokoroAudioOutput;
       const wav =
         typeof out.toWav === "function"
           ? Buffer.from(out.toWav())
           : encodeWav(out.audio, out.sampling_rate);
-
       return { audio: wav, contentType: "audio/wav" };
     },
   };

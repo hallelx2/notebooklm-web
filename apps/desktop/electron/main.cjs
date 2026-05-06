@@ -8,11 +8,140 @@
 // has no console window). Every require past this point inherits the
 // updated env and the wrapped console.
 const earlyBoot = require("./early-boot.cjs");
-const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  shell,
+  utilityProcess,
+} = require("electron");
 const path = require("node:path");
 const { buildMenu } = require("./menu.cjs");
 const { createWindowState } = require("./window-state.cjs");
 const { setupAutoUpdater } = require("./updater.cjs");
+
+// ─── TTS utility-process worker ────────────────────────────────────
+//
+// onnxruntime-node's `session.run()` returns a Promise but the JS-side
+// pre/post-processing in kokoro-js (phonemizer + tokenizer + tensor
+// reshaping) still runs on the same JS event loop that pumps Windows
+// IPC and serves renderer fetches. With audio-overview generation
+// pinning the loop for ~100 sec/segment, Windows DWM flags the
+// BrowserWindow as "Not Responding" and renderer polling stalls.
+//
+// Fix: spawn `tts-worker.cjs` in an Electron utility process the
+// first time the in-process kokoro provider receives a request, route
+// `speak` calls there over `postMessage`, and bring the result back
+// to the api-server. Main + renderer event loops stay free.
+//
+// We expose the RPC dispatcher via `globalThis.__notebooklmTtsRpc`.
+// The api-server bundle (`api-server.cjs`) runs in this same V8
+// isolate — `require()`d below — so it can read the same `globalThis`
+// without any explicit plumbing through `bindCoreRuntime`. The
+// kokoro-local provider (in `packages/core/src/tts/kokoro-local.ts`)
+// looks up that hook at speak-time and uses it when present, falling
+// back to in-process synthesis when it isn't (dev mode under
+// `bun run dev`, tests, server deployments, etc.).
+
+let ttsWorker = null;
+const pendingTtsRequests = new Map();
+let nextTtsRequestId = 1;
+
+function ensureTtsWorker() {
+  if (ttsWorker) return ttsWorker;
+  const workerPath = path.join(__dirname, "tts-worker.cjs");
+  // biome-ignore lint/suspicious/noConsole: main-process diagnostic
+  console.log(`[NotebookLM Desktop] forking tts-worker at ${workerPath}`);
+  ttsWorker = utilityProcess.fork(workerPath, [], {
+    serviceName: "notebooklm-tts",
+    // Pipe stdio so console.log inside the worker ends up in
+    // desktop.log instead of disappearing — the worker's parent is
+    // a detached helper process, so without this its stdout has no
+    // attached terminal.
+    stdio: "pipe",
+    // Forward NOTEBOOKLM_BUNDLED_MODELS_DIR / NOTEBOOKLM_MODEL_CACHE_DIR
+    // / KOKORO_* so the worker uses the same bundled-model layout the
+    // in-process path would.
+    env: { ...process.env },
+  });
+
+  ttsWorker.on("message", (msg) => {
+    if (!msg || typeof msg.id !== "number") return;
+    const pending = pendingTtsRequests.get(msg.id);
+    if (!pending) return;
+    pendingTtsRequests.delete(msg.id);
+    if (msg.ok) pending.resolve(msg.result);
+    else pending.reject(new Error(msg.error || "tts-worker rpc failed"));
+  });
+
+  ttsWorker.on("exit", (code) => {
+    // biome-ignore lint/suspicious/noConsole: main-process diagnostic
+    console.warn(
+      `[NotebookLM Desktop] tts-worker exited (code=${code}). It will be re-spawned on the next request.`,
+    );
+    const oldPending = Array.from(pendingTtsRequests.values());
+    pendingTtsRequests.clear();
+    ttsWorker = null;
+    for (const p of oldPending) {
+      p.reject(new Error(`tts-worker exited with code ${code}`));
+    }
+  });
+
+  // Fold worker stdout/stderr into desktop.log. Without this, the
+  // worker's "[tts-worker] model ready in NNNms" / native crash
+  // signatures vanish into the void.
+  if (ttsWorker.stdout) {
+    ttsWorker.stdout.on("data", (chunk) => {
+      const text = chunk.toString().replace(/\s+$/, "");
+      if (text) earlyBoot.logFromSource("tts-worker", "stdout", text);
+    });
+  }
+  if (ttsWorker.stderr) {
+    ttsWorker.stderr.on("data", (chunk) => {
+      const text = chunk.toString().replace(/\s+$/, "");
+      if (text) earlyBoot.logFromSource("tts-worker", "stderr", text);
+    });
+  }
+
+  return ttsWorker;
+}
+
+/**
+ * Send an RPC message to the tts-worker and resolve with its reply.
+ * Spawns the worker on first call. Times out at 5 min — model load +
+ * single-segment inference fits comfortably under that on every CPU
+ * we expect users to run on; anything longer means something is
+ * seriously wrong and we'd rather error than hang forever.
+ */
+function ttsRpc(type, payload, timeoutMs = 300_000) {
+  return new Promise((resolve, reject) => {
+    const worker = ensureTtsWorker();
+    const id = nextTtsRequestId++;
+    const timer = setTimeout(() => {
+      if (pendingTtsRequests.delete(id)) {
+        reject(new Error(`tts-worker timeout after ${timeoutMs}ms`));
+      }
+    }, timeoutMs);
+    pendingTtsRequests.set(id, {
+      resolve: (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      reject: (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    });
+    worker.postMessage({ id, type, payload });
+  });
+}
+
+// Publish the RPC to the api-server bundle. Both processes share this
+// V8 isolate (the bundle is `require()`d below from `startEmbeddedApiServer`),
+// so the assignment is visible the moment the bundle's modules
+// evaluate `globalThis.__notebooklmTtsRpc`.
+globalThis.__notebooklmTtsRpc = ttsRpc;
 
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.NOTEBOOKLM_DEV_URL ?? "http://localhost:5173";
@@ -368,7 +497,10 @@ app.whenReady().then(async () => {
 // Tear down the embedded server on quit so the http listener and
 // PGlite handle release cleanly. before-quit fires once even when the
 // user uses Cmd-Q on macOS, so it covers every exit path that goes
-// through Electron's normal shutdown.
+// through Electron's normal shutdown. We also kill the tts-worker if
+// it's still up — utility processes don't auto-die when their parent
+// exits, and a leftover ~200 MB Node child holding the kokoro model
+// shouldn't survive a clean quit.
 app.on("before-quit", async () => {
   if (apiServerHandle) {
     try {
@@ -377,6 +509,15 @@ app.on("before-quit", async () => {
       // biome-ignore lint/suspicious/noConsole: main-process diagnostic
       console.warn("[NotebookLM Desktop] api server close failed", err);
     }
+  }
+  if (ttsWorker) {
+    try {
+      ttsWorker.kill();
+    } catch (err) {
+      // biome-ignore lint/suspicious/noConsole: main-process diagnostic
+      console.warn("[NotebookLM Desktop] tts-worker kill failed", err);
+    }
+    ttsWorker = null;
   }
 });
 
