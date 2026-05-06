@@ -105,7 +105,9 @@ async function downloadFile(url, dest) {
     received += value.length;
     if (total > 0 && Date.now() - lastLog > 1000) {
       const pct = Math.round((received / total) * 100);
-      process.stdout.write(`\r    ${pct}% (${(received / 1024 / 1024).toFixed(1)}MB / ${(total / 1024 / 1024).toFixed(1)}MB)`);
+      process.stdout.write(
+        `\r    ${pct}% (${(received / 1024 / 1024).toFixed(1)}MB / ${(total / 1024 / 1024).toFixed(1)}MB)`,
+      );
       lastLog = Date.now();
     }
   }
@@ -129,7 +131,8 @@ async function fetchEntry(entry) {
   console.log(`  [${entry.name}] ${entry.repo}`);
   for (const file of entry.files) {
     const dest = join(baseDir, file);
-    if (!existsSync(dirname(dest))) mkdirSync(dirname(dest), { recursive: true });
+    if (!existsSync(dirname(dest)))
+      mkdirSync(dirname(dest), { recursive: true });
 
     if (!FORCE && existsSync(dest)) {
       const size = statSync(dest).size;

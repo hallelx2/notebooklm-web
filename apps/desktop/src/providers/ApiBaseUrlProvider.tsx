@@ -200,9 +200,7 @@ export function ApiBaseUrlGate({ children }: { children: ReactNode }) {
         }}
       >
         <div style={{ maxWidth: 480, textAlign: "center" }}>
-          <h1
-            style={{ fontSize: 18, fontWeight: 600, margin: "0 0 8px" }}
-          >
+          <h1 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 8px" }}>
             Couldn't reach the local server
           </h1>
           <p
@@ -213,13 +211,13 @@ export function ApiBaseUrlGate({ children }: { children: ReactNode }) {
               margin: "0 0 20px",
             }}
           >
-            NotebookLM runs an API server in the background for storage,
-            chat, and audio. It didn't respond on{" "}
+            NotebookLM runs an API server in the background for storage, chat,
+            and audio. It didn't respond on{" "}
             <code style={{ color: "#cbd5e1" }}>{state.url ?? "(unknown)"}</code>
             .
             <br />
-            Quitting and reopening usually fixes it. If this keeps
-            happening, please file a bug with the message below.
+            Quitting and reopening usually fixes it. If this keeps happening,
+            please file a bug with the message below.
           </p>
           <pre
             style={{
