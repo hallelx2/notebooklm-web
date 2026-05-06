@@ -20,6 +20,7 @@ import {
   Outlet,
   redirect,
 } from "@tanstack/react-router";
+import { ApiBaseUrlGate } from "./providers/ApiBaseUrlProvider";
 import { AuthBridge } from "./providers/AuthBridge";
 import { RouterBridge } from "./providers/RouterBridge";
 import { TransportBridge } from "./providers/TransportBridge";
@@ -28,14 +29,22 @@ const rootRoute = createRootRoute({
   // Bridges live INSIDE the TanStack Router so RouterBridge can read its
   // hooks. ThemeProvider sits at the top; the rest are wired in the same
   // order as apps/web's layout.
+  //
+  // ApiBaseUrlGate sits ABOVE TransportBridge + AuthBridge because both
+  // need the embedded API server's URL before constructing their
+  // respective clients (httpBatchLink + Better Auth fetch). The gate
+  // resolves the URL once via preload IPC and renders a brief
+  // "Connecting…" placeholder until it's ready.
   component: () => (
     <ThemeProvider>
       <RouterBridge>
-        <TransportBridge>
-          <AuthBridge>
-            <Outlet />
-          </AuthBridge>
-        </TransportBridge>
+        <ApiBaseUrlGate>
+          <TransportBridge>
+            <AuthBridge>
+              <Outlet />
+            </AuthBridge>
+          </TransportBridge>
+        </ApiBaseUrlGate>
       </RouterBridge>
     </ThemeProvider>
   ),
