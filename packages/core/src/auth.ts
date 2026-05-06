@@ -11,15 +11,6 @@ export type CreateAuthOptions = {
     clientId: string;
     clientSecret: string;
   };
-  /**
-   * Disable Better Auth's CSRF protection. Set this only when the
-   * caller knows the origin can't be cross-site abused — the desktop
-   * adapter, for instance, runs the API server on 127.0.0.1 only and
-   * loads its renderer via `file://`, so every request arrives with
-   * `Origin: null` and the default CSRF middleware rejects them with
-   * "Missing or null Origin". Web apps should leave this off.
-   */
-  disableCSRFCheck?: boolean;
 };
 
 /**
@@ -40,7 +31,6 @@ export function createAuth(opts: CreateAuthOptions) {
     database: drizzleAdapter(db, { provider: "pg" }),
     baseURL: opts.baseURL,
     trustedOrigins,
-    advanced: opts.disableCSRFCheck ? { disableCSRFCheck: true } : undefined,
     emailAndPassword: { enabled: true },
     ...(opts.google
       ? {

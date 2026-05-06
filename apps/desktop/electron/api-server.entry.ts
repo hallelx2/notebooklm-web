@@ -15,7 +15,9 @@
 // resolved at runtime against the packaged node_modules.
 
 import { createServer, type Server } from "node:http";
+import { resolve } from "node:path";
 import { getRequestListener } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { createApp } from "@notebooklm/server/app";
 import { getStubAdapter } from "../src/server/stub-adapter";
 
@@ -71,6 +73,25 @@ export async function startApiServer(): Promise<StartApiServerResult> {
   // an origin-mismatch.
   const adapter = await getStubAdapter({ baseURL: url });
   const app = createApp(adapter);
+
+  // Serve the renderer's static dist/ folder from the same origin as
+  // the API. Without this the renderer loaded via `loadFile()` runs
+  // on `file://`, which is cross-site to `http://127.0.0.1:<port>`.
+  // Chromium silently drops `SameSite=Lax` cookies set by a cross-
+  // site response, so the session cookie never persists and the user
+  // looks signed out the moment the post-sign-in `get-session` GET
+  // fires. Loading the renderer from this same server makes every
+  // fetch same-origin and the default cookie attributes Just Work.
+  //
+  // Path math: in the packaged build this entry compiles to
+  // `app.asar/dist-electron/api-server.cjs`, so `__dirname` is
+  // `app.asar/dist-electron` and the renderer bundle sits one
+  // directory up at `app.asar/dist`.
+  //
+  // Mounted AFTER `createApp` so the `/api/*` handlers always win
+  // route resolution; serveStatic only fires for unmatched paths.
+  const distRoot = resolve(__dirname, "..", "dist");
+  app.use("/*", serveStatic({ root: distRoot }));
 
   // Swap the placeholder handler for the real one. We keep the same
   // server instance so the port stays stable and we don't race
