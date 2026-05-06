@@ -12,6 +12,15 @@ declare global {
   interface Window {
     notebooklm?: {
       /**
+       * Origin the embedded API server is reachable at. Resolves to
+       * `http://127.0.0.1:<port>` in production builds and to the
+       * vite dev URL when running under `bun run dev`. The renderer
+       * should await this once at boot and pass the result into the
+       * trpc client + Better Auth fetch.
+       */
+      getApiBaseUrl(): Promise<string>;
+
+      /**
        * Subscribe to menu commands sent by the Electron main process. The
        * returned function unsubscribes — call it from useEffect cleanup so
        * hot-reload doesn't accumulate listeners.
