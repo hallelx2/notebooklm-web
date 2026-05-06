@@ -140,7 +140,35 @@ function createWindow() {
     });
     win.webContents.openDevTools({ mode: "right" });
   } else {
-    win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
+    // Load the renderer from the embedded API server so renderer + API
+    // share an origin. Previously we used `loadFile(dist/index.html)`,
+    // which put the renderer on `file://` while the API ran on
+    // `http://127.0.0.1:<port>` — those are cross-site, and Chromium
+    // silently drops `SameSite=Lax` Set-Cookie responses across that
+    // boundary. The session cookie never persisted and sign-in looked
+    // like it succeeded but the next get-session returned null.
+    //
+    // The Hono app now mounts `serveStatic` for the dist/ folder, so
+    // `loadURL(apiBaseUrl)` serves the same `index.html` over http
+    // without any cross-origin gymnastics. CSRF, trustedOrigins,
+    // cookies all behave exactly like they would on apps/web.
+    //
+    // Fallback: if the embedded server failed to start, `apiServerHandle`
+    // is null and the user has already seen the error dialog from
+    // `startEmbeddedApiServer`. Drop back to `loadFile` so the window
+    // still opens — sign-in won't work, but at least they see something
+    // instead of a blank screen pointed at a dead URL.
+    if (apiServerHandle) {
+      loadWithRetry(win, apiBaseUrl).catch((err) => {
+        // biome-ignore lint/suspicious/noConsole: main-process diagnostic
+        console.error(
+          "[NotebookLM Desktop] failed to load embedded server URL",
+          err,
+        );
+      });
+    } else {
+      win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
+    }
 
     // Production: block F12 / Cmd-Opt-I / Ctrl-Shift-I so end users can't
     // accidentally pop open devtools. The View > Toggle DevTools menu item

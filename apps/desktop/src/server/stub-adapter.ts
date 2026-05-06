@@ -237,24 +237,15 @@ export async function getStubAdapter(
 
   const storage = buildStorage();
 
-  // The renderer is served via `loadFile`, so its window origin is
-  // `file://` and Chromium sends `Origin: null` on every cross-origin
-  // fetch. Better Auth's CSRF middleware has a hardcoded reject for
-  // null/missing Origin headers — sits BEFORE the trustedOrigins
-  // check, so adding "null" to the list doesn't help. The supported
-  // way out is `advanced.disableCSRFCheck: true`.
-  //
-  // Safe in this environment: the API server only listens on
-  // 127.0.0.1, no remote attacker can reach it, and there's no
-  // browser tab on a malicious origin sharing cookies with us. CSRF
-  // matters when a user navigates to evil.com while signed in to
-  // your site — a desktop app loaded from disk has no analogue.
-  const auth = createAuth({
-    db,
-    baseURL,
-    trustedOrigins: [baseURL],
-    disableCSRFCheck: true,
-  });
+  // The renderer is now served from the same Hono server (the entry
+  // mounts `serveStatic` for dist/), so every fetch arrives with
+  // `Origin: http://127.0.0.1:<port>` — the same string Better Auth
+  // already trusts via the auto-included baseURL. CSRF middleware
+  // accepts it, default `SameSite=Lax` cookies persist, no overrides
+  // needed. The previous `disableCSRFCheck: true` + explicit
+  // `trustedOrigins` were band-aids for the cross-origin file://
+  // renderer setup and aren't needed any more.
+  const auth = createAuth({ db, baseURL });
 
   cachedAdapter = {
     db,
