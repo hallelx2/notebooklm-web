@@ -443,11 +443,13 @@ export function StudioPanel({
 
                 if (output.status === "generating") {
                   // Only audio overviews have a re-openable progress
-                  // modal — other studio outputs go through the synchronous
-                  // `studio.generate` mutation that doesn't expose live
-                  // progress. So the wrapper is only an interactive
-                  // <button> for audio-overview rows; everything else
-                  // stays a plain <div>.
+                  // modal — other studio outputs are queued via the
+                  // fire-and-forget `studio.generate` mutation (the row
+                  // is inserted "generating" and a background worker
+                  // flips it to ready/error), so there's no live
+                  // progress to reattach to. The wrapper is only an
+                  // interactive <button> for audio-overview rows;
+                  // everything else stays a plain <div>.
                   const isReattachable = output.kind === "audio-overview";
                   const Wrapper = isReattachable ? "button" : "div";
                   // Read the persisted progress snapshot so the pill

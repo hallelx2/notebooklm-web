@@ -161,6 +161,43 @@ async function loadModel(
         env.allowRemoteModels = false;
         cacheDir = `bundled:${expected}`;
         bundledMode = true;
+
+        // Probe the actual files the loader will request. The wrapper
+        // error message previously hid which file was missing — when
+        // installs went wrong (partial extraction, antivirus quarantine,
+        // wrong dtype suffix) the user only saw the generic "couldn't
+        // load" message. Listing missing children here means the file
+        // logger captures the exact gap the loader is going to trip on.
+        // biome-ignore lint/suspicious/noConsole: dev-time diagnostic
+        console.log(
+          `[kokoro-local] bundled mode: localModelPath=${env.localModelPath} modelId=${cfg.modelId}`,
+        );
+        const dtypeSuffix =
+          cfg.dtype === "fp32"
+            ? ""
+            : cfg.dtype === "fp16"
+              ? "_fp16"
+              : cfg.dtype === "q8"
+                ? "_quantized"
+                : cfg.dtype === "q4"
+                  ? "_q4"
+                  : cfg.dtype === "q4f16"
+                    ? "_q4f16"
+                    : "";
+        const required = [
+          "config.json",
+          "tokenizer.json",
+          "tokenizer_config.json",
+          `onnx/model${dtypeSuffix}.onnx`,
+        ];
+        const missing = required.filter((f) => !existsSync(join(expected, f)));
+        if (missing.length > 0) {
+          // biome-ignore lint/suspicious/noConsole: dev-time diagnostic
+          console.warn(
+            `[kokoro-local] bundled dir is missing required files for dtype=${cfg.dtype}: ${missing.join(", ")}. ` +
+              `Run \`bun run build:models\` from apps/desktop/ before packaging, or reinstall.`,
+          );
+        }
       } else {
         cacheDir = resolveCacheDir();
         env.cacheDir = cacheDir;
@@ -199,19 +236,30 @@ async function loadModel(
       console.log(`[kokoro-local] model ready in ${Date.now() - t0}ms`);
       return handle;
     } catch (err) {
+      // Always log the underlying error first — the wrapper that follows
+      // hides the stack and original message, which made the bundled-mode
+      // failure mode opaque (the user-facing string blamed network /
+      // cache, but the actual cause might be onnxruntime-node failing to
+      // load its native binary, a missing ORT op, or an asar path issue).
+      // The file logger picks this up so support can see what really went
+      // wrong.
+      // biome-ignore lint/suspicious/noConsole: critical diagnostic
+      console.error(
+        `[kokoro-local] from_pretrained failed (bundled=${bundledMode}, cache=${cacheDir})`,
+        err instanceof Error ? err.stack || err.message : err,
+      );
       const msg = err instanceof Error ? err.message : String(err);
       if (/unable to get model file path or buffer/i.test(msg)) {
         // Add actionable context to a notoriously opaque transformers.js
         // error. Almost always one of: HF Hub unreachable, the cache
         // dir isn't writable, or a previous interrupted download left
         // a corrupt file.
+        const cause = bundledMode
+          ? `  • Bundled model dir was found at ${cacheDir.replace(/^bundled:/, "")} but transformers.js couldn't read a file inside it. Check ${process.env.NOTEBOOKLM_DATA_DIR || "<DATA_DIR>"}/desktop.log for the underlying error (printed above this one).\n  • Antivirus / EDR sometimes quarantines large .onnx files in Program Files — rule out by reinstalling to a non-protected directory.\n`
+          : `  • Network: this build downloads ${cfg.modelId} from huggingface.co. Check connectivity / proxy / antivirus.\n  • Cache dir not writable: tried ${cacheDir}. Set KOKORO_LOCAL_CACHE_DIR to point at a writable directory.\n  • Corrupt partial download: delete ${cacheDir}/hub/models--${cfg.modelId.replace("/", "--")} and retry.\n`;
         throw new TtsProviderUnavailableError(
           "kokoro",
-          "kokoro-js couldn't load the ONNX model files. Common causes:\n" +
-            `  • Network: this build downloads ${cfg.modelId} from huggingface.co. Check connectivity / proxy / antivirus.\n` +
-            `  • Cache dir not writable: tried ${cacheDir}. Set KOKORO_LOCAL_CACHE_DIR to point at a writable directory.\n` +
-            `  • Corrupt partial download: delete ${cacheDir}/hub/models--${cfg.modelId.replace("/", "--")} and retry.\n` +
-            "If you already have Kokoro running locally via Python, the simplest fix is to use the FastAPI backend instead: spin up Kokoro-FastAPI and set KOKORO_BASE_URL.",
+          `kokoro-js couldn't load the ONNX model files. Common causes:\n${cause}If you already have Kokoro running locally via Python, the simplest fix is to use the FastAPI backend instead: spin up Kokoro-FastAPI and set KOKORO_BASE_URL.`,
         );
       }
       throw err;

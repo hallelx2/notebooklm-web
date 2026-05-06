@@ -16,7 +16,7 @@ const REPO_URL = "https://github.com/anthropics/notebooklm-web";
  * Sending a typed command lets the renderer translate it into whatever
  * navigation / state change the UI needs without leaking ipcRenderer.
  *
- * @param {{ isDev: boolean; showDevTools?: boolean }} opts
+ * @param {{ isDev: boolean; showDevTools?: boolean; logPath?: string | null }} opts
  */
 function buildMenu(opts) {
   const isMac = process.platform === "darwin";
@@ -25,6 +25,7 @@ function buildMenu(opts) {
   // true; in packaged builds the env-var override
   // (NOTEBOOKLM_ENABLE_DEVTOOLS=1) flips it on for support diagnosis.
   const showDevTools = !!opts.showDevTools || isDev;
+  const logPath = opts.logPath || null;
 
   /** Resolve the active window at click time so we don't capture a stale ref. */
   const send = (cmd) => {
@@ -153,6 +154,18 @@ function buildMenu(opts) {
         label: "Documentation",
         click: () => shell.openExternal(REPO_URL),
       },
+      // "Show Logs" reveals desktop.log in the platform file manager.
+      // Visible in every build because the primary use-case is users
+      // sharing logs with us — exactly when devtools is unavailable.
+      ...(logPath
+        ? [
+            { type: "separator" },
+            {
+              label: "Show Logs",
+              click: () => shell.showItemInFolder(logPath),
+            },
+          ]
+        : []),
       ...(isMac
         ? []
         : [

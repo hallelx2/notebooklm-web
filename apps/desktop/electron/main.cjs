@@ -1,5 +1,13 @@
 // CommonJS — Electron's main process is loaded via Node's CJS loader.
 // The renderer (Vite output) is ESM and lives separately.
+//
+// `early-boot.cjs` MUST come first: it loads `<DATA_DIR>/.env` so values
+// like NOTEBOOKLM_ENABLE_DEVTOOLS are visible to the module-level
+// `const`s below, and it installs a file logger to `<DATA_DIR>/desktop.log`
+// so api-server crashes are visible in packaged builds (Windows GUI
+// has no console window). Every require past this point inherits the
+// updated env and the wrapped console.
+const earlyBoot = require("./early-boot.cjs");
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const path = require("node:path");
 const { buildMenu } = require("./menu.cjs");
@@ -135,6 +143,19 @@ function createWindow() {
 
   // Hook resize/move/close so the keeper writes window-state.json.
   state.manage(win);
+
+  // Fold renderer console output into the same desktop.log file the
+  // main process writes to. Without this, errors thrown in React are
+  // invisible in packaged builds — devtools is gated and the file
+  // logger only sees main-side console calls. The arguments to
+  // `console-message` are documented at:
+  // https://www.electronjs.org/docs/latest/api/web-contents#event-console-message
+  win.webContents.on("console-message", (_event, level, message, line, source) => {
+    const levelName =
+      level === 0 ? "log" : level === 1 ? "warn" : level === 2 ? "error" : "info";
+    const where = source ? ` (${source}:${line})` : "";
+    earlyBoot.logFromSource("renderer", levelName, `${message}${where}`);
+  });
 
   // External links open in the user's default browser, not inside the app.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -278,6 +299,22 @@ async function startEmbeddedApiServer() {
 // dev URL in dev and to the embedded server's URL in production.
 ipcMain.handle("notebooklm:api-base-url", () => apiBaseUrl);
 
+// Renderer → main bridge: surface the on-disk log path so the renderer
+// can offer a "copy logs" / "show in folder" action when the user
+// wants to share a diagnostic. Returns null if early-boot couldn't
+// install a logger (memory mode or unwritable data dir).
+ipcMain.handle("notebooklm:log-path", () => earlyBoot.logPath);
+
+// Renderer → main bridge: reveal the desktop.log file in the platform
+// file manager. Cheaper than streaming the contents through IPC and
+// it gives the user the natural "drag this file into the issue
+// tracker" affordance. No-ops if the logger never came up.
+ipcMain.handle("notebooklm:show-log", () => {
+  if (!earlyBoot.logPath) return false;
+  shell.showItemInFolder(earlyBoot.logPath);
+  return true;
+});
+
 // Renderer → main bridge: open a URL in the user's default external
 // browser. Used by the in-app update banner's "Download" button to
 // send the user to the GitHub release page. Validate the protocol so
@@ -313,8 +350,10 @@ app.whenReady().then(async () => {
   // at click time so it stays correct across window close/recreate cycles
   // (notably macOS where the app stays alive after window-all-closed).
   // `showDevTools` flips the gate that ordinarily hides View > Toggle
-  // DevTools in packaged builds — see the env-var doc above.
-  buildMenu({ isDev, showDevTools });
+  // DevTools in packaged builds — see the env-var doc above. `logPath`
+  // is forwarded so the Help menu can offer a "Show Logs" item that
+  // reveals desktop.log in the platform file manager.
+  buildMenu({ isDev, showDevTools, logPath: earlyBoot.logPath });
   createWindow();
 
   // Production-only auto-update check via electron-updater. In dev the
