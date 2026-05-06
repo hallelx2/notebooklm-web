@@ -237,10 +237,22 @@ export async function getStubAdapter(
 
   const storage = buildStorage();
 
+  // Electron's renderer is served via `loadFile`, so its window origin
+  // is `file://` and Chromium sends `Origin: null` on every fetch
+  // (per the Fetch spec — opaque origins serialise to "null"). Better
+  // Auth rejects mismatched origins with "Missing or null Origin",
+  // which is exactly the "I created an account but nothing happened"
+  // error users hit before this list grew.
+  //
+  // Including the literal string "null" lets the file:// renderer
+  // through; we also include the bare "file://" just in case some
+  // call path serialises differently. The actual API server only
+  // listens on 127.0.0.1, so accepting null origins isn't broadening
+  // the attack surface beyond loopback.
   const auth = createAuth({
     db,
     baseURL,
-    trustedOrigins: [baseURL],
+    trustedOrigins: [baseURL, "null", "file://"],
   });
 
   cachedAdapter = {
