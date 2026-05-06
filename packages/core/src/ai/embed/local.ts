@@ -92,10 +92,45 @@ async function getPipeline(modelId: string): Promise<PipelineFn> {
 
 const BATCH_SIZE = 32; // CPU inference -- keep batches modest to stay responsive
 
+/**
+ * Optional RPC hook the desktop main process publishes via
+ * `globalThis.__notebooklmEmbedRpc`. When present, every batch ships
+ * to a utility-process worker instead of running ONNX inference inside
+ * the api-server's event loop. Mirrors the kokoro-local TTS hook.
+ */
+type EmbedRpc = (
+  type: "embed",
+  payload: { modelId: string; texts: string[] },
+) => Promise<{ vectors: number[][] }>;
+
+function getEmbedRpc(): EmbedRpc | null {
+  // biome-ignore lint/suspicious/noExplicitAny: globalThis bridge from desktop main
+  const fn = (globalThis as any).__notebooklmEmbedRpc;
+  return typeof fn === "function" ? (fn as EmbedRpc) : null;
+}
+
 export const localEmbedAdapter: EmbedAdapter = {
   async embed(texts: string[], opts: EmbedAdapterOpts): Promise<number[][]> {
-    const pipe = await getPipeline(opts.model);
+    const rpc = getEmbedRpc();
+    if (rpc) {
+      // Worker path: each batch is one rpc round-trip. The worker
+      // holds the warm pipeline keyed by modelId, so consecutive
+      // batches don't re-pay the model-load cost. Marshalling cost
+      // for a batch of 32×384 floats is ~100KB over structured
+      // clone — negligible compared to the inference itself.
+      return batchedEmbed(texts, BATCH_SIZE, async (batch) => {
+        const result = await rpc("embed", {
+          modelId: opts.model,
+          texts: batch,
+        });
+        assertVectorShape(result.vectors, batch.length, opts.dim, "Local");
+        return result.vectors;
+      });
+    }
 
+    // In-process path: dev mode under `bun run dev`, tests, server
+    // deployments without a worker host.
+    const pipe = await getPipeline(opts.model);
     return batchedEmbed(texts, BATCH_SIZE, async (batch) => {
       const tensor = await pipe(batch, { pooling: "mean", normalize: true });
       const vectors = tensor.tolist();
