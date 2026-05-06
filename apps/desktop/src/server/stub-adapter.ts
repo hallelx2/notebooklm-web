@@ -88,7 +88,90 @@ function loadOrCreateConfig(): DesktopConfig {
   return fresh;
 }
 
+/**
+ * Parse a .env file's contents into a `KEY=VALUE` map. Tiny inline
+ * parser — we don't pull in the `dotenv` package because the format
+ * we accept is intentionally restricted: one `KEY=VALUE` per line,
+ * comments starting with `#`, optional surrounding quotes on the
+ * value. No multi-line strings, no shell-style variable expansion.
+ *
+ * Empty / malformed lines are silently skipped — we don't want a
+ * stray comment to crash the whole adapter boot.
+ */
+function parseDotenv(text: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq <= 0) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    // Strip a trailing inline comment (`KEY=value # note`) only when
+    // the value isn't quoted — quoted values can contain `#`.
+    const isQuoted =
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"));
+    if (!isQuoted) {
+      const hashAt = value.indexOf(" #");
+      if (hashAt !== -1) value = value.slice(0, hashAt).trim();
+    } else {
+      value = value.slice(1, -1);
+    }
+    out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * Load `<DATA_DIR>/.env` and merge it into `process.env`, but only
+ * for keys not already set in the surrounding environment (so a
+ * value the user exported in their shell still wins, matching the
+ * behaviour of every other dotenv loader).
+ *
+ * Why the data dir specifically: in dev, vite loads `apps/desktop/.env`
+ * for us; in the packaged Electron app there's no such loader, so
+ * the user needs a path that survives upgrades and reinstalls. The
+ * data dir already houses PGlite, the storage tree, and the
+ * auto-generated config.json, so it's the natural home.
+ *
+ * Skipped silently if the file doesn't exist — a fresh install
+ * shouldn't see boot errors just because the user hasn't added any
+ * overrides yet.
+ */
+function loadDataDirDotenv() {
+  if (MEMORY_MODE) return;
+  const envPath = join(DATA_DIR, ".env");
+  if (!existsSync(envPath)) return;
+  let parsed: Record<string, string>;
+  try {
+    parsed = parseDotenv(readFileSync(envPath, "utf8"));
+  } catch (err) {
+    console.warn(
+      `[NotebookLM Desktop] failed to read ${envPath} —`,
+      err instanceof Error ? err.message : err,
+    );
+    return;
+  }
+  let applied = 0;
+  for (const [key, value] of Object.entries(parsed)) {
+    if (process.env[key] !== undefined) continue;
+    process.env[key] = value;
+    applied += 1;
+  }
+  if (applied > 0) {
+    console.log(
+      `[NotebookLM Desktop] loaded ${applied} env override(s) from ${envPath}`,
+    );
+  }
+}
+
 function ensureRuntimeEnv(cfg: DesktopConfig) {
+  // Run the dotenv merge before anything else inspects `process.env`
+  // so that a Kokoro / Deepgram / SearxNG / search-provider key in
+  // the data-dir .env is visible to every consumer below.
+  loadDataDirDotenv();
+
   if (!process.env.ENCRYPTION_KEY)
     process.env.ENCRYPTION_KEY = cfg.encryptionKey;
   if (!process.env.BETTER_AUTH_SECRET)
