@@ -1,6 +1,6 @@
 // CommonJS — Electron's main process is loaded via Node's CJS loader.
 // The renderer (Vite output) is ESM and lives separately.
-const { app, BrowserWindow, dialog, shell } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const path = require("node:path");
 const { buildMenu } = require("./menu.cjs");
 const { createWindowState } = require("./window-state.cjs");
@@ -8,6 +8,19 @@ const { setupAutoUpdater } = require("./updater.cjs");
 
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.NOTEBOOKLM_DEV_URL ?? "http://localhost:5173";
+
+/**
+ * Origin the renderer should target for `/api/*` calls. Set once
+ * `startApiServer()` resolves below; the renderer reads this via
+ * `ipcMain.handle('notebooklm:api-base-url')` from the preload
+ * script before constructing the trpc/auth clients.
+ *
+ * In dev the bundle isn't started — vite's middleware mode mounts
+ * the same Hono app on the dev URL — so we fall back to `DEV_URL`
+ * and the renderer sees the same string either way.
+ */
+let apiBaseUrl = DEV_URL;
+let apiServerHandle = null;
 
 // Single-instance lock: if another copy of the app is already running,
 // the second invocation receives `false` and exits immediately. The
@@ -153,7 +166,85 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
+/**
+ * Boot the embedded Hono server in production builds.
+ *
+ * Loads `dist-electron/api-server.cjs` (built by esbuild — see
+ * `apps/desktop/scripts/build-api-server.mjs`). The bundle exports
+ * `startApiServer()` which binds to a random localhost port, builds
+ * the desktop adapter (PGlite + Better Auth + storage), and returns
+ * `{ url, close }`.
+ *
+ * In dev we skip this entirely — vite's middleware mode mounts the
+ * same Hono app on the dev URL.
+ *
+ * If the boot throws (corrupt PGlite, port refused, ...) we surface
+ * the error in a dialog instead of leaving the user staring at the
+ * sign-up form's eternal "Creating..." spinner.
+ */
+async function startEmbeddedApiServer() {
+  if (isDev) return;
+  // The bundle sits next to main.cjs after electron-builder packs the
+  // app — both end up under `app.asar/electron/` and `app.asar/dist-
+  // electron/` respectively.
+  // biome-ignore lint/correctness/noNodejsModules: main process is Node
+  const bundlePath = path.join(
+    __dirname,
+    "..",
+    "dist-electron",
+    "api-server.cjs",
+  );
+  let mod;
+  try {
+    mod = require(bundlePath);
+  } catch (err) {
+    // biome-ignore lint/suspicious/noConsole: main-process diagnostic
+    console.error(
+      "[NotebookLM Desktop] failed to load api-server bundle from",
+      bundlePath,
+      err,
+    );
+    dialog.showErrorBox(
+      "NotebookLM couldn't start",
+      `The local API server bundle failed to load:\n\n${err.message ?? err}\n\nThis is a packaging bug — please reinstall.`,
+    );
+    throw err;
+  }
+
+  try {
+    apiServerHandle = await mod.startApiServer();
+    apiBaseUrl = apiServerHandle.url;
+    // biome-ignore lint/suspicious/noConsole: main-process diagnostic
+    console.log(`[NotebookLM Desktop] api server listening at ${apiBaseUrl}`);
+  } catch (err) {
+    // biome-ignore lint/suspicious/noConsole: main-process diagnostic
+    console.error("[NotebookLM Desktop] api server failed to start", err);
+    dialog.showErrorBox(
+      "NotebookLM couldn't start",
+      `The local API server crashed during startup:\n\n${err.message ?? err}\n\nThe app will continue to open but sign-in and notebooks won't work until this is fixed.`,
+    );
+    throw err;
+  }
+}
+
+// Renderer → main bridge: preload script invokes this to learn what
+// origin to point httpBatchLink + Better Auth at. Resolves to the
+// dev URL in dev and to the embedded server's URL in production.
+ipcMain.handle("notebooklm:api-base-url", () => apiBaseUrl);
+
+app.whenReady().then(async () => {
+  // Boot the API server BEFORE the window. The renderer's first
+  // fetches (auth session check, trpc.aiConfig.get) fire as soon as
+  // it mounts; if the server isn't up by then they'll race and the
+  // user sees stuck loading states.
+  try {
+    await startEmbeddedApiServer();
+  } catch {
+    // Already shown via dialog. Continue so the window opens — at
+    // least the menu/quit shortcuts work, and the user can see the
+    // error rather than a hung-and-unkillable Electron shell.
+  }
+
   // Install the application menu once. It uses BrowserWindow.getFocusedWindow()
   // at click time so it stays correct across window close/recreate cycles
   // (notably macOS where the app stays alive after window-all-closed).
@@ -166,6 +257,21 @@ app.whenReady().then(() => {
   // — a failed update check shouldn't kill the app.
   if (!isDev) {
     setupAutoUpdater({ dialog });
+  }
+});
+
+// Tear down the embedded server on quit so the http listener and
+// PGlite handle release cleanly. before-quit fires once even when the
+// user uses Cmd-Q on macOS, so it covers every exit path that goes
+// through Electron's normal shutdown.
+app.on("before-quit", async () => {
+  if (apiServerHandle) {
+    try {
+      await apiServerHandle.close();
+    } catch (err) {
+      // biome-ignore lint/suspicious/noConsole: main-process diagnostic
+      console.warn("[NotebookLM Desktop] api server close failed", err);
+    }
   }
 });
 
