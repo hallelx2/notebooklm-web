@@ -134,9 +134,7 @@ function buildMenu(opts) {
     submenu: [
       { role: "minimize" },
       { role: "close" },
-      ...(isMac
-        ? [{ type: "separator" }, { role: "front" }]
-        : []),
+      ...(isMac ? [{ type: "separator" }, { role: "front" }] : []),
     ],
   });
 

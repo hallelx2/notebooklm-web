@@ -150,10 +150,7 @@ function createWindow() {
       const key = input.key?.toLowerCase();
       const isF12 = key === "f12";
       const isMacShortcut =
-        process.platform === "darwin" &&
-        input.meta &&
-        input.alt &&
-        key === "i";
+        process.platform === "darwin" && input.meta && input.alt && key === "i";
       const isWinLinuxShortcut =
         process.platform !== "darwin" &&
         input.control &&

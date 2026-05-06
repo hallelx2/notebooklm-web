@@ -6,8 +6,7 @@
 //   bun run apps/desktop/scripts/demo-parse-link.mjs <url>
 import { parseLink } from "@notebooklm/core/ingest/parse";
 
-const url =
-  process.argv[2] ?? "https://www.mdpi.com/2673-4591/59/1/238";
+const url = process.argv[2] ?? "https://www.mdpi.com/2673-4591/59/1/238";
 
 console.log(`\n═══ Stage 2: parseLink("${url}") ═══\n`);
 const start = Date.now();

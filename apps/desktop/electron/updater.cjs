@@ -45,9 +45,7 @@ function setupAutoUpdater({ dialog }) {
 
   autoUpdater.on("update-not-available", () => {
     // biome-ignore lint/suspicious/noConsole: visible diagnostic
-    console.log(
-      "[NotebookLM Desktop] no update available — running latest.",
-    );
+    console.log("[NotebookLM Desktop] no update available — running latest.");
   });
 
   autoUpdater.on("update-downloaded", async (info) => {
@@ -79,9 +77,12 @@ function setupAutoUpdater({ dialog }) {
 
   // Recheck every 6 hours so long-running sessions still see new
   // releases without a restart.
-  setInterval(() => {
-    autoUpdater.checkForUpdates().catch(() => {});
-  }, 6 * 60 * 60 * 1_000);
+  setInterval(
+    () => {
+      autoUpdater.checkForUpdates().catch(() => {});
+    },
+    6 * 60 * 60 * 1_000,
+  );
 }
 
 module.exports = { setupAutoUpdater };

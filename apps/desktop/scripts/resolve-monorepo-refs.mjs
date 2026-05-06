@@ -31,7 +31,14 @@ const root = JSON.parse(
 const catalog = root.workspaces?.catalog ?? {};
 
 // Build a name→workspace-path map by reading every workspace package.json.
-const workspaceDirs = ["apps/desktop", "apps/web", "packages/core", "packages/server", "packages/ui", "packages/trpc-contract"];
+const workspaceDirs = [
+  "apps/desktop",
+  "apps/web",
+  "packages/core",
+  "packages/server",
+  "packages/ui",
+  "packages/trpc-contract",
+];
 const workspaceByName = new Map();
 for (const wsDir of workspaceDirs) {
   const file = path.join(ROOT, wsDir, "package.json");
@@ -184,7 +191,9 @@ for (const parent of NODE_MODULE_PARENTS) {
     resolveCatalog(pkg, pkgFile);
     resolveWorkspace(pkg, pkgFile, dir);
     fs.writeFileSync(pkgFile, `${JSON.stringify(pkg, null, 2)}\n`);
-    console.log(`resolve-monorepo-refs: patched ${parent}/${SCOPE}/${name}/package.json`);
+    console.log(
+      `resolve-monorepo-refs: patched ${parent}/${SCOPE}/${name}/package.json`,
+    );
   }
 }
 
