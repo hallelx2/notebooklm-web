@@ -32,4 +32,34 @@ contextBridge.exposeInMainWorld("notebooklm", {
     ipcRenderer.on("notebooklm:menu", listener);
     return () => ipcRenderer.removeListener("notebooklm:menu", listener);
   },
+
+  /**
+   * Subscribe to "update available" announcements from the main-process
+   * autoUpdater. Fires whenever GitHub Releases publishes a tag whose
+   * version is newer than this build, BEFORE any signature-verified
+   * download attempt — which means it works even on unsigned builds
+   * where the auto-installer step refuses to apply (current state until
+   * Authenticode is configured in CI). The renderer surfaces a banner
+   * with a "Download" button that opens the release page.
+   * @param {(info: { version: string; releaseUrl: string }) => void} handler
+   * @returns {() => void}
+   */
+  onUpdateAvailable(handler) {
+    /** @type {(_event: unknown, info: { version: string; releaseUrl: string }) => void} */
+    const listener = (_event, info) => handler(info);
+    ipcRenderer.on("notebooklm:update-available", listener);
+    return () =>
+      ipcRenderer.removeListener("notebooklm:update-available", listener);
+  },
+
+  /**
+   * Open a URL in the user's default external browser. Used by the
+   * update banner's "Download" button to send the user to the GitHub
+   * release page without surfacing `shell.openExternal` directly to
+   * the renderer.
+   * @param {string} url
+   */
+  openExternal(url) {
+    return ipcRenderer.invoke("notebooklm:open-external", url);
+  },
 });

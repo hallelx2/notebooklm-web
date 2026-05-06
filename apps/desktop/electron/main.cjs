@@ -9,6 +9,18 @@ const { setupAutoUpdater } = require("./updater.cjs");
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.NOTEBOOKLM_DEV_URL ?? "http://localhost:5173";
 
+// `isDev` gates auto-load of devtools and disables the menu/keyboard
+// blockers. In production builds it's always false, which means a user
+// hitting an opaque "fetch failed" / kokoro-load error has no way to see
+// what actually happened — the friendly modal hides it. Setting
+// NOTEBOOKLM_ENABLE_DEVTOOLS=1 (typically via <DATA_DIR>/.env) flips
+// that gate without giving up the rest of the prod build, so support
+// can surface the real error and we can iterate. Devtools still
+// requires an active key chord; the env var only un-blocks them.
+const ENABLE_DEVTOOLS_OVERRIDE =
+  process.env.NOTEBOOKLM_ENABLE_DEVTOOLS === "1";
+const showDevTools = isDev || ENABLE_DEVTOOLS_OVERRIDE;
+
 /**
  * Origin the renderer should target for `/api/*` calls. Set once
  * `startApiServer()` resolves below; the renderer reads this via
@@ -174,20 +186,29 @@ function createWindow() {
     // accidentally pop open devtools. The View > Toggle DevTools menu item
     // is already gated behind isDev (see electron/menu.cjs). We still let
     // Cmd/Ctrl-R reload — that's a useful escape hatch from a stuck UI.
-    win.webContents.on("before-input-event", (event, input) => {
-      const key = input.key?.toLowerCase();
-      const isF12 = key === "f12";
-      const isMacShortcut =
-        process.platform === "darwin" && input.meta && input.alt && key === "i";
-      const isWinLinuxShortcut =
-        process.platform !== "darwin" &&
-        input.control &&
-        input.shift &&
-        key === "i";
-      if (isF12 || isMacShortcut || isWinLinuxShortcut) {
-        event.preventDefault();
-      }
-    });
+    //
+    // The block is bypassed when NOTEBOOKLM_ENABLE_DEVTOOLS=1 — the
+    // support escape hatch for diagnosing renderer / server issues in
+    // a packaged build without shipping a debug-mode installer.
+    if (!showDevTools) {
+      win.webContents.on("before-input-event", (event, input) => {
+        const key = input.key?.toLowerCase();
+        const isF12 = key === "f12";
+        const isMacShortcut =
+          process.platform === "darwin" &&
+          input.meta &&
+          input.alt &&
+          key === "i";
+        const isWinLinuxShortcut =
+          process.platform !== "darwin" &&
+          input.control &&
+          input.shift &&
+          key === "i";
+        if (isF12 || isMacShortcut || isWinLinuxShortcut) {
+          event.preventDefault();
+        }
+      });
+    }
   }
 }
 
@@ -257,6 +278,24 @@ async function startEmbeddedApiServer() {
 // dev URL in dev and to the embedded server's URL in production.
 ipcMain.handle("notebooklm:api-base-url", () => apiBaseUrl);
 
+// Renderer → main bridge: open a URL in the user's default external
+// browser. Used by the in-app update banner's "Download" button to
+// send the user to the GitHub release page. Validate the protocol so
+// a compromised renderer can't pivot through us into `file://` reads
+// or arbitrary `shell.openExternal` payloads.
+ipcMain.handle("notebooklm:open-external", async (_event, url) => {
+  if (typeof url !== "string") return;
+  if (!/^https?:\/\//i.test(url)) {
+    // biome-ignore lint/suspicious/noConsole: main-process diagnostic
+    console.warn(
+      "[NotebookLM Desktop] refusing openExternal — non-http(s) URL:",
+      url,
+    );
+    return;
+  }
+  await shell.openExternal(url);
+});
+
 app.whenReady().then(async () => {
   // Boot the API server BEFORE the window. The renderer's first
   // fetches (auth session check, trpc.aiConfig.get) fire as soon as
@@ -273,7 +312,9 @@ app.whenReady().then(async () => {
   // Install the application menu once. It uses BrowserWindow.getFocusedWindow()
   // at click time so it stays correct across window close/recreate cycles
   // (notably macOS where the app stays alive after window-all-closed).
-  buildMenu({ isDev });
+  // `showDevTools` flips the gate that ordinarily hides View > Toggle
+  // DevTools in packaged builds — see the env-var doc above.
+  buildMenu({ isDev, showDevTools });
   createWindow();
 
   // Production-only auto-update check via electron-updater. In dev the
