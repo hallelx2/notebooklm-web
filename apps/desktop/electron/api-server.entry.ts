@@ -65,12 +65,11 @@ export async function startApiServer(): Promise<StartApiServerResult> {
   }
   const url = `http://127.0.0.1:${addr.port}`;
 
-  // The stub adapter currently builds Better Auth with a hardcoded
-  // `http://localhost:5173`. The next commit threads `baseURL` through
-  // so it matches the actual port we just bound; for now this
-  // bootstrap is wired up but the auth handshake still references the
-  // dev origin.
-  const adapter = await getStubAdapter();
+  // Pass the just-bound URL into the adapter so Better Auth signs
+  // cookies for the right origin and `trustedOrigins` lets sign-in
+  // requests through. Without this every auth POST would 403 with
+  // an origin-mismatch.
+  const adapter = await getStubAdapter({ baseURL: url });
   const app = createApp(adapter);
 
   // Swap the placeholder handler for the real one. We keep the same
