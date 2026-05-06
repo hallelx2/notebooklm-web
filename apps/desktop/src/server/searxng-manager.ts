@@ -146,7 +146,14 @@ async function waitForReady(url: string, totalMs: number): Promise<boolean> {
  * production server architecture isn't wired yet anyway).
  */
 function bundledConfigDir(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
+  // `__dirname` is provided by Node natively in the CJS bundle that
+  // ships in the packaged Electron app. In dev (vite ssrLoadModule,
+  // ESM), it's undefined and we fall back to the ESM idiom. Either
+  // way we walk up to the repo root and into docker/searxng/.
+  const here =
+    typeof __dirname !== "undefined"
+      ? __dirname
+      : dirname(fileURLToPath(import.meta.url));
   // apps/desktop/src/server/ → up 4 → repo root, then docker/searxng/
   return resolve(here, "..", "..", "..", "..", "docker", "searxng");
 }

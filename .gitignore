@@ -26,3 +26,7 @@ drizzle
 # Big binary blobs that don't belong in git; the prebuild script and HF
 # Hub are the source of truth.
 apps/desktop/resources/
+
+# esbuild output for the embedded Electron-main API server bundle.
+# Built by `bun run build:api-server`; rebuilt every CI run from source.
+apps/desktop/dist-electron/

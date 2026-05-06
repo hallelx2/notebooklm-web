@@ -11,10 +11,11 @@
     "dev:vite": "vite",
     "dev:electron": "electron .",
     "dev:browser": "vite",
-    "build": "vite build",
+    "build": "vite build && bun run build:api-server",
     "build:icon": "node scripts/build-icon.mjs",
     "build:models": "node scripts/fetch-bundled-models.mjs",
-    "build:electron": "bun run build:icon && bun run build:models && vite build && electron-builder",
+    "build:api-server": "node scripts/build-api-server.mjs",
+    "build:electron": "bun run build:icon && bun run build:models && bun run build && electron-builder",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
@@ -48,6 +49,7 @@
     "concurrently": "^9.1.0",
     "electron": "^33.2.0",
     "electron-builder": "^25.1.0",
+    "esbuild": "^0.25.0",
     "png2icons": "^2.0.1",
     "sharp": "^0.34.5",
     "tailwindcss": "^4",
@@ -65,6 +67,7 @@
     },
     "files": [
       "dist/**/*",
+      "dist-electron/**/*",
       "electron/**/*"
     ],
     "extraResources": [
