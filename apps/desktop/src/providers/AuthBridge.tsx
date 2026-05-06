@@ -1,7 +1,11 @@
 import { type Auth, AuthProvider } from "@notebooklm/ui/contexts";
 import { createAuthClient } from "better-auth/react";
 import { type ReactNode, useMemo } from "react";
-import { useApiBaseUrl } from "./ApiBaseUrlProvider";
+import {
+  API_REQUEST_TIMEOUT_MS,
+  fetchWithTimeout,
+  useApiBaseUrl,
+} from "./ApiBaseUrlProvider";
 
 export function AuthBridge({ children }: { children: ReactNode }) {
   const apiBaseUrl = useApiBaseUrl();
@@ -14,8 +18,18 @@ export function AuthBridge({ children }: { children: ReactNode }) {
   // useMemo so we don't construct a new client (and therefore a new
   // useSession listener) on every render. The URL is stable for the
   // app's lifetime.
+  //
+  // `customFetchImpl` adds a per-request timeout (same 15s as trpc)
+  // so a wedged sign-up POST surfaces as an error in the UI instead
+  // of a button stuck on "Creating…".
   const authClient = useMemo(
-    () => createAuthClient({ baseURL: apiBaseUrl }),
+    () =>
+      createAuthClient({
+        baseURL: apiBaseUrl,
+        fetchOptions: {
+          customFetchImpl: fetchWithTimeout(API_REQUEST_TIMEOUT_MS),
+        },
+      }),
     [apiBaseUrl],
   );
   const { signIn, signOut, signUp, useSession } = authClient;
