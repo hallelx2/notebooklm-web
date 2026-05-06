@@ -3,7 +3,11 @@ import { trpc } from "@notebooklm/ui/trpc/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
 import { type ReactNode, useMemo, useState } from "react";
-import { useApiBaseUrl } from "./ApiBaseUrlProvider";
+import {
+  API_REQUEST_TIMEOUT_MS,
+  fetchWithTimeout,
+  useApiBaseUrl,
+} from "./ApiBaseUrlProvider";
 
 /**
  * Bind the trpc + chat clients to the embedded API server's actual
@@ -32,7 +36,14 @@ export function TransportBridge({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
   const [trpcClient] = useState(() =>
     trpc.createClient({
-      links: [httpBatchLink({ url: `${apiBaseUrl}/api/trpc` })],
+      links: [
+        httpBatchLink({
+          url: `${apiBaseUrl}/api/trpc`,
+          // Per-request timeout so a wedged server surfaces as a
+          // tRPC error after 15s instead of a UI stuck on "Loading…".
+          fetch: fetchWithTimeout(API_REQUEST_TIMEOUT_MS),
+        }),
+      ],
     }),
   );
 
