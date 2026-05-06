@@ -109,7 +109,14 @@ function ensureRuntimeEnv(cfg: DesktopConfig) {
   // providers prefer this over a runtime HF Hub download when present, so
   // a fresh installation has no model-fetch step on first use.
   if (!process.env.NOTEBOOKLM_BUNDLED_MODELS_DIR) {
-    const here = dirname(fileURLToPath(import.meta.url));
+    // `__dirname` resolves natively in the CJS bundle that the
+    // packaged Electron main process loads via esbuild. In dev
+    // (vite ssrLoadModule, ESM), `__dirname` is undefined and we
+    // fall back to the standard ESM idiom.
+    const here =
+      typeof __dirname !== "undefined"
+        ? __dirname
+        : dirname(fileURLToPath(import.meta.url));
     const candidates: string[] = [];
     // Packaged Electron — process.resourcesPath is set by Electron's main
     // process. We guard the access because the desktop adapter may also
