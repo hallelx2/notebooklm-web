@@ -175,13 +175,37 @@ export function NotebookView({ id }: { id: string }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
+    // The desktop app uses TanStack Router's hash history, so a URL
+    // like `/notebooks/abc?onboard=1` lives inside `window.location
+    // .hash` (`#/notebooks/abc?onboard=1`) and `.search` is always
+    // empty. The web app uses normal browser history, where the
+    // query is in `.search`. Try the hash form first; fall back
+    // to `.search` so this works for both.
+    const hash = window.location.hash;
+    const hashQueryIdx = hash.indexOf("?");
+    const search =
+      hashQueryIdx !== -1
+        ? hash.slice(hashQueryIdx + 1)
+        : window.location.search;
+    const params = new URLSearchParams(search);
     if (params.get("onboard") === "1") {
       setUploadOpen(true);
       params.delete("onboard");
-      const next = params.toString();
-      const url = `${window.location.pathname}${next ? `?${next}` : ""}`;
-      window.history.replaceState({}, "", url);
+      const remaining = params.toString();
+      // Strip the consumed param from whichever location it lived in
+      // so a refresh doesn't re-trigger the modal.
+      if (hashQueryIdx !== -1) {
+        const hashPath = hash.slice(0, hashQueryIdx);
+        const nextHash = remaining ? `${hashPath}?${remaining}` : hashPath;
+        window.history.replaceState(
+          {},
+          "",
+          `${window.location.pathname}${nextHash}`,
+        );
+      } else {
+        const url = `${window.location.pathname}${remaining ? `?${remaining}` : ""}`;
+        window.history.replaceState({}, "", url);
+      }
     }
   }, []);
 
