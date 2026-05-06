@@ -1,7 +1,7 @@
 "use client";
 
 import { Link, useAuth, useRouter } from "@notebooklm/ui/contexts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthShell } from "./AuthShell";
 
 export function SignInView() {
@@ -11,6 +11,18 @@ export function SignInView() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Don't navigate on the sign-in POST's resolve — `useSession`'s
+  // cache update lands on a later microtask, and AuthGate would see
+  // the still-`unauthenticated` status and bounce us right back here
+  // (the visible bug: form clears, page stays). Instead wait for
+  // `auth.status` to flip to "authenticated", then navigate.
+  useEffect(() => {
+    if (submitted && auth.status === "authenticated") {
+      router.replace("/notebooks");
+    }
+  }, [submitted, auth.status, router]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,7 +34,7 @@ export function SignInView() {
       setErr(res.error ?? "Invalid email or password.");
       return;
     }
-    router.push("/notebooks");
+    setSubmitted(true);
   }
 
   return (

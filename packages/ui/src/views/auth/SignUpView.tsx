@@ -1,7 +1,7 @@
 "use client";
 
 import { Link, useAuth, useRouter } from "@notebooklm/ui/contexts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthShell } from "./AuthShell";
 
 export function SignUpView() {
@@ -12,6 +12,19 @@ export function SignUpView() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Same dance as SignInView: wait for `useSession` to actually
+  // reflect the new authenticated state before navigating, otherwise
+  // AuthGate sees `auth.status === "unauthenticated"` for one render
+  // cycle and bounces us back here. AuthGate also handles the
+  // "authenticated but not onboarded" case, so /notebooks is fine
+  // either way as the post-signup target.
+  useEffect(() => {
+    if (submitted && auth.status === "authenticated") {
+      router.replace("/notebooks");
+    }
+  }, [submitted, auth.status, router]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,7 +36,7 @@ export function SignUpView() {
       setErr(res.error ?? "Could not create your account.");
       return;
     }
-    router.push("/notebooks");
+    setSubmitted(true);
   }
 
   return (
