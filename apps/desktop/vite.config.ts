@@ -30,7 +30,14 @@ export default defineConfig({
         const { getStubAdapter } = stubMod as typeof import("./src/server/stub-adapter");
         const { getRequestListener } = honoNode as typeof import("@hono/node-server");
 
-        const adapter = await getStubAdapter();
+        // Vite dev origin — the renderer is served from this exact URL
+        // and Better Auth needs it in `trustedOrigins` to accept the
+        // sign-in POSTs the wizard fires. Phase 2's packaged Electron
+        // build passes a `http://127.0.0.1:<port>` URL into the same
+        // adapter at runtime; the shape of the call is identical.
+        const adapter = await getStubAdapter({
+          baseURL: "http://localhost:5173",
+        });
         const app = createApp(adapter);
         const handler = getRequestListener(app.fetch);
         server.middlewares.use((req, res, next) => {

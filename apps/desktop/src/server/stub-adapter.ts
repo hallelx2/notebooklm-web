@@ -167,8 +167,28 @@ function buildPGlite() {
   return new PGlite(dbDir, { extensions: { vector } });
 }
 
-export async function getStubAdapter(): Promise<PlatformAdapter> {
+export type GetStubAdapterOptions = {
+  /**
+   * Origin the local API server is reachable at, e.g.
+   * `http://127.0.0.1:53842`. Better Auth stamps cookies for this
+   * origin and rejects sign-in requests whose `Origin` header isn't
+   * in `trustedOrigins`, so the value has to match exactly what the
+   * renderer fetches against.
+   *
+   * Omitted for the dev path (vite middleware mode) — the legacy
+   * `http://localhost:5173` origin keeps that working.
+   */
+  baseURL?: string;
+};
+
+const DEV_BASE_URL = "http://localhost:5173";
+
+export async function getStubAdapter(
+  options: GetStubAdapterOptions = {},
+): Promise<PlatformAdapter> {
   if (cachedAdapter) return cachedAdapter;
+
+  const baseURL = options.baseURL ?? DEV_BASE_URL;
 
   const cfg = loadOrCreateConfig();
   ensureRuntimeEnv(cfg);
@@ -219,8 +239,8 @@ export async function getStubAdapter(): Promise<PlatformAdapter> {
 
   const auth = createAuth({
     db,
-    baseURL: "http://localhost:5173",
-    trustedOrigins: ["http://localhost:5173"],
+    baseURL,
+    trustedOrigins: [baseURL],
   });
 
   cachedAdapter = {
@@ -228,7 +248,7 @@ export async function getStubAdapter(): Promise<PlatformAdapter> {
     auth,
     storage,
     env: {
-      APP_URL: "http://localhost:5173",
+      APP_URL: baseURL,
       DEEPGRAM_API_KEY: process.env.DEEPGRAM_API_KEY,
       KOKORO_BASE_URL: process.env.KOKORO_BASE_URL,
       KOKORO_API_KEY: process.env.KOKORO_API_KEY,
