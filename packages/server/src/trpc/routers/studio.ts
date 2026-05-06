@@ -136,6 +136,132 @@ Example shape (for a hypothetical topic "Artificial Intelligence"):
   }
 }
 
+/**
+ * Background worker for `studio.generate`. Runs the chat-model call
+ * + content shaping + status update outside the tRPC request lifetime
+ * so the client gets a sub-second response and the LLM is free to take
+ * as long as it needs. All errors are caught and persisted as a row
+ * status flip — nothing escapes to the unhandled-rejection handler.
+ */
+async function runGeneration(args: {
+  adapter: PlatformAdapter;
+  userId: string;
+  rowId: string;
+  kind: string;
+  notebookId: string;
+  topic: string;
+  description: string | null;
+  questionCount: number | undefined;
+}): Promise<void> {
+  const { adapter, userId, rowId, kind, notebookId } = args;
+  try {
+    let chatModel: Awaited<ReturnType<typeof getChatModel>>;
+    try {
+      chatModel = await getChatModel(userId);
+    } catch (err) {
+      if (err instanceof NoAiConfigError) {
+        throw new Error(
+          "Configure a chat provider in Settings before generating studio outputs.",
+        );
+      }
+      throw err;
+    }
+
+    const readySources = await adapter.db
+      .select({ content: sources.content })
+      .from(sources)
+      .where(
+        and(eq(sources.notebookId, notebookId), eq(sources.status, "ready")),
+      );
+
+    // Defense-in-depth: even rows marked status="ready" can carry
+    // mojibake if they were ingested before the parse-time guard
+    // landed (or by a parallel path that bypassed it). Filter those
+    // out HERE so they can't poison the studio prompt with binary
+    // junk and steer the model toward off-topic output.
+    let skipped = 0;
+    let combinedContent = "";
+    for (const s of readySources) {
+      if (!s.content) continue;
+      const check = isReadable(s.content);
+      if (!check.ok) {
+        skipped++;
+        continue;
+      }
+      combinedContent += s.content + "\n\n";
+      if (combinedContent.length >= 20000) break;
+    }
+    combinedContent = combinedContent.slice(0, 20000);
+
+    if (!combinedContent.trim()) {
+      throw new Error(
+        skipped > 0
+          ? `No readable source content available. ${skipped} source${skipped === 1 ? " was" : "s were"} skipped because text extraction produced unreadable content (likely image-only PDFs or encrypted streams). Try re-ingesting with OCR, or add a different source.`
+          : "No source content available. Add sources to the notebook first.",
+      );
+    }
+
+    const prompt = buildPrompt(kind, combinedContent, {
+      topic: args.topic,
+      description: args.description,
+      questionCount: args.questionCount,
+    });
+
+    const { text: generatedText } = await generateText({
+      model: chatModel,
+      prompt,
+    });
+
+    let content: unknown;
+    if (kind === "mind-map") {
+      const cleaned = generatedText
+        .replace(/^```(?:markdown|md)?\s*\n?/i, "")
+        .replace(/\n?```\s*$/i, "")
+        .trim();
+      content = { markdown: cleaned };
+    } else if (STRUCTURED_KINDS.has(kind)) {
+      try {
+        const cleaned = generatedText
+          .replace(/^```(?:json)?\s*\n?/i, "")
+          .replace(/\n?```\s*$/i, "")
+          .trim();
+        content = JSON.parse(cleaned);
+      } catch {
+        // If JSON parsing fails, store as text
+        content = { text: generatedText };
+      }
+    } else {
+      content = { text: generatedText };
+    }
+
+    await adapter.db
+      .update(studioOutputs)
+      .set({ content, status: "ready" })
+      .where(eq(studioOutputs.id, rowId));
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+    // biome-ignore lint/suspicious/noConsole: surfaces the actual stack to desktop.log
+    console.error(
+      `[studio.generate] ${kind} (${rowId}) failed:`,
+      err instanceof Error ? err.stack || err.message : err,
+    );
+    try {
+      await adapter.db
+        .update(studioOutputs)
+        .set({ status: "error", content: { error: errorMessage } })
+        .where(eq(studioOutputs.id, rowId));
+    } catch (writeErr) {
+      // Last-ditch — if even the error write fails, the launch-time
+      // `reapOrphanedJobs` sweep will clean up the row eventually.
+      // biome-ignore lint/suspicious/noConsole: critical-path diagnostic
+      console.error(
+        `[studio.generate] failed to persist error status for ${rowId}:`,
+        writeErr,
+      );
+    }
+  }
+}
+
 export const studioRouter = router({
   list: protectedProcedure
     .input(z.object({ notebookId: z.string().uuid() }))
@@ -196,114 +322,29 @@ export const studioRouter = router({
         })
         .returning();
 
-      try {
-        let chatModel: Awaited<ReturnType<typeof getChatModel>>;
-        try {
-          chatModel = await getChatModel(ctx.user.id);
-        } catch (err) {
-          if (err instanceof NoAiConfigError) {
-            throw new Error(
-              "Configure a chat provider in Settings before generating studio outputs.",
-            );
-          }
-          throw err;
-        }
+      // Fire-and-forget the LLM work. Returning the inserted row
+      // immediately means the desktop client's 15s fetch timeout
+      // (apps/desktop/src/providers/ApiBaseUrlProvider.tsx) doesn't
+      // collide with quiz/study-guide/etc. generations that routinely
+      // run 30–120s. The renderer's StudioPanel polls `studio.list`
+      // every 2s while any row has status "generating" and picks up
+      // the eventual `ready`/`error` flip.
+      //
+      // If the process dies mid-generation, `reapOrphanedJobs` in
+      // apps/desktop/src/server/stub-adapter.ts marks the leftover
+      // row as `error` on next launch — no stuck spinners.
+      void runGeneration({
+        adapter: ctx.adapter,
+        userId: ctx.user.id,
+        rowId: row.id,
+        kind: input.kind,
+        notebookId: input.notebookId,
+        topic: nb.title,
+        description: nb.description,
+        questionCount: input.questionCount,
+      });
 
-        const readySources = await ctx.adapter.db
-          .select({ content: sources.content })
-          .from(sources)
-          .where(
-            and(
-              eq(sources.notebookId, input.notebookId),
-              eq(sources.status, "ready"),
-            ),
-          );
-
-        // Defense-in-depth: even rows marked status="ready" can carry
-        // mojibake if they were ingested before the parse-time guard
-        // landed (or by a parallel path that bypassed it). Filter those
-        // out HERE so they can't poison the studio prompt with binary
-        // junk and steer the model toward off-topic output.
-        let skipped = 0;
-        let combinedContent = "";
-        for (const s of readySources) {
-          if (!s.content) continue;
-          const check = isReadable(s.content);
-          if (!check.ok) {
-            skipped++;
-            continue;
-          }
-          combinedContent += s.content + "\n\n";
-          if (combinedContent.length >= 20000) break;
-        }
-        combinedContent = combinedContent.slice(0, 20000);
-
-        if (!combinedContent.trim()) {
-          throw new Error(
-            skipped > 0
-              ? `No readable source content available. ${skipped} source${skipped === 1 ? " was" : "s were"} skipped because text extraction produced unreadable content (likely image-only PDFs or encrypted streams). Try re-ingesting with OCR, or add a different source.`
-              : "No source content available. Add sources to the notebook first.",
-          );
-        }
-
-        const prompt = buildPrompt(input.kind, combinedContent, {
-          topic: nb.title,
-          description: nb.description,
-          questionCount: input.questionCount,
-        });
-
-        const { text: generatedText } = await generateText({
-          model: chatModel,
-          prompt,
-        });
-
-        let content: unknown;
-
-        if (input.kind === "mind-map") {
-          // Mind map stores markdown for markmap rendering
-          const cleaned = generatedText
-            .replace(/^```(?:markdown|md)?\s*\n?/i, "")
-            .replace(/\n?```\s*$/i, "")
-            .trim();
-          content = { markdown: cleaned };
-        } else if (STRUCTURED_KINDS.has(input.kind)) {
-          try {
-            // Strip markdown code fences if present
-            const cleaned = generatedText
-              .replace(/^```(?:json)?\s*\n?/i, "")
-              .replace(/\n?```\s*$/i, "")
-              .trim();
-            content = JSON.parse(cleaned);
-          } catch {
-            // If JSON parsing fails, store as text
-            content = { text: generatedText };
-          }
-        } else {
-          content = { text: generatedText };
-        }
-
-        const [updated] = await ctx.adapter.db
-          .update(studioOutputs)
-          .set({ content, status: "ready" })
-          .where(eq(studioOutputs.id, row.id))
-          .returning();
-
-        return updated;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Unknown error";
-
-        const [updated] = await ctx.adapter.db
-          .update(studioOutputs)
-          .set({
-            status: "error",
-            content: { error: errorMessage },
-          })
-          .where(eq(studioOutputs.id, row.id))
-          .returning();
-
-        return updated;
-      }
+      return row;
     }),
 
   delete: protectedProcedure

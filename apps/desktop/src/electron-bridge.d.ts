@@ -43,6 +43,22 @@ declare global {
        * `shell.openExternal` directly to the renderer.
        */
       openExternal(url: string): Promise<void>;
+
+      /**
+       * Resolves to the on-disk path of `desktop.log`, or null when the
+       * file logger couldn't be installed (memory mode or unwritable
+       * data dir). Renderer can show this path in an error UI so the
+       * user knows where to grab logs from.
+       */
+      getLogPath(): Promise<string | null>;
+
+      /**
+       * Reveal `desktop.log` in the platform file manager. Equivalent
+       * to the Help > Show Logs menu item; exposed so renderer-side
+       * error surfaces can escalate users to the same file with one
+       * click. Resolves true on success, false if the logger isn't up.
+       */
+      showLog(): Promise<boolean>;
     };
   }
 

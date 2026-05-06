@@ -62,4 +62,25 @@ contextBridge.exposeInMainWorld("notebooklm", {
   openExternal(url) {
     return ipcRenderer.invoke("notebooklm:open-external", url);
   },
+
+  /**
+   * Resolves to the on-disk path of `desktop.log`, or null if early-boot
+   * couldn't install a logger (memory mode or unwritable data dir).
+   * The renderer can render a "Send logs" affordance that points users
+   * at this path.
+   * @returns {Promise<string|null>}
+   */
+  getLogPath() {
+    return ipcRenderer.invoke("notebooklm:log-path");
+  },
+
+  /**
+   * Reveal the desktop.log file in the platform file manager. Equivalent
+   * to the Help > Show Logs menu item, exposed for in-renderer error UIs
+   * that want a one-click escalation.
+   * @returns {Promise<boolean>} true if the file was revealed.
+   */
+  showLog() {
+    return ipcRenderer.invoke("notebooklm:show-log");
+  },
 });
