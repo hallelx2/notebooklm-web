@@ -7,6 +7,25 @@ import { coreDb } from "../runtime";
 const DEFAULT_TITLES = new Set(["Untitled notebook", "Untitled"]);
 
 /**
+ * In-flight auto-title work, keyed by notebookId. The ingest pipeline
+ * fires `maybeAutoTitleAndSummarize` after each source finishes parsing,
+ * fire-and-forget. When a user uploads N sources at once, those parses
+ * complete in parallel and all see the still-default title — every one
+ * of them launches its own LLM call and races to UPDATE the notebook
+ * row. The user-visible bug: the title flickers through several
+ * different generated values during ingest before settling on
+ * whichever lost the race last.
+ *
+ * Dedupe by holding one Promise per notebook for the duration of the
+ * LLM + DB write. Concurrent callers `await` the same Promise (no
+ * extra LLM call). Late callers — after the title is set — fall
+ * through to the existing `needsTitle / needsDescription` check and
+ * return early. Process-local; sufficient for the desktop's single
+ * api-server process and the web app's per-request worker model.
+ */
+const inflight = new Map<string, Promise<void>>();
+
+/**
  * Best-effort: if the notebook still has the default title or no description,
  * ask the user's configured chat model to suggest something based on the
  * first source's text. Silent on any failure -- this is a UX nicety, not a
@@ -20,6 +39,23 @@ const DEFAULT_TITLES = new Set(["Untitled notebook", "Untitled"]);
  * orchestration, not an LLM call.
  */
 export async function maybeAutoTitleAndSummarize(
+  userId: string,
+  notebookId: string,
+  sourcePreview: string,
+) {
+  const existing = inflight.get(notebookId);
+  if (existing) return existing;
+
+  const work = runAutoTitle(userId, notebookId, sourcePreview);
+  inflight.set(notebookId, work);
+  try {
+    await work;
+  } finally {
+    inflight.delete(notebookId);
+  }
+}
+
+async function runAutoTitle(
   userId: string,
   notebookId: string,
   sourcePreview: string,

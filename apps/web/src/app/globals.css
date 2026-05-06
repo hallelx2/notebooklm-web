@@ -5,6 +5,12 @@
    @notebooklm/ui get tree-shaken from the production bundle. */
 @source "../../../../packages/ui/src/**/*.{ts,tsx}";
 
+/* Typography plugin — provides the `prose` utilities the markdown surfaces
+   in @notebooklm/ui rely on. Without this, react-markdown emits semantic
+   HTML but Tailwind's Preflight resets browser heading defaults so
+   everything collapses to body size. */
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {

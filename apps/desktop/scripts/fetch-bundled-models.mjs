@@ -41,8 +41,18 @@ const MANIFEST = [
    * file-system cache understands as "already downloaded".
    *
    * dtype=q8 — 80MB, indistinguishable from fp32 on CPU for this
-   * model, runs at ~real-time on a modern laptop. Other dtype
-   * variants stay on HF Hub for advanced users who switch.
+   * model, runs at ~real-time on a modern laptop. Matches the
+   * runtime default in packages/core/src/tts/kokoro-local.ts.
+   *
+   * IMPORTANT: the on-disk filename has to match transformers.js's
+   * `DEFAULT_DTYPE_SUFFIX_MAPPING`. For `dtype: "q8"` that suffix
+   * is `_quantized`, so the file MUST be `onnx/model_quantized.onnx`.
+   * Shipping `model_q8f16.onnx` (a different quant the HF repo
+   * also offers) ships ~80MB the runtime never opens, and the
+   * runtime fails with "couldn't load the ONNX model files"
+   * because the filename it computes — `model_quantized.onnx` —
+   * isn't on disk. Other dtype variants stay on HF Hub for users
+   * who switch.
    */
   {
     name: "kokoro",
@@ -51,7 +61,7 @@ const MANIFEST = [
       "config.json",
       "tokenizer.json",
       "tokenizer_config.json",
-      "onnx/model_q8f16.onnx",
+      "onnx/model_quantized.onnx",
       "voices/af_bella.bin",
       "voices/am_michael.bin",
     ],

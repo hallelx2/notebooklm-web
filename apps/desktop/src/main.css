@@ -6,6 +6,13 @@
 @source "../../../packages/ui/src/**/*.{ts,tsx}";
 @source "./**/*.{ts,tsx}";
 
+/* Typography plugin — provides the `prose` / `prose-sm` / `dark:prose-invert`
+   utilities the markdown surfaces (DeepResearchModal, ChatPanel,
+   StudioOutputView/Modal, UploadModal) rely on. Without this, react-markdown
+   emits semantic HTML but Tailwind's Preflight resets browser heading
+   defaults so everything collapses to body size. */
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
