@@ -130,8 +130,20 @@ async function loadModel(
     let cacheDir = "(unresolved)";
     let bundledMode = false;
     try {
-      // biome-ignore lint/suspicious/noExplicitAny: same optional-dep dance
-      const tx = mod.env ?? (mod.default && mod.default.env);
+      // CRITICAL: configure the *transformers.js* env, not kokoro-js's.
+      //
+      // kokoro-js re-exports a stub object also called `env` that only
+      // proxies `wasmPaths` — every other property assignment becomes a
+      // dead-letter on the wrapper and never reaches transformers.js.
+      // The previous `mod.env ?? tjs.env` fallback always took the
+      // wrapper, so `localModelPath`, `allowRemoteModels`, etc. were
+      // black-holed and transformers.js fell back to its in-asar default
+      // `models/` directory, missed the file, fetched remotely, got a
+      // `Response` (not `FileResponse`), then with `return_path=true`
+      // couldn't satisfy the `instanceof FileResponse` check and threw
+      // the generic "Unable to get model file path or buffer." That's
+      // the failure the user saw on every packaged build despite the
+      // bundled .onnx being right there on disk.
       const tjs = (await import("@huggingface/transformers")) as {
         env: {
           cacheDir?: string;
@@ -140,7 +152,7 @@ async function loadModel(
           localModelPath?: string;
         };
       };
-      const env = tx ?? tjs.env;
+      const env = tjs.env;
 
       // If a bundled-models dir is set AND it actually contains the
       // weights for our model id, use it as a *local model path* rather
