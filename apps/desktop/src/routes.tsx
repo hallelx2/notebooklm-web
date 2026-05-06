@@ -24,6 +24,7 @@ import { ApiBaseUrlGate } from "./providers/ApiBaseUrlProvider";
 import { AuthBridge } from "./providers/AuthBridge";
 import { RouterBridge } from "./providers/RouterBridge";
 import { TransportBridge } from "./providers/TransportBridge";
+import { UpdateBanner } from "./providers/UpdateBanner";
 
 const rootRoute = createRootRoute({
   // Bridges live INSIDE the TanStack Router so RouterBridge can read its
@@ -41,6 +42,7 @@ const rootRoute = createRootRoute({
         <ApiBaseUrlGate>
           <TransportBridge>
             <AuthBridge>
+              <UpdateBanner />
               <Outlet />
             </AuthBridge>
           </TransportBridge>
@@ -205,7 +207,45 @@ const routeTree = rootRoute.addChildren([
 // effect on apps/web, which is its own Next.js app.
 const hashHistory = createHashHistory();
 
-export const router = createRouter({ routeTree, history: hashHistory });
+// Plain URL-encoded search params, NOT TanStack's default JSON-wrapped
+// form. Default `stringifySearch` round-trips through `JSON.stringify` /
+// `JSON.parse` for symmetry, so any string value that looks like JSON
+// (including bare numbers) gets wrapped: `{ onboard: "1" }` becomes
+// `?onboard=%221%22` — the literal string `"1"` with quotes baked in.
+//
+// The reader side uses plain `URLSearchParams`
+// (NotebookView.tsx pulls `?onboard=1` from `window.location.hash`),
+// which would then return the literal `"1"` (with quotes) and the
+// `=== "1"` check fails. The result is the source-add modal silently
+// not opening when a notebook is freshly created.
+//
+// Replacing with a no-JSON serializer keeps every value as its string
+// representation. Aligns the writer (RouterBridge.parseHref →
+// tan.navigate({ search })) with what NotebookView's reader expects.
+function stringifySearch(search: Record<string, unknown>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(search)) {
+    if (value === undefined || value === null) continue;
+    params.set(key, String(value));
+  }
+  const str = params.toString();
+  return str ? `?${str}` : "";
+}
+
+function parseSearch(searchStr: string): Record<string, string> {
+  const trimmed = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr;
+  const params = new URLSearchParams(trimmed);
+  const out: Record<string, string> = {};
+  for (const [key, value] of params) out[key] = value;
+  return out;
+}
+
+export const router = createRouter({
+  routeTree,
+  history: hashHistory,
+  parseSearch,
+  stringifySearch,
+});
 
 declare module "@tanstack/react-router" {
   interface Register {

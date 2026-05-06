@@ -26,6 +26,23 @@ declare global {
        * hot-reload doesn't accumulate listeners.
        */
       onMenuCommand(handler: (cmd: MenuCommand) => void): () => void;
+
+      /**
+       * Subscribe to update-available announcements. The autoUpdater fires
+       * this whenever GitHub Releases has a newer version than this build,
+       * regardless of whether the signed-update flow can apply. Renderer
+       * surfaces a banner with the version + a Download button.
+       */
+      onUpdateAvailable(
+        handler: (info: { version: string; releaseUrl: string }) => void,
+      ): () => void;
+
+      /**
+       * Open a URL in the user's default external browser via the main
+       * process. Used by the update banner so we don't expose
+       * `shell.openExternal` directly to the renderer.
+       */
+      openExternal(url: string): Promise<void>;
     };
   }
 

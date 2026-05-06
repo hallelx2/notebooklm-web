@@ -21,6 +21,10 @@
  */
 
 const { autoUpdater } = require("electron-updater");
+const { BrowserWindow } = require("electron");
+
+const RELEASE_URL_BASE =
+  "https://github.com/hallelx2/notebooklm-web/releases/tag";
 
 function setupAutoUpdater({ dialog }) {
   // Quiet mode by default — we do our own dialog UX.
@@ -41,6 +45,25 @@ function setupAutoUpdater({ dialog }) {
     console.log(
       `[NotebookLM Desktop] update available: ${info.version} (current ${autoUpdater.currentVersion?.version})`,
     );
+
+    // Tell every renderer about the new version. We fire this BEFORE
+    // the autoUpdater attempts to download + apply the update — that
+    // way users still get notified even when the auto-installer step
+    // refuses (unsigned builds, signature mismatch). Renderer renders
+    // a banner with a "Download" button that opens the release page.
+    //
+    // Why getAllWindows: the BrowserWindow may not exist yet when the
+    // initial check fires (5s after launch) on a slow boot. We send
+    // to all open windows; the renderer's effect deduplicates by
+    // version so re-firing on the 6h interval is a no-op visually.
+    const releaseUrl = `${RELEASE_URL_BASE}/v${info.version}`;
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (win.isDestroyed()) continue;
+      win.webContents.send("notebooklm:update-available", {
+        version: info.version,
+        releaseUrl,
+      });
+    }
   });
 
   autoUpdater.on("update-not-available", () => {

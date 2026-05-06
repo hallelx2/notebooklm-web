@@ -16,11 +16,15 @@ const REPO_URL = "https://github.com/anthropics/notebooklm-web";
  * Sending a typed command lets the renderer translate it into whatever
  * navigation / state change the UI needs without leaking ipcRenderer.
  *
- * @param {{ isDev: boolean }} opts
+ * @param {{ isDev: boolean; showDevTools?: boolean }} opts
  */
 function buildMenu(opts) {
   const isMac = process.platform === "darwin";
   const isDev = opts.isDev;
+  // `showDevTools` is a superset of `isDev`. In dev builds it's always
+  // true; in packaged builds the env-var override
+  // (NOTEBOOKLM_ENABLE_DEVTOOLS=1) flips it on for support diagnosis.
+  const showDevTools = !!opts.showDevTools || isDev;
 
   /** Resolve the active window at click time so we don't capture a stale ref. */
   const send = (cmd) => {
@@ -107,12 +111,15 @@ function buildMenu(opts) {
   });
 
   // ── View menu ────────────────────────────────────────────────────
-  // Reload / DevTools are dev-only — see commit 3 for the production
-  // gating that also blocks F12 + Cmd-Opt-I via webContents key handler.
+  // Reload / DevTools default to dev-only — packaged builds also block
+  // F12 + Cmd-Opt-I via the webContents key handler. The env-var override
+  // (NOTEBOOKLM_ENABLE_DEVTOOLS=1) is the support escape hatch: it flips
+  // both the menu item and the keyboard blocker on without changing the
+  // rest of the prod build.
   template.push({
     label: "View",
     submenu: [
-      ...(isDev
+      ...(showDevTools
         ? [
             { role: "reload" },
             { role: "forceReload" },
