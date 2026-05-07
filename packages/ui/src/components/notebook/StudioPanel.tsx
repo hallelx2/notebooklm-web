@@ -7,598 +7,598 @@ import { QuizConfigModal } from "./QuizConfigModal";
 import { StudioOutputView } from "./StudioOutputView";
 
 type StudioOutput = {
-  id: string;
-  notebookId: string;
-  kind: string;
-  title: string;
-  content: unknown;
-  assetUrl: string | null;
-  status: string;
-  /** Live progress snapshot for in-flight rows (audio overview only). */
-  progress: unknown;
-  createdAt: Date | string;
+ id: string;
+ notebookId: string;
+ kind: string;
+ title: string;
+ content: unknown;
+ assetUrl: string | null;
+ status: string;
+ /** Live progress snapshot for in-flight rows (audio overview only). */
+ progress: unknown;
+ createdAt: Date | string;
 };
 
 const STUDIO_TOOLS: {
-  kind: string;
-  label: string;
-  icon: string;
-  description: string;
-  color: string;
+ kind: string;
+ label: string;
+ icon: string;
+ description: string;
+ color: string;
 }[] = [
-  {
-    kind: "study-guide",
-    label: "Study guide",
-    icon: "menu_book",
-    description: "Key topics & review",
-    color: "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/15",
-  },
-  {
-    kind: "briefing-doc",
-    label: "Briefing doc",
-    icon: "description",
-    description: "Executive summary",
-    color:
-      "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/15",
-  },
-  {
-    kind: "faq",
-    label: "FAQ",
-    icon: "help",
-    description: "Common questions",
-    color:
-      "text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/15",
-  },
-  {
-    kind: "timeline",
-    label: "Timeline",
-    icon: "timeline",
-    description: "Chronological events",
-    color: "text-cyan-600 dark:text-cyan-400 bg-cyan-100 dark:bg-cyan-500/15",
-  },
-  {
-    kind: "mind-map",
-    label: "Mind map",
-    icon: "account_tree",
-    description: "Visual concept map",
-    color:
-      "text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-500/15",
-  },
-  {
-    kind: "flashcards",
-    label: "Flashcards",
-    icon: "style",
-    description: "Study cards",
-    color: "text-pink-600 dark:text-pink-400 bg-pink-100 dark:bg-pink-500/15",
-  },
-  {
-    kind: "quiz",
-    label: "Quiz",
-    icon: "quiz",
-    description: "Test knowledge",
-    color:
-      "text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-500/15",
-  },
+ {
+ kind: "study-guide",
+ label: "Study guide",
+ icon: "menu_book",
+ description: "Key topics & review",
+ color: "text-blue-600 dark:text-fg-accent bg-accent-soft",
+ },
+ {
+ kind: "briefing-doc",
+ label: "Briefing doc",
+ icon: "description",
+ description: "Executive summary",
+ color:
+ "text-success bg-success/15",
+ },
+ {
+ kind: "faq",
+ label: "FAQ",
+ icon: "help",
+ description: "Common questions",
+ color:
+ "text-warning dark:text-amber-400 bg-warning/15",
+ },
+ {
+ kind: "timeline",
+ label: "Timeline",
+ icon: "timeline",
+ description: "Chronological events",
+ color: "text-cyan-600 dark:text-cyan-400 bg-cyan-100 dark:bg-cyan-500/15",
+ },
+ {
+ kind: "mind-map",
+ label: "Mind map",
+ icon: "account_tree",
+ description: "Visual concept map",
+ color:
+ "text-fg-accent bg-accent-soft",
+ },
+ {
+ kind: "flashcards",
+ label: "Flashcards",
+ icon: "style",
+ description: "Study cards",
+ color: "text-pink-600 dark:text-pink-400 bg-pink-100 dark:bg-pink-500/15",
+ },
+ {
+ kind: "quiz",
+ label: "Quiz",
+ icon: "quiz",
+ description: "Test knowledge",
+ color:
+ "text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-500/15",
+ },
 ];
 
 const KIND_ICONS: Record<string, string> = {
-  "audio-overview": "graphic_eq",
-  "study-guide": "menu_book",
-  "briefing-doc": "description",
-  faq: "help",
-  timeline: "timeline",
-  "mind-map": "account_tree",
-  flashcards: "style",
-  quiz: "quiz",
+ "audio-overview": "graphic_eq",
+ "study-guide": "menu_book",
+ "briefing-doc": "description",
+ faq: "help",
+ timeline: "timeline",
+ "mind-map": "account_tree",
+ flashcards: "style",
+ quiz: "quiz",
 };
 
 const KIND_LABELS: Record<string, string> = {
-  "audio-overview": "Audio Overview",
-  "study-guide": "Study Guide",
-  "briefing-doc": "Briefing Doc",
-  faq: "FAQ",
-  timeline: "Timeline",
-  "mind-map": "Mind Map",
-  flashcards: "Flashcards",
-  quiz: "Quiz",
+ "audio-overview": "Audio Overview",
+ "study-guide": "Study Guide",
+ "briefing-doc": "Briefing Doc",
+ faq: "FAQ",
+ timeline: "Timeline",
+ "mind-map": "Mind Map",
+ flashcards: "Flashcards",
+ quiz: "Quiz",
 };
 
 const KIND_BADGE_COLORS: Record<string, string> = {
-  "audio-overview":
-    "bg-purple-100 dark:bg-purple-500/15 text-purple-600 dark:text-purple-400",
-  "study-guide":
-    "bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400",
-  "briefing-doc":
-    "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-  faq: "bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  timeline: "bg-cyan-100 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
-  "mind-map":
-    "bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400",
-  flashcards:
-    "bg-pink-100 dark:bg-pink-500/15 text-pink-600 dark:text-pink-400",
-  quiz: "bg-orange-100 dark:bg-orange-500/15 text-orange-600 dark:text-orange-400",
+ "audio-overview":
+ "bg-purple-100 dark:bg-purple-500/15 text-purple-600 dark:text-purple-400",
+ "study-guide":
+ "bg-accent-soft text-blue-600 dark:text-fg-accent",
+ "briefing-doc":
+ "bg-success/15 text-success",
+ faq: "bg-warning/15 text-warning dark:text-amber-400",
+ timeline: "bg-cyan-100 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
+ "mind-map":
+ "bg-accent-soft text-fg-accent",
+ flashcards:
+ "bg-pink-100 dark:bg-pink-500/15 text-pink-600 dark:text-pink-400",
+ quiz: "bg-orange-100 dark:bg-orange-500/15 text-orange-600 dark:text-orange-400",
 };
 
 function formatRelativeDate(d: Date | string) {
-  const date = typeof d === "string" ? new Date(d) : d;
-  const now = Date.now();
-  const diff = Math.floor((now - date.getTime()) / 1000);
-  if (diff < 60) return "Just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
+ const date = typeof d === "string" ? new Date(d) : d;
+ const now = Date.now();
+ const diff = Math.floor((now - date.getTime()) / 1000);
+ if (diff < 60) return "Just now";
+ if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+ if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+ if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+ return date.toLocaleDateString(undefined, {
+ month: "short",
+ day: "numeric",
+ });
 }
 
 export function StudioPanel({
-  notebookId,
-  onMindmapNodeClick,
+ notebookId,
+ onMindmapNodeClick,
 }: {
-  notebookId: string;
-  onMindmapNodeClick?: (nodeText: string) => void;
+ notebookId: string;
+ onMindmapNodeClick?: (nodeText: string) => void;
 }) {
-  const utils = trpc.useUtils();
-  const [generatingKind, setGeneratingKind] = useState<string | null>(null);
-  const [selectedOutput, setSelectedOutput] = useState<StudioOutput | null>(
-    null,
-  );
-  const [audioModalOpen, setAudioModalOpen] = useState(false);
-  // When set, the audio modal opens in "reattach" mode and polls this
-  // row's progress instead of POSTing a new audio-overview job. Cleared
-  // on close so the next "Generate" click goes through the fresh-job
-  // configuration form as usual.
-  const [audioReattachId, setAudioReattachId] = useState<string | null>(null);
-  const [quizModalOpen, setQuizModalOpen] = useState(false);
+ const utils = trpc.useUtils();
+ const [generatingKind, setGeneratingKind] = useState<string | null>(null);
+ const [selectedOutput, setSelectedOutput] = useState<StudioOutput | null>(
+ null,
+ );
+ const [audioModalOpen, setAudioModalOpen] = useState(false);
+ // When set, the audio modal opens in "reattach" mode and polls this
+ // row's progress instead of POSTing a new audio-overview job. Cleared
+ // on close so the next "Generate" click goes through the fresh-job
+ // configuration form as usual.
+ const [audioReattachId, setAudioReattachId] = useState<string | null>(null);
+ const [quizModalOpen, setQuizModalOpen] = useState(false);
 
-  // Poll every 2s while EITHER (a) the user just kicked off a non-
-  // streaming studio output via the `generate` mutation (`generatingKind`
-  // is set until that mutation resolves) OR (b) any row in the latest
-  // payload still has status "generating". Case (b) is what catches
-  // audio overview — it streams over its own /api/studio/audio-overview
-  // endpoint and never touches `generatingKind`, so without this the
-  // panel would never re-fetch and the row would be stuck on
-  // "Generating..." forever.
-  const listQ = trpc.studio.list.useQuery(
-    { notebookId },
-    {
-      refetchInterval: (query) => {
-        const data = query.state.data as StudioOutput[] | undefined;
-        if (generatingKind !== null) return 2000;
-        if (data?.some((o) => o.status === "generating")) return 2000;
-        return false;
-      },
-    },
-  );
-  const outputs = (listQ.data ?? []) as StudioOutput[];
+ // Poll every 2s while EITHER (a) the user just kicked off a non-
+ // streaming studio output via the `generate` mutation (`generatingKind`
+ // is set until that mutation resolves) OR (b) any row in the latest
+ // payload still has status "generating". Case (b) is what catches
+ // audio overview — it streams over its own /api/studio/audio-overview
+ // endpoint and never touches `generatingKind`, so without this the
+ // panel would never re-fetch and the row would be stuck on
+ // "Generating..." forever.
+ const listQ = trpc.studio.list.useQuery(
+ { notebookId },
+ {
+ refetchInterval: (query) => {
+ const data = query.state.data as StudioOutput[] | undefined;
+ if (generatingKind !== null) return 2000;
+ if (data?.some((o) => o.status === "generating")) return 2000;
+ return false;
+ },
+ },
+ );
+ const outputs = (listQ.data ?? []) as StudioOutput[];
 
-  const generate = trpc.studio.generate.useMutation({
-    onSuccess: () => {
-      setGeneratingKind(null);
-      utils.studio.list.invalidate({ notebookId });
-    },
-    onError: () => {
-      setGeneratingKind(null);
-    },
-  });
+ const generate = trpc.studio.generate.useMutation({
+ onSuccess: () => {
+ setGeneratingKind(null);
+ utils.studio.list.invalidate({ notebookId });
+ },
+ onError: () => {
+ setGeneratingKind(null);
+ },
+ });
 
-  const deleteMut = trpc.studio.delete.useMutation({
-    onSuccess: () => {
-      utils.studio.list.invalidate({ notebookId });
-      setSelectedOutput(null);
-    },
-  });
+ const deleteMut = trpc.studio.delete.useMutation({
+ onSuccess: () => {
+ utils.studio.list.invalidate({ notebookId });
+ setSelectedOutput(null);
+ },
+ });
 
-  function handleGenerate(kind: string) {
-    setGeneratingKind(kind);
-    generate.mutate({ notebookId, kind });
-  }
+ function handleGenerate(kind: string) {
+ setGeneratingKind(kind);
+ generate.mutate({ notebookId, kind });
+ }
 
-  function handleDelete(id: string) {
-    deleteMut.mutate({ id });
-  }
+ function handleDelete(id: string) {
+ deleteMut.mutate({ id });
+ }
 
-  /**
-   * Cancel an in-flight generating job. POSTs to /api/studio/cancel
-   * directly (not tRPC) so the existing audio-overview handler's
-   * job registry can pick it up via shared in-process state. After
-   * the request resolves we invalidate the list to pick up the new
-   * `cancelled` row state.
-   */
-  async function handleCancel(id: string) {
-    try {
-      await fetch("/api/studio/cancel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-    } catch {
-      // best effort — the polling loop will pick up the new state
-      // either way
-    }
-    utils.studio.list.invalidate({ notebookId });
-  }
+ /**
+ * Cancel an in-flight generating job. POSTs to /api/studio/cancel
+ * directly (not tRPC) so the existing audio-overview handler's
+ * job registry can pick it up via shared in-process state. After
+ * the request resolves we invalidate the list to pick up the new
+ * `cancelled` row state.
+ */
+ async function handleCancel(id: string) {
+ try {
+ await fetch("/api/studio/cancel", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({ id }),
+ });
+ } catch {
+ // best effort — the polling loop will pick up the new state
+ // either way
+ }
+ utils.studio.list.invalidate({ notebookId });
+ }
 
-  // ─── Detail View ──────────────────────────────────────────────────
-  if (selectedOutput) {
-    const badgeColor =
-      KIND_BADGE_COLORS[selectedOutput.kind] ??
-      "bg-gray-100 dark:bg-gray-500/15 text-gray-600 dark:text-gray-400";
-    return (
-      <>
-        <div className="p-3 border-b border-border-light dark:border-border-dark shrink-0">
-          <div className="flex items-center gap-1.5 text-xs">
-            <button
-              type="button"
-              onClick={() => setSelectedOutput(null)}
-              className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium"
-            >
-              <span className="material-symbols-outlined text-[14px]">
-                arrow_back
-              </span>
-              Studio
-            </button>
-            <span className="text-gray-300 dark:text-gray-600">/</span>
-            <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${badgeColor}`}
-            >
-              <span className="material-symbols-outlined text-[12px]">
-                {KIND_ICONS[selectedOutput.kind] ?? "auto_awesome"}
-              </span>
-              {KIND_LABELS[selectedOutput.kind] ?? selectedOutput.kind}
-            </span>
-          </div>
-          <div className="flex items-center justify-between mt-2">
-            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate pr-2">
-              {selectedOutput.title}
-            </h3>
-            <button
-              type="button"
-              onClick={() => handleDelete(selectedOutput.id)}
-              className="p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-500/10 text-red-500 transition-colors shrink-0"
-              title="Delete"
-            >
-              <span className="material-symbols-outlined text-[16px]">
-                delete
-              </span>
-            </button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto min-h-0">
-          <StudioOutputView
-            output={selectedOutput}
-            onNodeClick={onMindmapNodeClick}
-          />
-        </div>
-      </>
-    );
-  }
+ // ─── Detail View ──────────────────────────────────────────────────
+ if (selectedOutput) {
+ const badgeColor =
+ KIND_BADGE_COLORS[selectedOutput.kind] ??
+ "bg-accent-soft dark:bg-gray-500/15 text-fg-secondary dark:text-fg-muted";
+ return (
+ <>
+ <div className="p-3 border-b border-border-subtle dark:border-border-subtle shrink-0">
+ <div className="flex items-center gap-1.5 text-xs">
+ <button
+ type="button"
+ onClick={() => setSelectedOutput(null)}
+ className="flex items-center gap-1 text-fg-muted hover:text-blue-600 dark:hover:text-fg-accent transition-colors font-medium"
+ >
+ <span className="material-symbols-outlined text-[14px]">
+ arrow_back
+ </span>
+ Studio
+ </button>
+ <span className="text-fg-secondary dark:text-fg-secondary">/</span>
+ <span
+ className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${badgeColor}`}
+ >
+ <span className="material-symbols-outlined text-[12px]">
+ {KIND_ICONS[selectedOutput.kind] ?? "auto_awesome"}
+ </span>
+ {KIND_LABELS[selectedOutput.kind] ?? selectedOutput.kind}
+ </span>
+ </div>
+ <div className="flex items-center justify-between mt-2">
+ <h3 className="text-sm font-semibold text-fg-secondary truncate pr-2">
+ {selectedOutput.title}
+ </h3>
+ <button
+ type="button"
+ onClick={() => handleDelete(selectedOutput.id)}
+ className="p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-500/10 text-red-500 transition-colors shrink-0"
+ title="Delete"
+ >
+ <span className="material-symbols-outlined text-[16px]">
+ delete
+ </span>
+ </button>
+ </div>
+ </div>
+ <div className="flex-1 overflow-y-auto min-h-0">
+ <StudioOutputView
+ output={selectedOutput}
+ onNodeClick={onMindmapNodeClick}
+ />
+ </div>
+ </>
+ );
+ }
 
-  // ─── Default List View ────────────────────────────────────────────
-  return (
-    <>
-      <div className="p-4 flex items-center justify-between border-b border-border-light dark:border-border-dark shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-lg text-indigo-500 dark:text-indigo-400">
-            auto_awesome
-          </span>
-          <h2 className="font-semibold text-gray-800 dark:text-gray-200">
-            Studio
-          </h2>
-        </div>
-      </div>
+ // ─── Default List View ────────────────────────────────────────────
+ return (
+ <>
+ <div className="p-4 flex items-center justify-between border-b border-border-subtle dark:border-border-subtle shrink-0">
+ <div className="flex items-center gap-2">
+ <span className="material-symbols-outlined text-lg text-fg-accent">
+ auto_awesome
+ </span>
+ <h2 className="font-semibold text-fg-secondary">
+ Studio
+ </h2>
+ </div>
+ </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {/* ── Audio Overview — Featured Hero ─────────────────────── */}
-        <div className="p-4">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-5 shadow-lg shadow-indigo-500/10">
-            {/* Glow effects */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
-            <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-purple-400/20 rounded-full blur-2xl pointer-events-none" />
+ <div className="flex-1 overflow-y-auto">
+ {/* ── Audio Overview — Featured Hero ─────────────────────── */}
+ <div className="p-4">
+ <div className="relative overflow-hidden rounded-2xl bg-[var(--ds-accent-gradient)] p-5 shadow-lg shadow-indigo-500/10">
+ {/* Glow effects */}
+ <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
+ <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-purple-400/20 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-inner">
-                  <span className="material-symbols-outlined text-white text-xl icon-filled">
-                    headphones
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-white font-bold text-sm tracking-tight">
-                    Audio Overview
-                  </h3>
-                  <p className="text-white/60 text-[11px]">
-                    AI podcast about your sources
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAudioModalOpen(true)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white text-sm font-semibold transition-all border border-white/10 hover:border-white/20 shadow-sm"
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  auto_awesome
-                </span>
-                Generate
-              </button>
-            </div>
-          </div>
-        </div>
+ <div className="relative z-10">
+ <div className="flex items-center gap-3 mb-4">
+ <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-inner">
+ <span className="material-symbols-outlined text-white text-xl icon-filled">
+ headphones
+ </span>
+ </div>
+ <div>
+ <h3 className="text-white font-bold text-sm tracking-tight">
+ Audio Overview
+ </h3>
+ <p className="text-white/60 text-[11px]">
+ AI podcast about your sources
+ </p>
+ </div>
+ </div>
+ <button
+ type="button"
+ onClick={() => setAudioModalOpen(true)}
+ className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white text-sm font-semibold transition-all border border-white/10 hover:border-white/20 shadow-sm"
+ >
+ <span className="material-symbols-outlined text-[18px]">
+ auto_awesome
+ </span>
+ Generate
+ </button>
+ </div>
+ </div>
+ </div>
 
-        {/* ── Tools Grid ─────────────────────────────────────────── */}
-        <div className="px-4 pb-5">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="material-symbols-outlined text-[15px] text-gray-400 dark:text-gray-500">
-              dashboard_customize
-            </span>
-            <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-[0.12em]">
-              Generate
-            </span>
-          </div>
+ {/* ── Tools Grid ─────────────────────────────────────────── */}
+ <div className="px-4 pb-5">
+ <div className="flex items-center gap-2 mb-3">
+ <span className="material-symbols-outlined text-[15px] text-fg-muted">
+ dashboard_customize
+ </span>
+ <span className="text-[10px] font-bold text-fg-muted uppercase tracking-[0.12em]">
+ Generate
+ </span>
+ </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            {STUDIO_TOOLS.map((tool) => {
-              const isGenerating = generatingKind === tool.kind;
-              const colorParts = tool.color.split(" ");
-              // Extract the bg class for the icon container
-              const iconBg = colorParts
-                .filter((c) => c.startsWith("bg-"))
-                .join(" ");
-              const iconText = colorParts
-                .filter((c) => c.startsWith("text-"))
-                .join(" ");
+ <div className="grid grid-cols-2 gap-2">
+ {STUDIO_TOOLS.map((tool) => {
+ const isGenerating = generatingKind === tool.kind;
+ const colorParts = tool.color.split(" ");
+ // Extract the bg class for the icon container
+ const iconBg = colorParts
+ .filter((c) => c.startsWith("bg-"))
+ .join(" ");
+ const iconText = colorParts
+ .filter((c) => c.startsWith("text-"))
+ .join(" ");
 
-              return (
-                <button
-                  key={tool.kind}
-                  type="button"
-                  disabled={isGenerating}
-                  onClick={() =>
-                    tool.kind === "quiz"
-                      ? setQuizModalOpen(true)
-                      : handleGenerate(tool.kind)
-                  }
-                  className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-element-light dark:bg-element-dark hover:bg-gray-100 dark:hover:bg-gray-700/80 border border-transparent hover:border-border-light dark:hover:border-border-dark transition-all text-left disabled:opacity-50"
-                >
-                  <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${iconBg}`}
-                  >
-                    {isGenerating ? (
-                      <span className="material-symbols-outlined text-[16px] animate-spin text-indigo-500">
-                        progress_activity
-                      </span>
-                    ) : (
-                      <span
-                        className={`material-symbols-outlined text-[16px] ${iconText}`}
-                      >
-                        {tool.icon}
-                      </span>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
-                      {tool.label}
-                    </p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
-                      {tool.description}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+ return (
+ <button
+ key={tool.kind}
+ type="button"
+ disabled={isGenerating}
+ onClick={() =>
+ tool.kind === "quiz"
+ ? setQuizModalOpen(true)
+ : handleGenerate(tool.kind)
+ }
+ className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-elevated dark:bg-elevated hover:bg-accent-soft dark:hover:bg-border-strong/80 border border-transparent hover:border-border-subtle dark:hover:border-border-subtle transition-all text-left disabled:opacity-50"
+ >
+ <div
+ className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${iconBg}`}
+ >
+ {isGenerating ? (
+ <span className="material-symbols-outlined text-[16px] animate-spin text-fg-accent">
+ progress_activity
+ </span>
+ ) : (
+ <span
+ className={`material-symbols-outlined text-[16px] ${iconText}`}
+ >
+ {tool.icon}
+ </span>
+ )}
+ </div>
+ <div className="min-w-0">
+ <p className="text-xs font-semibold text-fg-secondary truncate">
+ {tool.label}
+ </p>
+ <p className="text-[10px] text-fg-muted truncate">
+ {tool.description}
+ </p>
+ </div>
+ </button>
+ );
+ })}
+ </div>
+ </div>
 
-        {/* ── Saved Outputs ──────────────────────────────────────── */}
-        <div className="px-4 pb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="material-symbols-outlined text-[15px] text-gray-400 dark:text-gray-500">
-              inventory_2
-            </span>
-            <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-[0.12em]">
-              Saved
-            </span>
-            {outputs.length > 0 && (
-              <span className="text-[9px] font-bold text-white bg-indigo-500 px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                {outputs.length}
-              </span>
-            )}
-          </div>
+ {/* ── Saved Outputs ──────────────────────────────────────── */}
+ <div className="px-4 pb-4">
+ <div className="flex items-center gap-2 mb-3">
+ <span className="material-symbols-outlined text-[15px] text-fg-muted">
+ inventory_2
+ </span>
+ <span className="text-[10px] font-bold text-fg-muted uppercase tracking-[0.12em]">
+ Saved
+ </span>
+ {outputs.length > 0 && (
+ <span className="text-[9px] font-bold text-white bg-accent-soft0 px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+ {outputs.length}
+ </span>
+ )}
+ </div>
 
-          {listQ.isPending ? (
-            <div className="space-y-2 animate-pulse">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-2.5 px-2.5 py-2">
-                  <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg" />
-                  <div className="flex-1 space-y-1">
-                    <div className="h-3.5 w-3/4 bg-gray-200 dark:bg-gray-700 rounded" />
-                    <div className="h-2.5 w-1/3 bg-gray-200 dark:bg-gray-700 rounded" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : outputs.length === 0 ? (
-            <div className="text-center py-8 px-4">
-              <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3">
-                <span className="material-symbols-outlined text-2xl text-gray-300 dark:text-gray-600">
-                  auto_fix_high
-                </span>
-              </div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                No outputs yet
-              </p>
-              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                Generate study guides, quizzes, and more from your sources
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {outputs.map((output) => {
-                const badgeColor =
-                  KIND_BADGE_COLORS[output.kind] ??
-                  "bg-gray-100 dark:bg-gray-500/15 text-gray-600 dark:text-gray-400";
+ {listQ.isPending ? (
+ <div className="space-y-2 animate-pulse">
+ {Array.from({ length: 3 }).map((_, i) => (
+ <div key={i} className="flex items-center gap-2.5 px-2.5 py-2">
+ <div className="w-8 h-8 bg-border-subtle rounded-lg" />
+ <div className="flex-1 space-y-1">
+ <div className="h-3.5 w-3/4 bg-border-subtle rounded" />
+ <div className="h-2.5 w-1/3 bg-border-subtle rounded" />
+ </div>
+ </div>
+ ))}
+ </div>
+ ) : outputs.length === 0 ? (
+ <div className="text-center py-8 px-4">
+ <div className="w-12 h-12 rounded-2xl bg-accent-soft dark:bg-white/5 flex items-center justify-center mx-auto mb-3">
+ <span className="material-symbols-outlined text-2xl text-fg-secondary dark:text-fg-secondary">
+ auto_fix_high
+ </span>
+ </div>
+ <p className="text-xs font-medium text-fg-muted">
+ No outputs yet
+ </p>
+ <p className="text-[10px] text-fg-muted mt-1">
+ Generate study guides, quizzes, and more from your sources
+ </p>
+ </div>
+ ) : (
+ <div className="space-y-1">
+ {outputs.map((output) => {
+ const badgeColor =
+ KIND_BADGE_COLORS[output.kind] ??
+ "bg-accent-soft dark:bg-gray-500/15 text-fg-secondary dark:text-fg-muted";
 
-                if (output.status === "generating") {
-                  // Only audio overviews have a re-openable progress
-                  // modal — other studio outputs are queued via the
-                  // fire-and-forget `studio.generate` mutation (the row
-                  // is inserted "generating" and a background worker
-                  // flips it to ready/error), so there's no live
-                  // progress to reattach to. The wrapper is only an
-                  // interactive <button> for audio-overview rows;
-                  // everything else stays a plain <div>.
-                  const isReattachable = output.kind === "audio-overview";
-                  const Wrapper = isReattachable ? "button" : "div";
-                  // Read the persisted progress snapshot so the pill
-                  // can show "Converting 5/12" instead of just
-                  // "Generating..." when the user has already passed
-                  // the script stage.
-                  const p = output.progress as {
-                    message?: string;
-                    ttsCompleted?: number;
-                    ttsTotal?: number;
-                  } | null;
-                  const subline =
-                    p?.ttsTotal && p.ttsTotal > 0
-                      ? `Audio ${p.ttsCompleted ?? 0}/${p.ttsTotal}`
-                      : (p?.message ?? "Generating...");
-                  const widthPct =
-                    p?.ttsTotal && p.ttsTotal > 0
-                      ? Math.round(((p.ttsCompleted ?? 0) / p.ttsTotal) * 100)
-                      : null;
-                  return (
-                    <Wrapper
-                      key={output.id}
-                      type={isReattachable ? "button" : undefined}
-                      onClick={
-                        isReattachable
-                          ? () => {
-                              setAudioReattachId(output.id);
-                              setAudioModalOpen(true);
-                            }
-                          : undefined
-                      }
-                      className={`w-full text-left mindmap-generating-card rounded-xl border border-indigo-200 dark:border-indigo-500/20 bg-gradient-to-r from-indigo-50/80 to-purple-50/80 dark:from-indigo-500/5 dark:to-purple-500/5 p-3 ${isReattachable ? "hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-500/10 dark:hover:to-purple-500/10 transition-colors cursor-pointer" : ""}`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[16px] text-indigo-500 dark:text-indigo-400 animate-spin">
-                            progress_activity
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 truncate">
-                            {output.title}
-                          </p>
-                          <p className="text-[10px] text-indigo-500/70 dark:text-indigo-400/70 truncate">
-                            {subline}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          aria-label="Cancel generation"
-                          title="Cancel"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCancel(output.id);
-                          }}
-                          className="shrink-0 w-7 h-7 rounded-md flex items-center justify-center text-indigo-500/70 dark:text-indigo-400/70 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">
-                            close
-                          </span>
-                        </button>
-                      </div>
-                      <div className="mt-2 h-1 w-full rounded-full bg-indigo-100 dark:bg-indigo-500/10 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 transition-[width] duration-500"
-                          style={
-                            widthPct != null
-                              ? { width: `${Math.max(5, widthPct)}%` }
-                              : {
-                                  width: "33%",
-                                  animation:
-                                    "shimmer 1.5s ease-in-out infinite",
-                                }
-                          }
-                        />
-                      </div>
-                    </Wrapper>
-                  );
-                }
+ if (output.status === "generating") {
+ // Only audio overviews have a re-openable progress
+ // modal — other studio outputs are queued via the
+ // fire-and-forget `studio.generate` mutation (the row
+ // is inserted "generating" and a background worker
+ // flips it to ready/error), so there's no live
+ // progress to reattach to. The wrapper is only an
+ // interactive <button> for audio-overview rows;
+ // everything else stays a plain <div>.
+ const isReattachable = output.kind === "audio-overview";
+ const Wrapper = isReattachable ? "button" : "div";
+ // Read the persisted progress snapshot so the pill
+ // can show "Converting 5/12" instead of just
+ // "Generating..." when the user has already passed
+ // the script stage.
+ const p = output.progress as {
+ message?: string;
+ ttsCompleted?: number;
+ ttsTotal?: number;
+ } | null;
+ const subline =
+ p?.ttsTotal && p.ttsTotal > 0
+ ? `Audio ${p.ttsCompleted ?? 0}/${p.ttsTotal}`
+ : (p?.message ?? "Generating...");
+ const widthPct =
+ p?.ttsTotal && p.ttsTotal > 0
+ ? Math.round(((p.ttsCompleted ?? 0) / p.ttsTotal) * 100)
+ : null;
+ return (
+ <Wrapper
+ key={output.id}
+ type={isReattachable ? "button" : undefined}
+ onClick={
+ isReattachable
+ ? () => {
+ setAudioReattachId(output.id);
+ setAudioModalOpen(true);
+ }
+ : undefined
+ }
+ className={`w-full text-left mindmap-generating-card rounded-xl border border-indigo-200 dark:border-indigo-500/20 bg-gradient-to-r from-indigo-50/80 to-purple-50/80 dark:from-indigo-500/5 dark:to-purple-500/5 p-3 ${isReattachable ? "hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-500/10 dark:hover:to-purple-500/10 transition-colors cursor-pointer" : ""}`}
+ >
+ <div className="flex items-center gap-2.5">
+ <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-accent-soft0/20 flex items-center justify-center shrink-0">
+ <span className="material-symbols-outlined text-[16px] text-fg-accent animate-spin">
+ progress_activity
+ </span>
+ </div>
+ <div className="flex-1 min-w-0">
+ <p className="text-xs font-semibold text-fg-accent truncate">
+ {output.title}
+ </p>
+ <p className="text-[10px] text-fg-accent/70 dark:text-fg-accent/70 truncate">
+ {subline}
+ </p>
+ </div>
+ <button
+ type="button"
+ aria-label="Cancel generation"
+ title="Cancel"
+ onClick={(e) => {
+ e.stopPropagation();
+ handleCancel(output.id);
+ }}
+ className="shrink-0 w-7 h-7 rounded-md flex items-center justify-center text-fg-accent/70 dark:text-fg-accent/70 hover:text-red-600 hover:bg-danger/10 transition-colors"
+ >
+ <span className="material-symbols-outlined text-[18px]">
+ close
+ </span>
+ </button>
+ </div>
+ <div className="mt-2 h-1 w-full rounded-full bg-indigo-100 dark:bg-accent-soft0/10 overflow-hidden">
+ <div
+ className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 transition-[width] duration-500"
+ style={
+ widthPct != null
+ ? { width: `${Math.max(5, widthPct)}%` }
+ : {
+ width: "33%",
+ animation:
+ "shimmer 1.5s ease-in-out infinite",
+ }
+ }
+ />
+ </div>
+ </Wrapper>
+ );
+ }
 
-                return (
-                  <button
-                    key={output.id}
-                    type="button"
-                    onClick={() => setSelectedOutput(output)}
-                    className="group/item w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-element-light dark:hover:bg-element-dark transition-all text-left"
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${badgeColor}`}
-                    >
-                      <span className="material-symbols-outlined text-[15px]">
-                        {KIND_ICONS[output.kind] ?? "auto_awesome"}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">
-                        {output.title}
-                      </p>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                          {formatRelativeDate(output.createdAt)}
-                        </span>
-                        {output.status === "error" && (
-                          <span className="text-[10px] text-red-500 font-semibold flex items-center gap-0.5">
-                            <span className="material-symbols-outlined text-[10px]">
-                              error
-                            </span>
-                            Error
-                          </span>
-                        )}
-                        {output.status === "cancelled" && (
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-0.5">
-                            <span className="material-symbols-outlined text-[10px]">
-                              cancel
-                            </span>
-                            Cancelled
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <span className="material-symbols-outlined text-[16px] text-gray-300 dark:text-gray-600 group-hover/item:text-gray-500 dark:group-hover/item:text-gray-400 transition-colors">
-                      chevron_right
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
+ return (
+ <button
+ key={output.id}
+ type="button"
+ onClick={() => setSelectedOutput(output)}
+ className="group/item w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-elevated dark:hover:bg-elevated transition-all text-left"
+ >
+ <div
+ className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${badgeColor}`}
+ >
+ <span className="material-symbols-outlined text-[15px]">
+ {KIND_ICONS[output.kind] ?? "auto_awesome"}
+ </span>
+ </div>
+ <div className="flex-1 min-w-0">
+ <p className="text-xs font-medium text-fg-secondary truncate">
+ {output.title}
+ </p>
+ <div className="flex items-center gap-1.5">
+ <span className="text-[10px] text-fg-muted">
+ {formatRelativeDate(output.createdAt)}
+ </span>
+ {output.status === "error" && (
+ <span className="text-[10px] text-red-500 font-semibold flex items-center gap-0.5">
+ <span className="material-symbols-outlined text-[10px]">
+ error
+ </span>
+ Error
+ </span>
+ )}
+ {output.status === "cancelled" && (
+ <span className="text-[10px] text-fg-muted font-semibold flex items-center gap-0.5">
+ <span className="material-symbols-outlined text-[10px]">
+ cancel
+ </span>
+ Cancelled
+ </span>
+ )}
+ </div>
+ </div>
+ <span className="material-symbols-outlined text-[16px] text-fg-secondary dark:text-fg-secondary group-hover/item:text-fg-muted dark:group-hover/item:text-fg-muted transition-colors">
+ chevron_right
+ </span>
+ </button>
+ );
+ })}
+ </div>
+ )}
+ </div>
+ </div>
 
-      <AudioOverviewModal
-        open={audioModalOpen}
-        onClose={() => {
-          setAudioModalOpen(false);
-          setAudioReattachId(null);
-          utils.studio.list.invalidate({ notebookId });
-        }}
-        notebookId={notebookId}
-        reattachId={audioReattachId}
-      />
+ <AudioOverviewModal
+ open={audioModalOpen}
+ onClose={() => {
+ setAudioModalOpen(false);
+ setAudioReattachId(null);
+ utils.studio.list.invalidate({ notebookId });
+ }}
+ notebookId={notebookId}
+ reattachId={audioReattachId}
+ />
 
-      <QuizConfigModal
-        open={quizModalOpen}
-        onClose={() => {
-          setQuizModalOpen(false);
-        }}
-        notebookId={notebookId}
-      />
-    </>
-  );
+ <QuizConfigModal
+ open={quizModalOpen}
+ onClose={() => {
+ setQuizModalOpen(false);
+ }}
+ notebookId={notebookId}
+ />
+ </>
+ );
 }

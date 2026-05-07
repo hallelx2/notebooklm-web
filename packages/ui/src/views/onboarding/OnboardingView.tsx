@@ -2,22 +2,6 @@
 
 /**
  * First-launch onboarding wizard.
- *
- * Flow (each step is skippable except 1, 2, 3):
- *   1. Welcome
- *   2. Chat AI provider — required, otherwise nothing works
- *   3. Embeddings — required, defaults to bundled BGE-Small (zero setup)
- *   4. Audio overview — optional toggle. If on, pick Kokoro (bundled) /
- *      Deepgram (paid cloud) / FastAPI (advanced)
- *   5. Web search — optional toggle. If on, configure Tavily (free tier)
- *      and/or Exa (paid). Tavily fires first, Exa is the fallback when
- *      Tavily fails or runs out of quota.
- *   6. Done — flips userAiConfig.onboardedAt and redirects to /notebooks
- *
- * The wizard reuses existing tRPC routers (aiConfig, provider,
- * searchConfig) — every step's "Save" is a network call to the same
- * backend the Settings tabs hit, so the user can re-edit any choice
- * later via Settings without losing the onboarding work.
  */
 
 import type { ReactNode } from "react";
@@ -57,16 +41,12 @@ export function OnboardingView() {
 
   const [stepIdx, setStepIdx] = useState(0);
 
-  // Bounce out if the user is already onboarded — no point showing the
-  // wizard. They can revisit anything from Settings.
   useEffect(() => {
     if (aiConfigQ.data?.isOnboarded) {
       router.replace("/notebooks");
     }
   }, [aiConfigQ.data?.isOnboarded, router]);
 
-  // Bounce unauthenticated users — onboarding requires a session so we
-  // can write per-user config + credentials.
   useEffect(() => {
     if (auth.status === "unauthenticated") {
       router.replace("/auth/sign-in?next=/onboarding");
@@ -87,7 +67,7 @@ export function OnboardingView() {
   const currentStep = STEPS[stepIdx]?.id ?? "welcome";
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-[#050505] text-slate-900 dark:text-white">
+    <div className="min-h-screen flex flex-col bg-canvas text-fg">
       <Header stepIdx={stepIdx} totalSteps={STEPS.length} />
 
       <main className="flex-1 flex items-start justify-center px-4 py-10 sm:py-14">
@@ -111,10 +91,6 @@ export function OnboardingView() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Layout chrome                                                       */
-/* ------------------------------------------------------------------ */
-
 function Header({
   stepIdx,
   totalSteps,
@@ -123,26 +99,26 @@ function Header({
   totalSteps: number;
 }) {
   return (
-    <header className="border-b border-slate-200 dark:border-white/10 px-4 sm:px-8 py-4 flex items-center justify-between">
+    <header className="border-b border-border-subtle px-4 sm:px-8 py-4 flex items-center justify-between">
       <div className="flex items-center gap-2.5">
-        <span className="w-7 h-7 rounded-md bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center">
-          <span className="material-symbols-outlined text-white text-sm icon-filled">
+        <span className="w-7 h-7 rounded-card bg-accent flex items-center justify-center">
+          <span className="material-symbols-outlined text-fg-on-accent text-sm icon-filled">
             book_2
           </span>
         </span>
         <span className="font-medium tracking-tight text-sm">NotebookLM</span>
-        <span className="hidden sm:inline-block h-4 w-px bg-slate-300 dark:bg-white/10 mx-1" />
-        <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">
+        <span className="hidden sm:inline-block h-4 w-px bg-border-subtle mx-1" />
+        <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-fg-muted">
           Setup
         </span>
       </div>
-      <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400">
+      <div className="flex items-center gap-2 text-[11px] text-fg-muted">
         <span>
           Step {Math.min(stepIdx + 1, totalSteps)} of {totalSteps}
         </span>
-        <div className="w-32 h-1 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+        <div className="w-32 h-1 rounded-full bg-border-subtle overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500"
+            className="h-full bg-accent transition-all duration-500"
             style={{
               width: `${((stepIdx + 1) / totalSteps) * 100}%`,
             }}
@@ -164,22 +140,19 @@ function FooterNav({
   onBack: () => void;
   currentStep: StepId;
 }) {
-  // The wizard's primary action button (Next/Continue/Skip) lives
-  // *inside* each step body so the step can disable / change its
-  // copy based on form state. The footer only owns Back.
   const onLast = stepIdx === totalSteps - 1;
   if (onLast) return null;
   return (
-    <footer className="border-t border-slate-200 dark:border-white/10 px-4 sm:px-8 py-4 flex items-center justify-between">
+    <footer className="border-t border-border-subtle px-4 sm:px-8 py-4 flex items-center justify-between">
       <button
         type="button"
         onClick={onBack}
         disabled={stepIdx === 0}
-        className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        className="text-[11px] font-bold uppercase tracking-widest text-fg-muted hover:text-fg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
       >
         ← Back
       </button>
-      <span className="text-[11px] text-slate-400 dark:text-zinc-600">
+      <span className="text-[11px] text-fg-muted">
         {currentStep === "welcome"
           ? "This takes about 90 seconds"
           : "Use Settings to change anything later"}
@@ -187,10 +160,6 @@ function FooterNav({
     </footer>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/*  Step dispatcher                                                     */
-/* ------------------------------------------------------------------ */
 
 function StepBody({
   step,

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, Input, Text } from "@notebooklm/ui";
 import { Link, useAuth, useRouter } from "@notebooklm/ui/contexts";
 import { useEffect, useState } from "react";
 import { AuthShell } from "./AuthShell";
@@ -14,12 +15,6 @@ export function SignUpView() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Same dance as SignInView: wait for `useSession` to actually
-  // reflect the new authenticated state before navigating, otherwise
-  // AuthGate sees `auth.status === "unauthenticated"` for one render
-  // cycle and bounces us back here. AuthGate also handles the
-  // "authenticated but not onboarded" case, so /notebooks is fine
-  // either way as the post-signup target.
   useEffect(() => {
     if (submitted && auth.status === "authenticated") {
       router.replace("/notebooks");
@@ -55,46 +50,46 @@ export function SignUpView() {
         <div>
           <label
             htmlFor="name"
-            className="block text-sm font-medium text-slate-900 mb-1.5"
+            className="block text-sm font-medium text-fg mb-1.5"
           >
             Name
           </label>
-          <input
+          <Input
             id="name"
             required
             placeholder="Ada Lovelace"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none transition-colors text-sm"
+            size="lg"
           />
         </div>
 
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-slate-900 mb-1.5"
+            className="block text-sm font-medium text-fg mb-1.5"
           >
             Email
           </label>
-          <input
+          <Input
             id="email"
             type="email"
             required
             placeholder="you@domain.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none transition-colors text-sm"
+            size="lg"
           />
         </div>
 
         <div>
           <label
             htmlFor="password"
-            className="block text-sm font-medium text-slate-900 mb-1.5"
+            className="block text-sm font-medium text-fg mb-1.5"
           >
             Password
           </label>
-          <input
+          <Input
             id="password"
             type="password"
             required
@@ -102,25 +97,27 @@ export function SignUpView() {
             placeholder="At least 8 characters"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none transition-colors text-sm"
+            size="lg"
           />
         </div>
 
         {err && (
-          <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm">
+          <div className="rounded-input bg-danger/10 border border-danger/30 text-danger px-3 py-2 text-sm">
             {err}
           </div>
         )}
 
-        <button
+        <Button
           type="submit"
+          variant="primary"
+          size="lg"
           disabled={loading}
-          className="w-full h-12 rounded-xl bg-slate-900 text-white font-medium hover:bg-slate-800 shadow-sm transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
+          className="w-full"
         >
           {loading ? "Creating..." : "Create account"}
-        </button>
+        </Button>
 
-        <p className="text-xs text-slate-500 text-center">
+        <Text variant="body" tone="muted" className="text-xs text-center">
           By continuing you agree to our{" "}
           <Link href="/terms" className="underline underline-offset-2">
             terms
@@ -130,18 +127,22 @@ export function SignUpView() {
             privacy policy
           </Link>
           .
-        </p>
+        </Text>
       </form>
 
-      <p className="mt-10 text-center text-sm text-slate-500">
+      <Text
+        variant="body"
+        tone="secondary"
+        className="mt-10 text-center text-sm"
+      >
         Already have an account?{" "}
         <Link
           href="/auth/sign-in"
-          className="font-semibold text-blue-600 hover:text-blue-700"
+          className="font-semibold text-fg-accent hover:opacity-80 transition-opacity"
         >
           Sign in
         </Link>
-      </p>
+      </Text>
     </AuthShell>
   );
 }

@@ -1,3 +1,4 @@
+import { Heading, Text } from "@notebooklm/ui";
 import { Link } from "@notebooklm/ui/contexts";
 
 type Props = {
@@ -26,14 +27,14 @@ export function AuthShell({
   },
 }: Props) {
   return (
-    <div className="min-h-screen flex bg-white text-slate-900">
+    <div className="min-h-screen flex bg-canvas text-fg">
       {/* Left — form */}
       <div className="flex-1 flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-16 xl:px-24">
         <div className="w-full max-w-md mx-auto">
           <div className="flex items-center justify-between mb-14">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <span className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center">
-                <span className="material-symbols-outlined text-white text-lg icon-filled">
+              <span className="w-8 h-8 rounded-card bg-accent flex items-center justify-center">
+                <span className="material-symbols-outlined text-fg-on-accent text-lg icon-filled">
                   book_2
                 </span>
               </span>
@@ -41,24 +42,28 @@ export function AuthShell({
             </Link>
             <Link
               href={altHref}
-              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+              className="text-sm font-medium text-fg-accent hover:opacity-80 transition-opacity"
             >
               {altLabel}
             </Link>
           </div>
 
           <div className="mb-10">
-            <h1 className="text-4xl font-semibold tracking-tight mb-3">
+            <Heading level="h2" weight="semibold" className="mb-3">
               {title}
-            </h1>
-            <p className="text-slate-500">{subtitle}</p>
+            </Heading>
+            <Text variant="body" tone="secondary">
+              {subtitle}
+            </Text>
           </div>
 
           {children}
         </div>
       </div>
 
-      {/* Right — quote */}
+      {/* Right — quote panel. Pinned dark for dramatic split-screen,
+          regardless of pack/tone. Token consumers inside can still
+          flip if needed but the canvas + accent here are intentional. */}
       <div className="hidden lg:flex flex-1 bg-[#0a0a0a] text-white p-16 flex-col justify-between relative overflow-hidden">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.05]"
@@ -68,11 +73,11 @@ export function AuthShell({
             backgroundSize: "48px 48px",
           }}
         />
-        <div className="pointer-events-none absolute -top-20 -right-20 w-[40rem] h-[40rem] bg-indigo-500/15 blur-[120px] rounded-full" />
-        <div className="pointer-events-none absolute bottom-0 left-0 w-[30rem] h-[30rem] bg-blue-500/10 blur-[100px] rounded-full" />
+        <div className="pointer-events-none absolute -top-20 -right-20 w-[40rem] h-[40rem] bg-accent/15 blur-[120px] rounded-full" />
+        <div className="pointer-events-none absolute bottom-0 left-0 w-[30rem] h-[30rem] bg-accent/10 blur-[100px] rounded-full" />
 
         <div className="relative flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
           v0.1 — preview
         </div>
 
@@ -84,7 +89,7 @@ export function AuthShell({
             {quote.text}
           </blockquote>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-sm font-semibold">
+            <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-sm font-semibold text-fg-on-accent">
               {quote.author
                 .split(" ")
                 .map((p) => p[0])

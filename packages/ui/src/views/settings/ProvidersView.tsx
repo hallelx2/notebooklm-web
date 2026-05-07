@@ -58,7 +58,7 @@ export function ProvidersView() {
 
 function Loading() {
   return (
-    <div className="py-20 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+    <div className="py-20 text-center text-[10px] font-bold uppercase tracking-widest text-fg-muted">
       Loading…
     </div>
   );
@@ -84,7 +84,7 @@ function ProviderCard({
     if (!saved) return null;
     if (status === "ok")
       return (
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-success">
           <span className="material-symbols-outlined text-[12px]">
             check_circle
           </span>
@@ -93,13 +93,13 @@ function ProviderCard({
       );
     if (status === "invalid")
       return (
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-red-700 dark:text-red-400">
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-danger">
           <span className="material-symbols-outlined text-[12px]">error</span>
           Invalid
         </span>
       );
     return (
-      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-fg-muted">
         Saved · untested
       </span>
     );
@@ -107,10 +107,10 @@ function ProviderCard({
 
   return (
     <div
-      className={`border bg-white dark:bg-[#0a0a0a] transition-colors ${
+      className={`border bg-surface rounded-card transition-colors ${
         isOpen
-          ? "border-slate-900 dark:border-white col-span-full"
-          : "border-slate-200 hover:border-slate-400 dark:border-white/10 dark:hover:border-white/30"
+          ? "border-fg col-span-full"
+          : "border-border-subtle hover:border-border-strong"
       }`}
     >
       <button
@@ -118,24 +118,19 @@ function ProviderCard({
         onClick={onToggle}
         className="w-full p-4 flex items-center gap-3 text-left"
       >
-        <div className="w-10 h-10 bg-white border border-slate-200 dark:border-white/10 flex items-center justify-center flex-shrink-0 p-1.5">
-          {/* biome-ignore lint/performance/noImgElement: SVG logo, next/image overhead unwarranted */}
-          <img src={provider.logo} alt="" className="w-full h-full" />
-        </div>
+        <ProviderLogo src={provider.logo} alt={provider.label} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="font-medium text-slate-900 dark:text-white truncate">
-              {provider.label}
-            </h3>
+            <h3 className="font-medium text-fg truncate">{provider.label}</h3>
             {provider.selfHostedOnly ? (
-              <span className="text-[9px] uppercase tracking-widest font-bold px-1.5 py-0.5 border border-amber-500/40 text-amber-700 dark:text-amber-400 flex-shrink-0">
+              <span className="text-[9px] uppercase tracking-widest font-bold px-1.5 py-0.5 border border-warning/40 text-warning flex-shrink-0">
                 Self-hosted
               </span>
             ) : null}
           </div>
-          <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+          <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-fg-muted">
             {provider.authType === "none" ? (
-              <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
+              <span className="inline-flex items-center gap-1 text-success">
                 <span className="material-symbols-outlined text-[12px]">
                   check_circle
                 </span>
@@ -184,14 +179,14 @@ function BuiltInInfo({
     m.capabilities.includes("embed"),
   ).length;
   return (
-    <div className="p-5 border-t border-slate-200 dark:border-white/10 space-y-3 bg-slate-50/50 dark:bg-white/[0.02] text-sm text-slate-700 dark:text-zinc-300">
+    <div className="p-5 border-t border-border-subtle space-y-3 bg-accent-soft text-sm text-fg-secondary">
       <p>
         Runs sentence-transformers ONNX models inside the app process — no API
         key, no GPU, no Docker, no Ollama install. Models download once on first
         use (~30 MB for the smallest) and are cached locally for offline use
         afterwards.
       </p>
-      <p className="text-xs text-slate-500 dark:text-zinc-500">
+      <p className="text-xs text-fg-muted">
         Pick one of the {embedModelCount} bundled models from the Models tab to
         start using {provider.label}. The default (BGE Small EN v1.5) works well
         on any laptop CPU.
@@ -200,7 +195,7 @@ function BuiltInInfo({
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center justify-center w-11 h-11 border border-transparent text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
+          className="flex items-center justify-center w-11 h-11 border border-transparent text-fg-muted hover:text-fg transition-colors"
           aria-label="Close"
         >
           <span className="material-symbols-outlined text-[18px]">close</span>
@@ -306,7 +301,7 @@ function CredentialForm({
   }
 
   return (
-    <div className="p-5 border-t border-slate-200 dark:border-white/10 space-y-4 bg-slate-50/50 dark:bg-white/[0.02]">
+    <div className="p-5 border-t border-border-subtle space-y-4 bg-accent-soft">
       {showApiKeyInput ? (
         <Field
           label="API Key"
@@ -324,7 +319,7 @@ function CredentialForm({
             }
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            className="w-full h-11 bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:border-blue-500 dark:focus:border-emerald-500 transition-colors"
+            className="w-full h-11 bg-surface border border-border-subtle rounded-input px-4 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-fg-accent transition-colors"
           />
         </Field>
       ) : null}
@@ -342,7 +337,7 @@ function CredentialForm({
             }
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
-            className="w-full h-11 bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:border-blue-500 dark:focus:border-emerald-500 transition-colors"
+            className="w-full h-11 bg-surface border border-border-subtle rounded-input px-4 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-fg-accent transition-colors"
           />
         </Field>
       ) : null}
@@ -354,7 +349,7 @@ function CredentialForm({
             placeholder="org-..."
             value={organization}
             onChange={(e) => setOrganization(e.target.value)}
-            className="w-full h-11 bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:border-blue-500 dark:focus:border-emerald-500 transition-colors"
+            className="w-full h-11 bg-surface border border-border-subtle rounded-input px-4 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-fg-accent transition-colors"
           />
         </Field>
       ) : null}
@@ -364,7 +359,7 @@ function CredentialForm({
           type="button"
           onClick={handleSave}
           disabled={upsert.isPending}
-          className="flex items-center justify-center gap-2 h-11 px-5 border border-emerald-500/70 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white dark:hover:text-black transition-colors disabled:opacity-60"
+          className="flex items-center justify-center gap-2 h-11 px-5 border border-success/70 bg-success/10 text-success text-[10px] font-bold uppercase tracking-widest hover:bg-success hover:text-success-fg transition-colors disabled:opacity-60 rounded-button"
         >
           <span className="material-symbols-outlined text-[14px]">save</span>
           {upsert.isPending ? "Saving" : "Save"}
@@ -373,7 +368,7 @@ function CredentialForm({
           type="button"
           onClick={handleTest}
           disabled={test.isPending || (!saved && !apiKey.trim())}
-          className="flex items-center justify-center gap-2 h-11 px-5 border border-slate-300 hover:border-slate-900 dark:border-white/20 dark:hover:border-white text-slate-700 dark:text-zinc-300 text-[10px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50"
+          className="flex items-center justify-center gap-2 h-11 px-5 border border-border-strong hover:border-fg text-fg-secondary text-[10px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 rounded-button"
         >
           <span className="material-symbols-outlined text-[14px]">bolt</span>
           {test.isPending ? "Testing" : "Test connection"}
@@ -383,7 +378,7 @@ function CredentialForm({
             type="button"
             onClick={handleDelete}
             disabled={remove.isPending}
-            className="flex items-center justify-center gap-2 h-11 px-5 border border-red-500/40 hover:border-red-500 text-red-700 dark:text-red-400 text-[10px] font-bold uppercase tracking-widest transition-colors disabled:opacity-60 ml-auto"
+            className="flex items-center justify-center gap-2 h-11 px-5 border border-danger/40 hover:border-danger text-danger text-[10px] font-bold uppercase tracking-widest transition-colors disabled:opacity-60 ml-auto rounded-button"
           >
             <span className="material-symbols-outlined text-[14px]">
               delete
@@ -394,7 +389,7 @@ function CredentialForm({
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center justify-center w-11 h-11 border border-transparent text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
+          className="flex items-center justify-center w-11 h-11 border border-transparent text-fg-muted hover:text-fg transition-colors"
           aria-label="Close"
         >
           <span className="material-symbols-outlined text-[18px]">close</span>
@@ -405,8 +400,8 @@ function CredentialForm({
         <div
           className={`px-4 py-3 border text-[11px] font-mono ${
             testResult.kind === "ok"
-              ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-800 dark:text-emerald-300"
-              : "border-red-500/40 bg-red-500/5 text-red-800 dark:text-red-300"
+              ? "border-success/40 bg-success/5 text-success"
+              : "border-danger/40 bg-danger/5 text-danger"
           }`}
         >
           {testResult.kind === "ok"
@@ -414,10 +409,29 @@ function CredentialForm({
             : `✗ ${testResult.error}`}
         </div>
       ) : upsert.isError ? (
-        <div className="px-4 py-3 border border-red-500/40 bg-red-500/5 text-red-800 dark:text-red-300 text-[11px] font-mono">
+        <div className="px-4 py-3 border border-danger/40 bg-danger/5 text-danger text-[11px] font-mono">
           ✗ {upsert.error.message}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Provider logo tile — pinned to a white background regardless of pack /
+ * tone. Many provider SVGs use `fill="currentColor"` (openai, ollama,
+ * groq), which means they inherit the surrounding text color and vanish
+ * on dark surfaces. Forcing a white tile + black text keeps every logo
+ * legible without per-logo special-casing.
+ */
+function ProviderLogo({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div
+      className="w-10 h-10 flex items-center justify-center flex-shrink-0 p-1.5 rounded border border-border-subtle"
+      style={{ background: "#ffffff", color: "#0d0d0d" }}
+    >
+      {/* biome-ignore lint/performance/noImgElement: SVG logo, next/image overhead unwarranted */}
+      <img src={src} alt={alt} className="w-full h-full" />
     </div>
   );
 }
@@ -437,7 +451,7 @@ function Field({
     // biome-ignore lint/a11y/noLabelWithoutControl: input is passed via children, biome can't see through it
     <label className="block">
       <span className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-fg-muted">
           {label}
         </span>
         {docsUrl ? (
@@ -445,7 +459,7 @@ function Field({
             href={docsUrl}
             target="_blank"
             rel="noreferrer noopener"
-            className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
+            className="text-[10px] font-bold uppercase tracking-widest text-fg-accent hover:underline inline-flex items-center gap-1"
           >
             {docsLabel ?? "Docs"}
             <span className="material-symbols-outlined text-[12px]">

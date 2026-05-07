@@ -101,17 +101,17 @@ export function ModelsView() {
       description="Choose the chat model and embedding model the app uses for everything — chat, deep research, retrieval, and ingestion."
     >
       {cfgQ.isLoading || catalogQ.isLoading || listQ.isLoading ? (
-        <div className="py-20 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+        <div className="py-20 text-center text-[10px] font-bold uppercase tracking-widest text-fg-muted">
           Loading…
         </div>
       ) : (
         <div className="space-y-6">
           {noCredentials ? (
-            <div className="border border-amber-500/40 bg-amber-500/5 px-5 py-4 text-sm text-amber-800 dark:text-amber-300">
+            <div className="border border-warning/40 bg-warning/5 px-5 py-4 text-sm text-warning">
               You haven't added any provider credentials yet.{" "}
               <Link
                 href="/settings/providers"
-                className="underline font-medium hover:text-amber-900 dark:hover:text-amber-100"
+                className="underline font-medium hover:opacity-80 transition-opacity"
               >
                 Add one →
               </Link>
@@ -161,7 +161,7 @@ export function ModelsView() {
               }
             />
             {embedDim ? (
-              <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500 inline-flex items-center gap-1.5">
+              <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-fg-muted inline-flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[12px]">
                   memory
                 </span>
@@ -178,7 +178,7 @@ export function ModelsView() {
               type="button"
               onClick={handleSave}
               disabled={updateMut.isPending || noCredentials}
-              className="flex items-center justify-center gap-2 h-11 px-6 border border-emerald-500/70 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white dark:hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 h-11 px-6 border border-success/70 bg-success/10 text-success text-[10px] font-bold uppercase tracking-widest hover:bg-success hover:text-success-fg rounded-button transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined text-[14px]">
                 save
@@ -188,9 +188,7 @@ export function ModelsView() {
             {saveMessage ? (
               <span
                 className={`text-[10px] font-bold uppercase tracking-widest ${
-                  updateMut.isError
-                    ? "text-red-700 dark:text-red-400"
-                    : "text-emerald-700 dark:text-emerald-400"
+                  updateMut.isError ? "text-danger" : "text-success"
                 }`}
               >
                 {saveMessage}
@@ -219,16 +217,16 @@ function RoleBlock({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] p-5">
+    <section className="border border-border-subtle bg-accent-soft rounded-card p-5">
       <div className="flex items-center gap-3 mb-1">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-emerald-400">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-fg-accent">
           {tag}
         </span>
       </div>
-      <h3 className="text-lg font-medium text-slate-900 dark:text-white tracking-tight">
+      <h3 className="text-lg font-medium text-fg tracking-tight">
         {title}
       </h3>
-      <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400 font-light leading-relaxed mb-5">
+      <p className="mt-1 text-sm text-fg-muted font-light leading-relaxed mb-5">
         {description}
       </p>
       {children}
@@ -256,13 +254,13 @@ function ProviderModelPicker({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <label className="block">
-        <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-2">
+        <span className="block text-[10px] font-bold uppercase tracking-widest text-fg-muted mb-2">
           Provider
         </span>
         <select
           value={providerValue}
           onChange={(e) => onProviderChange(e.target.value)}
-          className="w-full h-11 bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-4 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-emerald-500 transition-colors"
+          className="w-full h-11 bg-surface border border-border-subtle rounded-input px-4 text-sm text-fg focus:outline-none focus:border-fg-accent transition-colors"
         >
           <option value="">— Pick a provider —</option>
           {providerOptions.map((p) => (
@@ -274,7 +272,7 @@ function ProviderModelPicker({
       </label>
       {/* biome-ignore lint/a11y/noLabelWithoutControl: input is a conditional child, biome can't statically see through it */}
       <label className="block">
-        <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-2">
+        <span className="block text-[10px] font-bold uppercase tracking-widest text-fg-muted mb-2">
           Model
         </span>
         {allowCustom ? (
@@ -284,14 +282,14 @@ function ProviderModelPicker({
             onChange={(e) => onModelChange(e.target.value)}
             list={`models-${providerValue}`}
             placeholder="model-id"
-            className="w-full h-11 bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:border-blue-500 dark:focus:border-emerald-500 transition-colors"
+            className="w-full h-11 bg-surface border border-border-subtle rounded-input px-4 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-fg-accent transition-colors"
           />
         ) : (
           <select
             value={modelValue}
             onChange={(e) => onModelChange(e.target.value)}
             disabled={!providerValue}
-            className="w-full h-11 bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-4 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-emerald-500 transition-colors disabled:opacity-50"
+            className="w-full h-11 bg-surface border border-border-subtle rounded-input px-4 text-sm text-fg focus:outline-none focus:border-fg-accent transition-colors disabled:opacity-50"
           >
             <option value="">— Pick a model —</option>
             {modelOptions.map((m) => (
@@ -318,7 +316,7 @@ function ProviderModelPicker({
 
 function ReembedNotice() {
   return (
-    <div className="mt-4 border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+    <div className="mt-4 border border-warning/40 bg-warning/5 p-3 text-xs text-warning flex items-start gap-2">
       <span className="material-symbols-outlined text-[14px] mt-px flex-shrink-0">
         sync
       </span>
@@ -407,18 +405,18 @@ function ReembedSection() {
     | undefined;
 
   return (
-    <section className="border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] p-5 mt-2">
+    <section className="border border-border-subtle bg-accent-soft rounded-card p-5 mt-2">
       <div className="flex items-start gap-3 mb-1">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-emerald-400">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-fg-accent">
           Maintenance
         </span>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
-          <h3 className="text-lg font-medium text-slate-900 dark:text-white tracking-tight">
+          <h3 className="text-lg font-medium text-fg tracking-tight">
             Re-embed all sources
           </h3>
-          <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400 font-light leading-relaxed">
+          <p className="mt-1 text-sm text-fg-muted font-light leading-relaxed">
             Reprocess every existing source under your current embedding model.
             Old vectors stay in storage so you can switch back instantly.
           </p>
@@ -427,7 +425,7 @@ function ReembedSection() {
           type="button"
           onClick={start}
           disabled={running}
-          className="flex items-center justify-center gap-2 h-11 px-5 border border-emerald-500/70 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white dark:hover:text-black transition-colors disabled:opacity-60 self-start sm:self-auto whitespace-nowrap"
+          className="flex items-center justify-center gap-2 h-11 px-5 border border-success/70 bg-success/10 text-success text-[10px] font-bold uppercase tracking-widest hover:bg-success hover:text-success-fg rounded-button transition-colors disabled:opacity-60 self-start sm:self-auto whitespace-nowrap"
         >
           <span className="material-symbols-outlined text-[14px]">
             {running ? "sync" : "play_arrow"}
@@ -437,7 +435,7 @@ function ReembedSection() {
       </div>
 
       {events.length > 0 ? (
-        <div className="border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-3 max-h-60 overflow-y-auto space-y-1 text-[11px] font-mono">
+        <div className="border border-border-subtle bg-surface rounded-card p-3 max-h-60 overflow-y-auto space-y-1 text-[11px] font-mono">
           {events.map((entry) => (
             <ReembedLine key={entry.id} event={entry.ev} />
           ))}
@@ -445,7 +443,7 @@ function ReembedSection() {
       ) : null}
 
       {summary ? (
-        <div className="mt-3 text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-zinc-300">
+        <div className="mt-3 text-[10px] font-bold uppercase tracking-widest text-fg-secondary">
           Done · {summary.succeeded}/{summary.total} succeeded
           {summary.failed > 0 ? ` · ${summary.failed} failed` : ""}
         </div>
@@ -457,26 +455,22 @@ function ReembedSection() {
 function ReembedLine({ event }: { event: ReembedEvent }) {
   switch (event.type) {
     case "source-start":
-      return (
-        <div className="text-slate-500 dark:text-zinc-500">↻ {event.title}</div>
-      );
+      return <div className="text-fg-muted">↻ {event.title}</div>;
     case "source-done":
       return (
-        <div className="text-emerald-700 dark:text-emerald-400">
+        <div className="text-success">
           ✓ {event.sourceId.slice(0, 8)} · {event.chunkCount} chunks
         </div>
       );
     case "source-error":
       return (
-        <div className="text-red-700 dark:text-red-400">
+        <div className="text-danger">
           ✗ {event.sourceId.slice(0, 8)} · {event.error}
         </div>
       );
     case "fatal":
       return (
-        <div className="text-red-700 dark:text-red-400 font-bold">
-          Fatal: {event.error}
-        </div>
+        <div className="text-danger font-bold">Fatal: {event.error}</div>
       );
     case "summary":
       return null;

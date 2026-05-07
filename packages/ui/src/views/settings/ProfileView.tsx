@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, Card, Input, Pill, Text, cn } from "@notebooklm/ui";
 import { useAuth } from "@notebooklm/ui/contexts";
 import { useState } from "react";
 import { SettingsSection } from "./SettingsSection";
@@ -41,8 +42,8 @@ export function ProfileView() {
     >
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 lg:gap-10">
         {/* Avatar + summary */}
-        <div className="border border-slate-200 dark:border-white/10 p-6 flex flex-col items-center text-center bg-white/60 dark:bg-white/[0.02]">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center mb-4">
+        <Card variant="default" padding="lg" className="flex flex-col items-center text-center">
+          <div className="w-20 h-20 rounded-full bg-accent flex items-center justify-center mb-4">
             {user.image ? (
               // biome-ignore lint/performance/noImgElement: avatar is a small remote image; next/image overkill
               <img
@@ -51,41 +52,47 @@ export function ProfileView() {
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (
-              <span className="text-3xl font-medium text-white">{initial}</span>
+              <span className="text-3xl font-medium text-fg-on-accent">
+                {initial}
+              </span>
             )}
           </div>
-          <p className="font-medium text-slate-900 dark:text-white truncate w-full">
+          <p className="font-medium text-fg truncate w-full">
             {user.name || "Unnamed"}
           </p>
-          <p className="mt-1 text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-zinc-500 truncate w-full">
+          <Text
+            variant="meta"
+            tone="muted"
+            as="span"
+            className="mt-1 truncate w-full"
+          >
             {user.email}
-          </p>
+          </Text>
           {user.emailVerified ? (
-            <span className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+            <Pill tone="success" className="mt-3">
               <span className="material-symbols-outlined text-[12px]">
                 verified
               </span>
               Verified
-            </span>
+            </Pill>
           ) : (
-            <span className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400">
+            <Pill tone="warning" className="mt-3">
               <span className="material-symbols-outlined text-[12px]">
                 pending
               </span>
               Unverified
-            </span>
+            </Pill>
           )}
-        </div>
+        </Card>
 
         {/* Editable fields */}
         <div className="space-y-6">
           <Field label="Display name">
-            <input
+            <Input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={80}
-              className="w-full h-11 bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:border-blue-500 dark:focus:border-emerald-500 transition-colors"
               placeholder="What should we call you?"
             />
           </Field>
@@ -94,11 +101,11 @@ export function ProfileView() {
             label="Email"
             hint="Used for sign-in. Email changes aren't supported yet — get in touch if you need this."
           >
-            <input
+            <Input
               type="email"
               value={user.email}
               readOnly
-              className="w-full h-11 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 px-4 text-sm text-slate-500 dark:text-zinc-500 cursor-not-allowed select-all"
+              className="bg-accent-soft text-fg-muted cursor-not-allowed select-all"
             />
           </Field>
 
@@ -106,36 +113,35 @@ export function ProfileView() {
             label="Account ID"
             hint="Internal identifier for support tickets."
           >
-            <input
+            <Input
               type="text"
               value={user.id}
               readOnly
-              className="w-full h-11 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 px-4 text-xs font-mono text-slate-500 dark:text-zinc-500 cursor-not-allowed select-all"
+              className="bg-accent-soft text-fg-muted cursor-not-allowed select-all font-mono text-xs"
             />
           </Field>
 
           <div className="flex items-center gap-4 pt-2">
-            <button
-              type="button"
+            <Button
+              variant="soft"
+              size="md"
               onClick={handleSave}
               disabled={!dirty || saving}
-              className="flex items-center justify-center gap-2 h-11 px-6 border border-emerald-500/70 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white dark:hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="uppercase tracking-widest text-[10px] font-bold"
             >
               <span className="material-symbols-outlined text-[14px]">
                 save
               </span>
               {saving ? "Saving" : "Save changes"}
-            </button>
+            </Button>
             {message ? (
-              <span
-                className={`text-[10px] font-bold uppercase tracking-widest ${
-                  message.kind === "ok"
-                    ? "text-emerald-700 dark:text-emerald-400"
-                    : "text-red-700 dark:text-red-400"
-                }`}
+              <Text
+                variant="caption"
+                tone={message.kind === "ok" ? "success" : "danger"}
+                as="span"
               >
                 {message.text}
-              </span>
+              </Text>
             ) : null}
           </div>
         </div>
@@ -156,14 +162,18 @@ function Field({
   return (
     // biome-ignore lint/a11y/noLabelWithoutControl: input passed via children, biome can't see through it
     <label className="block">
-      <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-2">
+      <Text variant="caption" tone="muted" className="block mb-2">
         {label}
-      </span>
+      </Text>
       {children}
       {hint ? (
-        <span className="block mt-1.5 text-xs text-slate-500 dark:text-zinc-500 font-light">
+        <Text
+          variant="body"
+          tone="muted"
+          className="block mt-1.5 text-xs font-light"
+        >
           {hint}
-        </span>
+        </Text>
       ) : null}
     </label>
   );
