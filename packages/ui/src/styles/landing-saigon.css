@@ -1,0 +1,67 @@
+/* Landing-page tokens — pinned to monopo saigon dark regardless of the
+ * user's saved pack. Selector-isolated so the rest of the app keeps the
+ * pack the user picked.
+ *
+ * Wrap the LandingView root with <div data-surface="landing">. The local
+ * --landing-* variables below are kept verbatim from the previous block
+ * in apps/web/src/app/globals.css — LandingView still references them
+ * directly. The semantic --ds-* overrides allow primitives used inside
+ * the landing surface (Button, Pill, Heading) to also pick up saigon
+ * looks. */
+
+[data-surface="landing"] {
+  /* Force saigon-dark semantic tokens regardless of host pack/tone */
+  --ds-bg-canvas: #06060a;
+  --ds-bg-surface: rgba(255, 255, 255, 0.02);
+  --ds-bg-elevated: #0c0c12;
+  --ds-bg-overlay: rgba(6, 6, 10, 0.8);
+  --ds-bg-accent-soft: rgba(123, 143, 239, 0.1);
+
+  --ds-fg-primary: #dddbd8;
+  --ds-fg-secondary: #b8b6b3;
+  --ds-fg-muted: #7a7672;
+  --ds-fg-inverted: #06060a;
+  --ds-fg-accent: #8b9cf8;
+  --ds-fg-on-accent: #ffffff;
+
+  --ds-border-subtle: rgba(255, 255, 255, 0.06);
+  --ds-border-strong: rgba(255, 255, 255, 0.12);
+  --ds-border-accent: rgba(123, 143, 239, 0.45);
+
+  --ds-accent: #7b8fef;
+  --ds-accent-hover: #8b9cf8;
+  --ds-accent-active: #6b7ee0;
+  --ds-accent-secondary: #c084fc;
+
+  --ds-radius-button: 75.024px;
+  --ds-radius-card: 10px;
+
+  color-scheme: dark;
+
+  /* Landing-only locals — kept for LandingView/ConstellationBackground/Footer
+     animations (foot-big gradient, marquee accents, dot grid) */
+  --landing-bg: #06060a;
+  --landing-bg2: #0c0c12;
+  --landing-ink: #dddbd8;
+  --landing-mid: #7a7672;
+  --landing-dim: #3d3a37;
+  --landing-pop: #7b8fef;
+  --landing-pop-d: #6b7ee0;
+  --landing-pop-vivid: #8b9cf8;
+  --landing-pop-glow: rgba(123, 143, 239, 0.08);
+  --landing-pop-glow2: rgba(123, 143, 239, 0.15);
+  --landing-card: rgba(255, 255, 255, 0.02);
+  --landing-line: rgba(255, 255, 255, 0.06);
+  --landing-line-h: rgba(255, 255, 255, 0.12);
+  --landing-surface: rgba(255, 255, 255, 0.03);
+  --landing-dot-color: rgba(255, 255, 255, 0.02);
+  --landing-tag-bg: rgba(123, 143, 239, 0.1);
+  --landing-tag-fg: #8b9cf8;
+  --landing-purple: #c084fc;
+  --landing-teal: #2dd4bf;
+  --landing-rose: #fb7185;
+  --landing-amber: #fbbf24;
+  --landing-blue: #60a5fa;
+  --landing-nav-bg: rgba(6, 6, 10, 0.65);
+  --landing-nav-bg-s: rgba(6, 6, 10, 0.8);
+}

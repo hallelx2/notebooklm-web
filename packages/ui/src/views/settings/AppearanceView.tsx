@@ -1,6 +1,10 @@
 "use client";
 
-import { useTheme } from "@notebooklm/ui/components/ThemeProvider";
+import { Text, cn } from "@notebooklm/ui";
+import {
+  type DesignSystem,
+  useTheme,
+} from "@notebooklm/ui/components/ThemeProvider";
 import { useEffect, useState } from "react";
 import { SettingsSection } from "./SettingsSection";
 
@@ -25,8 +29,33 @@ const THEMES = [
   },
 ];
 
+const DESIGN_SYSTEMS: Array<{
+  id: DesignSystem;
+  label: string;
+  tagline: string;
+  description: string;
+  swatches: { canvas: string; surface: string; accent: string };
+}> = [
+  {
+    id: "saigon",
+    label: "Saigon",
+    tagline: "Atmospheric depth",
+    description:
+      "Dark, organic, immersive. Pill buttons, spacious rhythm, gradient atmosphere — designed by monopo saigon.",
+    swatches: { canvas: "#000000", surface: "#181818", accent: "#a0e0ab" },
+  },
+  {
+    id: "render",
+    label: "Render",
+    tagline: "Crisp clarity",
+    description:
+      "Light, sharp, vibrant. Tight typography, 0px corners, purple → sunset accents — inspired by Render.",
+    swatches: { canvas: "#ffffff", surface: "#f6f0ff", accent: "#8a05ff" },
+  },
+];
+
 export function AppearanceView() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, designSystem, setDesignSystem } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -34,47 +63,121 @@ export function AppearanceView() {
     <SettingsSection
       tagline="Settings · Appearance"
       title="Appearance"
-      description="Choose how the app looks. Your preference is stored on this device only."
+      description="Choose your design system and tone. Both preferences are stored on this device only."
     >
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {THEMES.map((opt) => {
-          const active = mounted && theme === opt.id;
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setTheme(opt.id)}
-              className={`text-left p-5 border transition-colors ${
-                active
-                  ? "border-slate-900 bg-slate-900/5 dark:border-white dark:bg-white/5"
-                  : "border-slate-200 hover:border-slate-400 dark:border-white/10 dark:hover:border-white/30"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span
-                  className={`material-symbols-outlined text-[24px] ${
-                    active
-                      ? "text-slate-900 dark:text-white"
-                      : "text-slate-500 dark:text-zinc-500"
-                  }`}
+      {/* Design system picker */}
+      <div className="mb-12">
+        <div className="flex items-center gap-3 mb-4">
+          <Text variant="caption" tone="muted">
+            Design system
+          </Text>
+          <span className="h-px flex-1 bg-border-subtle" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {DESIGN_SYSTEMS.map((opt) => {
+            const active = mounted && designSystem === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setDesignSystem(opt.id)}
+                className={cn(
+                  "text-left p-6 border transition-colors rounded-card",
+                  active
+                    ? "border-fg-accent bg-accent-soft"
+                    : "border-border-subtle hover:border-border-strong",
+                )}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex gap-1.5">
+                    {[
+                      opt.swatches.canvas,
+                      opt.swatches.surface,
+                      opt.swatches.accent,
+                    ].map((c, i) => (
+                      <span
+                        // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length swatch row
+                        key={i}
+                        className="block h-6 w-6 rounded-full border border-border-subtle"
+                        style={{ background: c }}
+                      />
+                    ))}
+                  </div>
+                  {active ? (
+                    <Text variant="caption" tone="success">
+                      Active
+                    </Text>
+                  ) : null}
+                </div>
+                <p className="text-base font-medium text-fg mb-1">
+                  {opt.label}
+                </p>
+                <Text variant="caption" tone="muted" className="mb-3">
+                  {opt.tagline}
+                </Text>
+                <Text
+                  variant="body"
+                  tone="secondary"
+                  className="text-sm font-light leading-relaxed"
                 >
-                  {opt.icon}
-                </span>
-                {active ? (
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
-                    Active
+                  {opt.description}
+                </Text>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Theme tone picker */}
+      <div>
+        <div className="flex items-center gap-3 mb-4">
+          <Text variant="caption" tone="muted">
+            Tone
+          </Text>
+          <span className="h-px flex-1 bg-border-subtle" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {THEMES.map((opt) => {
+            const active = mounted && theme === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setTheme(opt.id)}
+                className={cn(
+                  "text-left p-5 border transition-colors rounded-card",
+                  active
+                    ? "border-fg-accent bg-accent-soft"
+                    : "border-border-subtle hover:border-border-strong",
+                )}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span
+                    className={cn(
+                      "material-symbols-outlined text-[24px]",
+                      active ? "text-fg" : "text-fg-muted",
+                    )}
+                  >
+                    {opt.icon}
                   </span>
-                ) : null}
-              </div>
-              <p className="text-sm font-medium text-slate-900 dark:text-white mb-1">
-                {opt.label}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 font-light leading-relaxed">
-                {opt.description}
-              </p>
-            </button>
-          );
-        })}
+                  {active ? (
+                    <Text variant="caption" tone="success">
+                      Active
+                    </Text>
+                  ) : null}
+                </div>
+                <p className="text-sm font-medium text-fg mb-1">{opt.label}</p>
+                <Text
+                  variant="body"
+                  tone="muted"
+                  className="text-xs font-light leading-relaxed"
+                >
+                  {opt.description}
+                </Text>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </SettingsSection>
   );
