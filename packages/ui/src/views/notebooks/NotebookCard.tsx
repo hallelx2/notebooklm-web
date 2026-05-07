@@ -1,5 +1,7 @@
 "use client";
 
+import { cardVariants } from "@notebooklm/ui/components/primitives";
+import { IconButton, Pill, Text, cn } from "@notebooklm/ui";
 import { Link } from "@notebooklm/ui/contexts";
 import { useEffect, useRef, useState } from "react";
 
@@ -53,53 +55,53 @@ export function NotebookCard({
   return (
     <Link
       href={`/notebooks/${id}`}
-      className="group relative bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 hover:border-blue-500/60 dark:hover:border-blue-500/50 transition-all duration-300 p-5 sm:p-6 flex flex-col gap-4 sm:gap-5 overflow-hidden"
+      className={cn(
+        cardVariants({ variant: "default", padding: "lg", interactive: true }),
+        "group flex flex-col gap-4 sm:gap-5",
+      )}
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-blue-100/50 dark:to-blue-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-accent-soft opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
       <div className="flex justify-between items-start relative z-10 gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors line-clamp-2">
+          <h3 className="text-xl font-bold text-fg group-hover:text-fg-accent transition-colors line-clamp-2">
             {title}
           </h3>
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] text-slate-500 dark:text-zinc-500 font-mono uppercase tracking-wider">
+            <Text variant="meta" tone="muted" as="span">
               {formatDate(createdAt)}
-            </span>
-            <span className="w-1 h-1 bg-slate-300 dark:bg-zinc-700 rounded-full" />
-            <span className="text-[10px] text-slate-500 dark:text-zinc-500 font-mono uppercase tracking-wider">
+            </Text>
+            <span className="w-1 h-1 bg-fg-muted rounded-full" />
+            <Text variant="meta" tone="muted" as="span">
               {sourceCount} source{sourceCount === 1 ? "" : "s"}
-            </span>
+            </Text>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <div className="px-2.5 py-1 rounded-sm flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
-              Active
-            </span>
-          </div>
+          <Pill tone="success">
+            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+            Active
+          </Pill>
 
           {onDelete && (
             <div ref={menuRef} className="relative">
-              <button
-                type="button"
+              <IconButton
+                variant="ghost"
+                size="sm"
+                icon="more_vert"
+                aria-label="More options"
+                title="More options"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   setMenuOpen((prev) => !prev);
                 }}
-                className="p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
-                title="More options"
-              >
-                <span className="material-symbols-outlined text-[18px] text-slate-500 dark:text-zinc-400">
-                  more_vert
-                </span>
-              </button>
+                className="opacity-0 group-hover:opacity-100"
+              />
 
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
+                <div className="absolute right-0 top-full mt-1 w-36 bg-elevated border border-border-subtle rounded-card shadow-xl z-50 overflow-hidden">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -108,7 +110,7 @@ export function NotebookCard({
                       setMenuOpen(false);
                       onDelete(id);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-danger hover:bg-danger/10 transition-colors"
                   >
                     <span className="material-symbols-outlined text-[18px]">
                       delete
@@ -122,9 +124,13 @@ export function NotebookCard({
         </div>
       </div>
 
-      <p className="text-xs text-slate-500 dark:text-zinc-500 leading-relaxed relative z-10 line-clamp-2 min-h-[2.4em]">
+      <Text
+        variant="body"
+        tone="muted"
+        className="text-xs leading-relaxed relative z-10 line-clamp-2 min-h-[2.4em]"
+      >
         {description ?? "No description yet."}
-      </p>
+      </Text>
 
       <div className="flex items-center gap-1 relative z-10 py-2 overflow-x-auto no-scrollbar">
         {STEP_LABELS.map((step, i) => {
@@ -133,50 +139,44 @@ export function NotebookCard({
             <div key={step} className="flex items-center gap-1">
               {i > 0 && (
                 <div
-                  className={`w-3 h-[1px] transition-colors ${
+                  className={cn(
+                    "w-3 h-[1px] transition-colors",
                     reached
-                      ? "bg-blue-400/60 group-hover:bg-blue-500"
-                      : "bg-slate-200 dark:bg-white/10"
-                  }`}
+                      ? "bg-fg-accent/60 group-hover:bg-fg-accent"
+                      : "bg-border-subtle",
+                  )}
                 />
               )}
-              <div
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 border rounded-sm transition-colors ${
+              <Pill
+                tone={reached ? "accent" : "neutral"}
+                size="sm"
+                className={cn(
                   reached
-                    ? "bg-blue-50 dark:bg-blue-500/5 border-blue-200 dark:border-blue-500/20 group-hover:border-blue-400 dark:group-hover:border-blue-500/40"
-                    : "bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-white/5 group-hover:border-slate-300 dark:group-hover:border-white/10"
-                }`}
+                    ? "group-hover:border-border-accent"
+                    : "group-hover:border-border-strong",
+                )}
               >
                 <span
-                  className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                    reached
-                      ? "bg-blue-500 group-hover:bg-blue-600"
-                      : "bg-slate-300 dark:bg-zinc-700"
-                  }`}
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full transition-colors",
+                    reached ? "bg-fg-accent" : "bg-fg-muted/50",
+                  )}
                 />
-                <span
-                  className={`text-[9px] font-bold uppercase tracking-wider transition-colors whitespace-nowrap ${
-                    reached
-                      ? "text-blue-700 dark:text-blue-200"
-                      : "text-slate-500 dark:text-zinc-500 group-hover:text-slate-700 dark:group-hover:text-zinc-300"
-                  }`}
-                >
-                  {step}
-                </span>
-              </div>
+                {step}
+              </Pill>
             </div>
           );
         })}
       </div>
 
       <div className="flex flex-wrap gap-2 mt-auto relative z-10">
-        <span className="px-2 py-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-[10px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 group-hover:border-blue-300 dark:group-hover:border-blue-500/20 group-hover:text-blue-700 dark:group-hover:text-blue-200 transition-colors">
+        <Pill tone="neutral" className="group-hover:border-border-accent group-hover:text-fg-accent">
           Private
-        </span>
-        <span className="px-2 py-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-[10px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 group-hover:border-blue-300 dark:group-hover:border-blue-500/20 group-hover:text-blue-700 dark:group-hover:text-blue-200 transition-colors">
+        </Pill>
+        <Pill tone="neutral" className="group-hover:border-border-accent group-hover:text-fg-accent">
           Gemini 2.5
-        </span>
-        <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-slate-400 dark:text-zinc-600 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors flex items-center gap-1">
+        </Pill>
+        <span className="ml-auto text-[10px] font-mono uppercase tracking-widest text-fg-muted group-hover:text-fg-accent transition-colors flex items-center gap-1">
           Open
           <span className="material-symbols-outlined text-[12px]">
             arrow_forward

@@ -1,20 +1,30 @@
 "use client";
 
+import { Button, Card, Heading, Text } from "@notebooklm/ui";
+
 export function WelcomeStep({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="space-y-6 sm:space-y-8">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-3">
+        <Text variant="caption" tone="muted" className="mb-3">
           Welcome
-        </p>
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-medium tracking-tighter mb-3">
+        </Text>
+        <Heading
+          level="h2"
+          weight="medium"
+          className="text-3xl sm:text-4xl md:text-5xl tracking-tighter mb-3"
+        >
           Local-first AI for your notes
-        </h1>
-        <p className="text-slate-600 dark:text-zinc-400 text-base leading-relaxed max-w-xl">
-          NotebookLM Desktop runs against your own files, your own keys,
-          and your own machine. Nothing leaves the device unless you
-          point it somewhere else.
-        </p>
+        </Heading>
+        <Text
+          variant="body"
+          tone="secondary"
+          className="text-base leading-relaxed max-w-xl"
+        >
+          NotebookLM Desktop runs against your own files, your own keys, and
+          your own machine. Nothing leaves the device unless you point it
+          somewhere else.
+        </Text>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3">
@@ -41,16 +51,17 @@ export function WelcomeStep({ onContinue }: { onContinue: () => void }) {
       </div>
 
       <div className="pt-2">
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="lg"
           onClick={onContinue}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-medium text-sm hover:bg-slate-800 dark:hover:bg-zinc-200 transition-colors"
+          className="w-full sm:w-auto"
         >
           Let's set things up
           <span className="material-symbols-outlined text-base">
             arrow_forward
           </span>
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -66,18 +77,14 @@ function FeatureCard({
   body: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-white/10 p-4 bg-slate-50/40 dark:bg-white/[0.02]">
+    <Card variant="default" padding="sm" className="bg-accent-soft">
       <div className="flex items-center gap-2 mb-1.5">
-        <span className="material-symbols-outlined text-[18px] text-indigo-500 dark:text-indigo-400">
+        <span className="material-symbols-outlined text-[18px] text-fg-accent">
           {icon}
         </span>
-        <h3 className="text-sm font-medium text-slate-900 dark:text-white">
-          {title}
-        </h3>
+        <h3 className="text-sm font-medium text-fg">{title}</h3>
       </div>
-      <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
-        {body}
-      </p>
-    </div>
+      <p className="text-xs text-fg-secondary leading-relaxed">{body}</p>
+    </Card>
   );
 }

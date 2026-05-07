@@ -535,6 +535,7 @@ export function LandingView() {
 
   return (
     <div
+      data-surface="landing"
       className="min-h-screen overflow-x-hidden landing-grain"
       style={{
         background: "var(--landing-bg)",

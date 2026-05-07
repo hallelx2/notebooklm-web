@@ -159,7 +159,7 @@ function SortableProviderRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]"
+      className="border border-border-subtle bg-surface rounded-card"
     >
       <div className="flex items-center gap-3 px-4 py-3">
         <button
@@ -167,7 +167,7 @@ function SortableProviderRow({
           {...attributes}
           {...listeners}
           aria-label={`Drag ${row.descriptor.label} to reorder`}
-          className="cursor-grab active:cursor-grabbing text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300"
+          className="cursor-grab active:cursor-grabbing text-fg-muted hover:text-fg-secondary"
         >
           <span className="material-symbols-outlined text-[18px]">
             drag_indicator
@@ -178,12 +178,12 @@ function SortableProviderRow({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-sm font-medium text-slate-900 dark:text-white">
+            <span className="text-sm font-medium text-fg">
               {row.descriptor.label}
             </span>
             <ConfiguredBadge row={row} />
           </div>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">
+          <p className="text-xs text-fg-muted truncate">
             {row.descriptor.description}
           </p>
         </div>
@@ -191,7 +191,7 @@ function SortableProviderRow({
         <button
           type="button"
           onClick={() => setOpen(!open)}
-          className="text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 border border-slate-300 dark:border-white/20 hover:border-slate-900 dark:hover:border-white transition-colors"
+          className="text-[10px] font-bold uppercase tracking-widest text-fg-secondary hover:text-fg px-3 py-1.5 border border-border-subtle hover:border-border-strong rounded-button transition-colors"
         >
           {open ? "Close" : row.configured ? "Edit" : "Configure"}
         </button>
@@ -205,7 +205,7 @@ function SortableProviderRow({
 function ConfiguredBadge({ row }: { row: ProviderRow }) {
   if (row.configured?.hasKey || row.configured?.baseUrl) {
     return (
-      <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-success">
         <span className="material-symbols-outlined text-[11px]">
           check_circle
         </span>
@@ -215,14 +215,14 @@ function ConfiguredBadge({ row }: { row: ProviderRow }) {
   }
   if (row.envFallback.apiKey || row.envFallback.baseUrl) {
     return (
-      <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-blue-700 dark:text-blue-400">
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-info">
         <span className="material-symbols-outlined text-[11px]">terminal</span>
         Env
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-fg-muted">
       <span className="material-symbols-outlined text-[11px]">close</span>
       Not configured
     </span>
@@ -268,14 +268,12 @@ function ProviderEditor({
   });
 
   return (
-    <div className="border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#070707] px-4 py-4 space-y-3">
+    <div className="border-t border-border-subtle bg-accent-soft px-4 py-4 space-y-3">
       {row.descriptor.fields.map((f) => (
         <label key={f.key} className="block">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-zinc-300 mb-1">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-fg-secondary mb-1">
             {f.label}
-            {f.required ? (
-              <span className="text-red-600 dark:text-red-400 ml-1">*</span>
-            ) : null}
+            {f.required ? <span className="text-danger ml-1">*</span> : null}
           </div>
           <input
             type={f.type ?? "text"}
@@ -288,22 +286,20 @@ function ProviderEditor({
             onChange={(e) =>
               setDraft((d) => ({ ...d, [f.key]: e.target.value }))
             }
-            className="w-full bg-white dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/20 px-3 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:border-slate-900 dark:focus:border-white focus:outline-none"
+            className="w-full bg-surface border border-border-subtle rounded-input px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:border-fg-accent focus:outline-none"
           />
           {f.hint ? (
-            <p className="text-[11px] text-slate-500 dark:text-zinc-500 mt-1">
-              {f.hint}
-            </p>
+            <p className="text-[11px] text-fg-muted mt-1">{f.hint}</p>
           ) : null}
         </label>
       ))}
 
       {testResult ? (
         <div
-          className={`text-xs p-3 border ${
+          className={`text-xs p-3 border rounded-card ${
             testResult.ok
-              ? "border-emerald-300 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200"
-              : "border-red-300 dark:border-red-800/60 bg-red-50 dark:bg-red-950/30 text-red-900 dark:text-red-200"
+              ? "border-success/40 bg-success/10 text-success"
+              : "border-danger/40 bg-danger/10 text-danger"
           }`}
         >
           {testResult.ok ? (
@@ -335,7 +331,7 @@ function ProviderEditor({
             })
           }
           disabled={testMut.isPending}
-          className="text-[10px] font-bold uppercase tracking-widest px-3 py-2 border border-slate-300 dark:border-white/20 hover:border-slate-900 dark:hover:border-white text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-50"
+          className="text-[10px] font-bold uppercase tracking-widest px-3 py-2 border border-border-subtle hover:border-border-strong text-fg-secondary hover:text-fg rounded-button transition-colors disabled:opacity-50"
         >
           {testMut.isPending ? "Testing…" : "Test connection"}
         </button>
@@ -349,7 +345,7 @@ function ProviderEditor({
             })
           }
           disabled={upsertMut.isPending}
-          className="text-[10px] font-bold uppercase tracking-widest px-3 py-2 bg-slate-900 dark:bg-white text-white dark:text-black hover:bg-slate-800 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50"
+          className="text-[10px] font-bold uppercase tracking-widest px-3 py-2 bg-fg text-fg-inverted hover:bg-fg-secondary rounded-button transition-colors disabled:opacity-50"
         >
           {upsertMut.isPending ? "Saving…" : "Save"}
         </button>
@@ -362,20 +358,20 @@ function ProviderEditor({
               }
             }}
             disabled={deleteMut.isPending}
-            className="text-[10px] font-bold uppercase tracking-widest px-3 py-2 text-red-700 dark:text-red-400 hover:underline ml-auto disabled:opacity-50"
+            className="text-[10px] font-bold uppercase tracking-widest px-3 py-2 text-danger hover:underline ml-auto disabled:opacity-50"
           >
             Remove
           </button>
         ) : null}
       </div>
 
-      <p className="text-[11px] text-slate-500 dark:text-zinc-500">
+      <p className="text-[11px] text-fg-muted">
         Need help?{" "}
         <a
           href={row.descriptor.homepage}
           target="_blank"
           rel="noreferrer"
-          className="underline hover:text-slate-900 dark:hover:text-white"
+          className="underline hover:text-fg"
         >
           {row.descriptor.homepage}
         </a>
@@ -402,9 +398,7 @@ function Toggle({
       aria-checked={checked}
       onClick={() => onChange(!checked)}
       className={`shrink-0 relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-        checked
-          ? "bg-emerald-500"
-          : "bg-slate-300 dark:bg-zinc-700"
+        checked ? "bg-success" : "bg-border-strong"
       }`}
     >
       <span
@@ -418,7 +412,7 @@ function Toggle({
 
 function ZeroProvidersBanner() {
   return (
-    <div className="mb-6 p-4 border border-amber-300 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200">
+    <div className="mb-6 p-4 border border-warning/40 bg-warning/10 text-warning rounded-card">
       <div className="flex items-start gap-3">
         <span className="material-symbols-outlined text-[20px] mt-0.5">
           warning
@@ -428,9 +422,9 @@ function ZeroProvidersBanner() {
             No web search providers active
           </div>
           <p className="text-xs leading-relaxed">
-            Deep-research needs at least one provider to fetch sources from
-            the web. Toggle one on below and add a key (or self-host SearxNG
-            and point at it).
+            Deep-research needs at least one provider to fetch sources from the
+            web. Toggle one on below and add a key (or self-host SearxNG and
+            point at it).
           </p>
         </div>
       </div>
@@ -440,7 +434,7 @@ function ZeroProvidersBanner() {
 
 function Loading() {
   return (
-    <div className="py-20 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+    <div className="py-20 text-center text-[10px] font-bold uppercase tracking-widest text-fg-muted">
       Loading…
     </div>
   );

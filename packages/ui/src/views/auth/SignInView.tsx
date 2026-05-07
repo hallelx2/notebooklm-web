@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, Input, Text } from "@notebooklm/ui";
 import { Link, useAuth, useRouter } from "@notebooklm/ui/contexts";
 import { useEffect, useState } from "react";
 import { AuthShell } from "./AuthShell";
@@ -13,11 +14,6 @@ export function SignInView() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Don't navigate on the sign-in POST's resolve — `useSession`'s
-  // cache update lands on a later microtask, and AuthGate would see
-  // the still-`unauthenticated` status and bounce us right back here
-  // (the visible bug: form clears, page stays). Instead wait for
-  // `auth.status` to flip to "authenticated", then navigate.
   useEffect(() => {
     if (submitted && auth.status === "authenticated") {
       router.replace("/notebooks");
@@ -48,18 +44,18 @@ export function SignInView() {
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-slate-900 mb-1.5"
+            className="block text-sm font-medium text-fg mb-1.5"
           >
             Email
           </label>
-          <input
+          <Input
             id="email"
             type="email"
             required
             placeholder="you@domain.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none transition-colors text-sm"
+            size="lg"
           />
         </div>
 
@@ -67,52 +63,58 @@ export function SignInView() {
           <div className="flex items-center justify-between mb-1.5">
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-slate-900"
+              className="block text-sm font-medium text-fg"
             >
               Password
             </label>
             <Link
               href="/auth/forgot-password"
-              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+              className="text-sm font-medium text-fg-accent hover:opacity-80 transition-opacity"
             >
               Forgot password?
             </Link>
           </div>
-          <input
+          <Input
             id="password"
             type="password"
             required
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none transition-colors text-sm"
+            size="lg"
           />
         </div>
 
         {err && (
-          <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm">
+          <div className="rounded-input bg-danger/10 border border-danger/30 text-danger px-3 py-2 text-sm">
             {err}
           </div>
         )}
 
-        <button
+        <Button
           type="submit"
+          variant="primary"
+          size="lg"
           disabled={loading}
-          className="w-full h-12 rounded-xl bg-slate-900 text-white font-medium hover:bg-slate-800 shadow-sm transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
+          className="w-full"
         >
           {loading ? "Signing in..." : "Sign in"}
-        </button>
+        </Button>
       </form>
 
-      <p className="mt-10 text-center text-sm text-slate-500">
+      <Text
+        variant="body"
+        tone="secondary"
+        className="mt-10 text-center text-sm"
+      >
         Don't have an account?{" "}
         <Link
           href="/auth/sign-up"
-          className="font-semibold text-blue-600 hover:text-blue-700"
+          className="font-semibold text-fg-accent hover:opacity-80 transition-opacity"
         >
           Sign up for free
         </Link>
-      </p>
+      </Text>
     </AuthShell>
   );
 }
