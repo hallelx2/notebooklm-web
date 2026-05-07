@@ -248,7 +248,7 @@ export function ChatPanel({
  [notebookId, sourceIds, transportCtx.chat.url],
  );
 
- const { messages, sendMessage, status, setMessages } = useChat({
+ const { messages, sendMessage, status, setMessages, error } = useChat({
  transport,
  });
  const busy = status === "submitted" || status === "streaming";
@@ -533,12 +533,36 @@ export function ChatPanel({
  messages[messages.length - 1].role === "user" && (
  <div className="max-w-[85%] rounded-2xl px-4 py-4 bg-elevated space-y-2.5">
  <div className="flex items-center gap-2 mb-1">
- <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
- <div className="h-3 w-24 bg-border-subtle dark:bg-gray-600 rounded animate-pulse" />
+ <span className="inline-block w-2 h-2 rounded-full bg-fg-accent animate-pulse" />
+ <div className="h-3 w-24 bg-border-subtle rounded animate-pulse" />
  </div>
- <div className="h-3 w-full bg-border-subtle dark:bg-gray-600 rounded animate-pulse" />
- <div className="h-3 w-5/6 bg-border-subtle dark:bg-gray-600 rounded animate-pulse" />
- <div className="h-3 w-3/6 bg-border-subtle dark:bg-gray-600 rounded animate-pulse" />
+ <div className="h-3 w-full bg-border-subtle rounded animate-pulse" />
+ <div className="h-3 w-5/6 bg-border-subtle rounded animate-pulse" />
+ <div className="h-3 w-3/6 bg-border-subtle rounded animate-pulse" />
+ </div>
+ )}
+
+ {/* Surface chat-stream errors so silent failures don't read as
+     "no output" — until this was added a misconfigured AI provider
+     (or a chat-endpoint 5xx in dev) just left the user staring
+     at an empty assistant slot with no way to know what went wrong. */}
+ {error && !busy && (
+ <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-danger/10 border border-danger/40">
+ <div className="flex items-center gap-2 mb-1.5">
+ <span className="material-symbols-outlined text-[16px] text-danger">
+ error
+ </span>
+ <span className="text-xs font-bold uppercase tracking-widest text-danger">
+ Chat error
+ </span>
+ </div>
+ <p className="text-sm text-danger leading-relaxed break-words">
+ {error.message || String(error)}
+ </p>
+ <p className="text-[11px] text-fg-muted mt-2">
+ If this persists, open Settings → Providers and re-test the
+ chat provider, then try again.
+ </p>
  </div>
  )}
  </div>
