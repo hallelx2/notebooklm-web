@@ -37,7 +37,7 @@ export function QuizConfigModal({ open, onClose, notebookId }: Props) {
  disabled={isLoading}
  />
 
- <div className="relative w-full max-w-md bg-surface dark:bg-surface rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-border-subtle/50 dark:border-border-strong/50">
+ <div className="relative w-full max-w-md bg-surface rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-border-subtle/50 dark:border-border-strong/50">
  {/* Gradient accent bar */}
  <div className="absolute inset-x-0 top-0 h-[3px] bg-[var(--ds-accent-gradient)]" />
 
@@ -50,7 +50,7 @@ export function QuizConfigModal({ open, onClose, notebookId }: Props) {
  </span>
  </div>
  <div>
- <h2 className="text-lg font-semibold text-fg-secondary dark:text-fg">
+ <h2 className="text-lg font-semibold text-fg">
  Quiz
  </h2>
  <p className="text-xs text-fg-muted">
@@ -62,7 +62,7 @@ export function QuizConfigModal({ open, onClose, notebookId }: Props) {
  type="button"
  onClick={onClose}
  disabled={isLoading}
- className="p-2 rounded-full hover:bg-accent-soft dark:hover:bg-border-strong text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary transition-colors"
+ className="p-2 rounded-full hover:bg-accent-soft dark:hover:bg-border-strong text-fg-muted hover:text-fg-secondary transition-colors"
  >
  <span className="material-symbols-outlined">close</span>
  </button>
@@ -72,7 +72,7 @@ export function QuizConfigModal({ open, onClose, notebookId }: Props) {
  <div className="px-6 pb-6 space-y-5">
  {/* Question count selector */}
  <div>
- <label className="text-sm font-medium text-fg-secondary dark:text-fg-secondary mb-2 block">
+ <label className="text-sm font-medium text-fg-secondary mb-2 block">
  Number of questions
  </label>
  <div className="flex gap-2">
@@ -85,7 +85,7 @@ export function QuizConfigModal({ open, onClose, notebookId }: Props) {
  className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-medium transition-all border ${
  questionCount === count
  ? "bg-orange-50 dark:bg-orange-500/15 border-orange-300 dark:border-orange-500/40 text-orange-700 dark:text-orange-300 shadow-sm"
- : "bg-elevated dark:bg-elevated border-border-subtle dark:border-border-subtle text-fg-secondary dark:text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong"
+ : "bg-elevated border-border-subtle text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong"
  }`}
  >
  {count}

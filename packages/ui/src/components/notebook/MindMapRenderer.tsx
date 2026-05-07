@@ -146,13 +146,13 @@ export function MindMapRenderer({ markdown, onNodeClick }: Props) {
  {/* ---------- Loading overlay ---------- */}
  {loading && (
  <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-canvas/50 backdrop-blur-sm">
- <div className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-white dark:bg-elevated shadow-lg border border-gray-100 dark:border-border-strong">
+ <div className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-elevated shadow-lg border border-gray-100 dark:border-border-strong">
  <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-accent-soft0/20 flex items-center justify-center">
  <span className="material-symbols-outlined text-2xl text-fg-accent animate-spin">
  progress_activity
  </span>
  </div>
- <p className="text-sm font-medium text-fg-secondary dark:text-fg-secondary">
+ <p className="text-sm font-medium text-fg-secondary">
  Rendering mind map...
  </p>
  <p className="text-[10px] text-fg-muted">
@@ -170,7 +170,7 @@ export function MindMapRenderer({ markdown, onNodeClick }: Props) {
  className="p-1.5 rounded-lg bg-white/80 dark:bg-elevated/80 backdrop-blur-sm border border-border-subtle hover:bg-white dark:hover:bg-border-strong transition-colors shadow-sm"
  title="Fit to view"
  >
- <span className="material-symbols-outlined text-[18px] text-fg-secondary dark:text-fg-secondary">
+ <span className="material-symbols-outlined text-[18px] text-fg-secondary">
  fit_screen
  </span>
  </button>
@@ -179,7 +179,7 @@ export function MindMapRenderer({ markdown, onNodeClick }: Props) {
  className="p-1.5 rounded-lg bg-white/80 dark:bg-elevated/80 backdrop-blur-sm border border-border-subtle hover:bg-white dark:hover:bg-border-strong transition-colors shadow-sm"
  title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
  >
- <span className="material-symbols-outlined text-[18px] text-fg-secondary dark:text-fg-secondary">
+ <span className="material-symbols-outlined text-[18px] text-fg-secondary">
  {isFullscreen ? "fullscreen_exit" : "fullscreen"}
  </span>
  </button>

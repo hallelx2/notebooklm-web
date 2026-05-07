@@ -246,7 +246,7 @@ export function DeepResearchModal({
  onClose();
  }}
  />
- <div className="relative w-full max-w-6xl bg-surface dark:bg-surface sm:rounded-2xl rounded-none shadow-2xl flex flex-col max-h-full sm:max-h-[92vh] h-full sm:h-auto overflow-hidden border border-border-subtle/50 dark:border-border-strong/50">
+ <div className="relative w-full max-w-6xl bg-surface sm:rounded-2xl rounded-none shadow-2xl flex flex-col max-h-full sm:max-h-[92vh] h-full sm:h-auto overflow-hidden border border-border-subtle/50 dark:border-border-strong/50">
  {/* Header with gradient accent */}
  <div className="relative shrink-0">
  <div className="absolute inset-x-0 top-0 h-1 bg-[var(--ds-accent-gradient)]" />
@@ -258,7 +258,7 @@ export function DeepResearchModal({
  </span>
  </div>
  <div>
- <h2 className="text-lg font-semibold text-fg-secondary dark:text-fg">
+ <h2 className="text-lg font-semibold text-fg">
  Deep Research
  </h2>
  <p className="text-xs text-fg-muted">
@@ -272,7 +272,7 @@ export function DeepResearchModal({
  abortRef.current?.abort();
  onClose();
  }}
- className="p-2 rounded-full hover:bg-accent-soft dark:hover:bg-border-strong text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary transition-colors"
+ className="p-2 rounded-full hover:bg-accent-soft dark:hover:bg-border-strong text-fg-muted hover:text-fg-secondary transition-colors"
  >
  <span className="material-symbols-outlined">close</span>
  </button>
@@ -326,7 +326,7 @@ export function DeepResearchModal({
  onChange={(e) => setQuery(e.target.value)}
  disabled={running}
  placeholder="What do you want to research?"
- className="w-full pl-12 pr-4 py-3 rounded-xl border border-border-subtle bg-white dark:bg-elevated focus:ring-2 focus:ring-fg-accent/40 focus:border-fg-accent text-sm shadow-sm transition-shadow"
+ className="w-full pl-12 pr-4 py-3 rounded-xl border border-border-subtle bg-elevated focus:ring-2 focus:ring-fg-accent/40 focus:border-fg-accent text-sm shadow-sm transition-shadow"
  onKeyDown={(e) => {
  if (e.key === "Enter" && !running) run();
  }}
@@ -341,8 +341,8 @@ export function DeepResearchModal({
  disabled={running}
  className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
  mode === "fast"
- ? "bg-white dark:bg-gray-600 text-fg-secondary dark:text-fg shadow-sm"
- : "text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary"
+ ? "bg-white dark:bg-gray-600 text-fg shadow-sm"
+ : "text-fg-muted hover:text-fg-secondary "
  }`}
  >
  <span className="material-symbols-outlined text-xs align-middle mr-1">
@@ -356,8 +356,8 @@ export function DeepResearchModal({
  disabled={running}
  className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
  mode === "deep"
- ? "bg-white dark:bg-gray-600 text-fg-secondary dark:text-fg shadow-sm"
- : "text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary"
+ ? "bg-white dark:bg-gray-600 text-fg shadow-sm"
+ : "text-fg-muted hover:text-fg-secondary "
  }`}
  >
  <span className="material-symbols-outlined text-xs align-middle mr-1">
@@ -410,7 +410,7 @@ export function DeepResearchModal({
  <span
  className={`text-xs font-medium ${
  stage === "done"
- ? "text-green-600 dark:text-green-400"
+ ? "text-success"
  : stage === "error"
  ? "text-danger"
  : "text-fg-accent"
@@ -453,12 +453,12 @@ export function DeepResearchModal({
  {plan.map((p, i) => (
  <div
  key={p}
- className="flex gap-3 p-2.5 rounded-lg bg-white dark:bg-elevated/60 border border-gray-100 dark:border-border-strong/50 shadow-sm"
+ className="flex gap-3 p-2.5 rounded-lg bg-elevated/60 border border-gray-100 dark:border-border-strong/50 shadow-sm"
  >
  <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-fg-accent text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
  {i + 1}
  </span>
- <span className="text-xs text-fg-secondary dark:text-fg-secondary leading-relaxed">
+ <span className="text-xs text-fg-secondary leading-relaxed">
  {p}
  </span>
  </div>
@@ -496,7 +496,7 @@ export function DeepResearchModal({
  )}
  {plan.length === 0 && logs.length === 0 && (
  <div className="flex flex-col items-center justify-center h-full text-center py-12 opacity-50">
- <span className="material-symbols-outlined text-3xl text-fg-secondary dark:text-fg-secondary mb-2">
+ <span className="material-symbols-outlined text-3xl text-fg-secondary mb-2">
  format_list_numbered
  </span>
  <p className="text-xs text-fg-muted">
@@ -531,7 +531,7 @@ export function DeepResearchModal({
  ) : (
  <div className="flex flex-col items-center justify-center h-full text-center py-12">
  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 flex items-center justify-center mb-4">
- <span className="material-symbols-outlined text-3xl text-fg-accent dark:text-fg-accent">
+ <span className="material-symbols-outlined text-3xl text-fg-accent">
  article
  </span>
  </div>
@@ -567,10 +567,10 @@ export function DeepResearchModal({
  {sources.map((s) => (
  <div
  key={s.url}
- className="p-3 rounded-xl border border-border-subtle/70 dark:border-border-strong/50 bg-white dark:bg-elevated/40 text-xs hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-sm transition-all group"
+ className="p-3 rounded-xl border border-border-subtle/70 dark:border-border-strong/50 bg-elevated/40 text-xs hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-sm transition-all group"
  >
  <div className="flex items-start justify-between gap-2">
- <span className="text-[10px] font-mono text-fg-accent dark:text-fg-accent mt-0.5 font-bold">
+ <span className="text-[10px] font-mono text-fg-accent mt-0.5 font-bold">
  [{s.n}]
  </span>
  <div className="flex-1 min-w-0">
@@ -598,7 +598,7 @@ export function DeepResearchModal({
  ))}
  {sources.length === 0 && (
  <div className="flex flex-col items-center justify-center text-center py-12 opacity-50">
- <span className="material-symbols-outlined text-3xl text-fg-secondary dark:text-fg-secondary mb-2">
+ <span className="material-symbols-outlined text-3xl text-fg-secondary mb-2">
  language
  </span>
  <p className="text-xs text-fg-muted">
@@ -637,7 +637,7 @@ export function DeepResearchModal({
  abortRef.current?.abort();
  onClose();
  }}
- className="px-5 py-2 rounded-lg text-sm font-medium bg-border-subtle hover:bg-gray-300 dark:hover:bg-gray-600 text-fg-secondary dark:text-fg-secondary transition-colors"
+ className="px-5 py-2 rounded-lg text-sm font-medium bg-border-subtle hover:bg-border-strong text-fg-secondary transition-colors"
  >
  Done
  </button>

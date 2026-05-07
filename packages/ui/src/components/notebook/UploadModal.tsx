@@ -263,7 +263,7 @@ export function UploadModal({
  onClose();
  }}
  />
- <div className="relative w-full max-w-5xl bg-surface dark:bg-surface sm:rounded-2xl rounded-none shadow-2xl flex flex-col max-h-full sm:max-h-[92vh] h-full sm:h-auto overflow-hidden">
+ <div className="relative w-full max-w-5xl bg-surface sm:rounded-2xl rounded-none shadow-2xl flex flex-col max-h-full sm:max-h-[92vh] h-full sm:h-auto overflow-hidden">
  <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-border-subtle shrink-0">
  <h2 className="text-xl font-medium text-fg-secondary">
  Add & Manage Sources
@@ -294,8 +294,8 @@ export function UploadModal({
  onClick={() => setTab(t.id)}
  className={`pb-3 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${
  tab === t.id
- ? "border-blue-600 text-blue-600 dark:text-fg-accent"
- : "border-transparent text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary"
+ ? "border-blue-600 text-fg-accent"
+ : "border-transparent text-fg-muted hover:text-fg-secondary "
  }`}
  >
  <span className="material-symbols-outlined text-lg">
@@ -308,7 +308,7 @@ export function UploadModal({
 
  {tab === "research" && (
  <div className="overflow-y-auto p-6 flex-1 space-y-5">
- <div className="rounded-2xl border border-indigo-200 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 p-5">
+ <div className="rounded-2xl border border-fg-accent/30 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 p-5">
  <div className="flex items-center gap-2 mb-3">
  <span className="material-symbols-outlined text-fg-accent">
  science
@@ -317,14 +317,14 @@ export function UploadModal({
  Let the agent find your sources
  </h3>
  </div>
- <p className="text-xs text-fg-secondary dark:text-fg-muted mb-4 leading-relaxed">
+ <p className="text-xs text-fg-muted mb-4 leading-relaxed">
  Describe what you want to research. The agent plans
  sub-questions, searches the web, reads the top pages, writes a
  report, and adds everything it used as sources.
  </p>
 
  <div className="flex flex-col sm:flex-row gap-2">
- <div className="flex-1 flex items-center gap-2 rounded-xl border border-border-subtle bg-white dark:bg-elevated focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/30 transition-colors">
+ <div className="flex-1 flex items-center gap-2 rounded-xl border border-border-subtle bg-elevated focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/30 transition-colors">
  <span className="material-symbols-outlined text-fg-muted ml-3">
  search
  </span>
@@ -337,7 +337,7 @@ export function UploadModal({
  if (e.key === "Enter" && !running) runResearch();
  }}
  placeholder="What do you want to research?"
- className="flex-1 bg-transparent py-3 pr-4 text-sm text-fg-secondary dark:text-fg placeholder:text-fg-muted outline-none"
+ className="flex-1 bg-transparent py-3 pr-4 text-sm text-fg placeholder:text-fg-muted outline-none"
  />
  </div>
  <div className="flex items-center gap-1 p-1 rounded-xl bg-accent-soft dark:bg-elevated">
@@ -348,7 +348,7 @@ export function UploadModal({
  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
  mode === "fast"
  ? "bg-white dark:bg-border-strong text-fg dark:text-white shadow-sm"
- : "text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary"
+ : "text-fg-muted hover:text-fg-secondary "
  }`}
  >
  <span className="material-symbols-outlined text-sm">
@@ -363,7 +363,7 @@ export function UploadModal({
  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
  mode === "deep"
  ? "bg-white dark:bg-border-strong text-fg dark:text-white shadow-sm"
- : "text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary"
+ : "text-fg-muted hover:text-fg-secondary "
  }`}
  >
  <span className="material-symbols-outlined text-sm">
@@ -389,7 +389,7 @@ export function UploadModal({
  </div>
 
  {stageMsg && (
- <div className="mt-3 text-xs text-fg-secondary dark:text-fg-muted flex items-center gap-2">
+ <div className="mt-3 text-xs text-fg-muted flex items-center gap-2">
  <span className="material-symbols-outlined text-sm">
  {running ? "autorenew" : "check_circle"}
  </span>
@@ -404,7 +404,7 @@ export function UploadModal({
  {(plan.length > 0 || logs.length > 0) && (
  <div className="grid md:grid-cols-[260px_1fr] gap-4">
  {/* Left: Plan + Activity */}
- <div className="rounded-xl border border-border-subtle dark:border-border-subtle bg-gray-50/50 dark:bg-white/[0.02] p-4 space-y-4 max-h-[50vh] overflow-y-auto">
+ <div className="rounded-xl border border-border-subtle bg-gray-50/50 dark:bg-white/[0.02] p-4 space-y-4 max-h-[50vh] overflow-y-auto">
  {plan.length > 0 && (
  <div>
  <h4 className="text-[10px] uppercase tracking-widest font-semibold text-fg-muted mb-3">
@@ -414,7 +414,7 @@ export function UploadModal({
  {plan.map((p, i) => (
  <div
  key={p}
- className="flex gap-2.5 text-xs text-fg-secondary dark:text-fg-secondary"
+ className="flex gap-2.5 text-xs text-fg-secondary"
  >
  <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-accent-soft0/20 text-fg-accent flex items-center justify-center text-[10px] font-bold shrink-0">
  {i + 1}
@@ -445,13 +445,13 @@ export function UploadModal({
  key={`${i}-${l.slice(0, 10)}`}
  className={`flex items-start gap-1.5 text-[10px] leading-relaxed ${
  isStage
- ? "font-medium text-fg-secondary dark:text-fg-secondary"
+ ? "font-medium text-fg-secondary"
  : isSuccess
  ? "text-success pl-2"
  : isFail
  ? "text-red-500 dark:text-red-400 pl-2"
  : isSearch
- ? "text-blue-600 dark:text-fg-accent pl-2"
+ ? "text-fg-accent pl-2"
  : "text-fg-muted pl-2"
  }`}
  >
@@ -480,7 +480,7 @@ export function UploadModal({
  </div>
 
  {/* Right: Report */}
- <div className="rounded-xl border border-border-subtle dark:border-border-subtle p-5 max-h-[50vh] overflow-y-auto">
+ <div className="rounded-xl border border-border-subtle p-5 max-h-[50vh] overflow-y-auto">
  <h4 className="text-[10px] uppercase tracking-widest font-semibold text-fg-muted mb-3">
  Report (auto-added to notebook)
  </h4>
@@ -547,7 +547,7 @@ export function UploadModal({
  {pending.map((p, i) => (
  <div
  key={`${p.file.name}-${i}`}
- className="flex items-center gap-3 p-3 rounded-xl bg-elevated dark:bg-elevated"
+ className="flex items-center gap-3 p-3 rounded-xl bg-elevated"
  >
  <span className="material-symbols-outlined text-blue-500">
  description
@@ -577,12 +577,12 @@ export function UploadModal({
  onDrop={onDrop}
  className="border-2 border-dashed border-border-subtle rounded-2xl p-10 flex flex-col items-center justify-center text-center bg-gray-50 dark:bg-elevated/50 hover:bg-blue-50 dark:hover:bg-blue-900/10 hover:border-blue-300 transition-all cursor-pointer group"
  >
- <div className="w-14 h-14 rounded-full bg-white dark:bg-surface shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
- <span className="material-symbols-outlined text-3xl text-blue-600 dark:text-fg-accent">
+ <div className="w-14 h-14 rounded-full bg-surface shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+ <span className="material-symbols-outlined text-3xl text-fg-accent">
  cloud_upload
  </span>
  </div>
- <p className="text-base font-medium text-fg-secondary dark:text-fg-secondary mb-1">
+ <p className="text-base font-medium text-fg-secondary mb-1">
  Drag & drop or{" "}
  <span className="text-blue-600 hover:underline">
  choose files
@@ -608,7 +608,7 @@ export function UploadModal({
  <div className="p-6 flex-1">
  <label
  htmlFor="linkInput"
- className="text-sm font-medium text-fg-secondary dark:text-fg-secondary mb-2 block"
+ className="text-sm font-medium text-fg-secondary mb-2 block"
  >
  Enter URL
  </label>
@@ -617,7 +617,7 @@ export function UploadModal({
  type="url"
  value={link}
  onChange={(e) => setLink(e.target.value)}
- className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-white dark:bg-elevated text-fg-secondary focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 mb-6"
+ className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-elevated text-fg-secondary focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 mb-6"
  placeholder="https://example.com/article"
  />
  <button
@@ -635,11 +635,11 @@ export function UploadModal({
  <div className="p-6 flex-1">
  <div className="text-center py-10">
  <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
- <span className="material-symbols-outlined text-3xl text-green-600 dark:text-green-400">
+ <span className="material-symbols-outlined text-3xl text-success">
  add_to_drive
  </span>
  </div>
- <p className="text-base font-medium text-fg-secondary dark:text-fg-secondary mb-2">
+ <p className="text-base font-medium text-fg-secondary mb-2">
  Connect Google Drive
  </p>
  <p className="text-sm text-fg-muted">
@@ -659,7 +659,7 @@ export function UploadModal({
  )}
 
  <div className="px-5 py-3 bg-gray-50/80 dark:bg-surface border-t border-gray-100 dark:border-border-subtle flex items-center justify-between shrink-0">
- <div className="flex items-center gap-2 text-sm text-fg-secondary dark:text-fg-muted">
+ <div className="flex items-center gap-2 text-sm text-fg-muted">
  {tab === "research" && running ? (
  <span className="material-symbols-outlined text-lg animate-spin text-fg-accent">
  progress_activity
@@ -683,7 +683,7 @@ export function UploadModal({
  type="button"
  onClick={onClose}
  disabled={tab === "research" && running}
- className="px-5 py-2 text-sm font-medium rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-border-subtle hover:bg-gray-300 dark:bg-border-strong dark:hover:bg-gray-600 text-fg-secondary dark:text-fg-secondary"
+ className="px-5 py-2 text-sm font-medium rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-border-subtle hover:bg-gray-300 dark:bg-border-strong dark:hover:bg-gray-600 text-fg-secondary"
  >
  Done
  </button>

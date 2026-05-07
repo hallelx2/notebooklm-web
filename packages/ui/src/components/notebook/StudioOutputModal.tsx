@@ -93,7 +93,7 @@ function FlashcardsContent({
  key={i}
  type="button"
  onClick={() => toggle(i)}
- className="relative min-h-[140px] rounded-xl border border-border-subtle dark:border-border-subtle bg-elevated dark:bg-elevated p-4 text-left transition-all hover:shadow-md cursor-pointer"
+ className="relative min-h-[140px] rounded-xl border border-border-subtle bg-elevated p-4 text-left transition-all hover:shadow-md cursor-pointer"
  >
  <div className="flex items-center justify-between mb-2">
  <span className="text-[10px] font-bold uppercase tracking-wider text-fg-muted">
@@ -140,7 +140,7 @@ function QuizContent({
  return (
  <div className="space-y-6">
  {attempted === total && total > 0 && (
- <div className="rounded-xl bg-elevated dark:bg-elevated p-4 text-center border border-border-subtle dark:border-border-subtle">
+ <div className="rounded-xl bg-elevated p-4 text-center border border-border-subtle">
  <p className="text-lg font-semibold text-fg-secondary">
  Score: {correct}/{total}
  </p>
@@ -168,11 +168,11 @@ function QuizContent({
  <div className="space-y-1.5 ml-4">
  {q.options.map((option, oIdx) => {
  let optionStyle =
- "border-border-subtle dark:border-border-subtle bg-elevated dark:bg-elevated hover:bg-border-subtle dark:hover:bg-gray-600";
+ "border-border-subtle bg-elevated hover:bg-border-subtle dark:hover:bg-gray-600";
  if (hasAnswered) {
  if (oIdx === q.answer) {
  optionStyle =
- "border-emerald-400 dark:border-emerald-500/50 bg-emerald-50 dark:bg-success/10";
+ "border-success/40 bg-success/10";
  } else if (oIdx === selected && oIdx !== q.answer) {
  optionStyle =
  "border-red-400 dark:border-red-500/50 bg-danger/10";
@@ -198,7 +198,7 @@ function QuizContent({
  >
  {String.fromCharCode(65 + oIdx)}
  </span>
- <span className="text-fg-secondary dark:text-fg-secondary">
+ <span className="text-fg-secondary">
  {option}
  </span>
  {hasAnswered && oIdx === q.answer && (
@@ -354,7 +354,7 @@ function AudioOverviewPlayer({
  <button
  type="button"
  onClick={() => setShowScript(!showScript)}
- className="flex items-center gap-2 text-sm font-medium text-fg-secondary dark:text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary transition-colors mb-3"
+ className="flex items-center gap-2 text-sm font-medium text-fg-muted hover:text-fg-secondary transition-colors mb-3"
  >
  <span
  className="material-symbols-outlined text-lg transition-transform"
@@ -373,8 +373,8 @@ function AudioOverviewPlayer({
  <div
  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
  isAlex
- ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-fg-accent"
- : "bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300"
+ ? "bg-accent-soft text-fg-accent"
+ : "bg-accent-soft text-fg-accent"
  }`}
  >
  {line.speaker.charAt(0).toUpperCase()}
@@ -383,13 +383,13 @@ function AudioOverviewPlayer({
  <p
  className={`text-xs font-semibold mb-0.5 ${
  isAlex
- ? "text-blue-600 dark:text-fg-accent"
- : "text-purple-600 dark:text-purple-400"
+ ? "text-fg-accent"
+ : "text-fg-accent"
  }`}
  >
  {line.speaker}
  </p>
- <p className="text-sm text-fg-secondary dark:text-fg-secondary leading-relaxed">
+ <p className="text-sm text-fg-secondary leading-relaxed">
  {line.text}
  </p>
  </div>
@@ -549,12 +549,12 @@ export function StudioOutputModal({
  onClick={onClose}
  />
  <div
- className={`relative w-full ${kind === "mind-map" ? "max-w-5xl" : "max-w-3xl"} bg-surface dark:bg-surface rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden`}
+ className={`relative w-full ${kind === "mind-map" ? "max-w-5xl" : "max-w-3xl"} bg-surface rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden`}
  >
  {/* Header */}
- <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle dark:border-border-subtle shrink-0">
+ <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle shrink-0">
  <div className="flex items-center gap-3 min-w-0">
- <span className="material-symbols-outlined text-2xl text-blue-600 dark:text-fg-accent">
+ <span className="material-symbols-outlined text-2xl text-fg-accent">
  {icon}
  </span>
  <div className="min-w-0">
