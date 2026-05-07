@@ -21,6 +21,19 @@ export default defineConfig({
       // to, refuses extensionless `./app` imports inside packages/server.
       name: "notebooklm-server-middleware",
       async configureServer(server) {
+        // Spawn the kokoro-tts + sentence-transformer embed workers
+        // BEFORE the api-server module evaluates. The kokoro-local /
+        // local-embed providers read `globalThis.__notebooklm*Rpc` at
+        // request time and route through the worker when present,
+        // falling back to inline ONNX when it isn't — and inline ONNX
+        // crashes on Kokoro-82M model load on most setups. In packaged
+        // builds main.cjs handles this; in dev the api-server lives
+        // inside Vite's process so we mirror the wiring here.
+        const { installDevWorkers } = await server.ssrLoadModule(
+          "/src/server/dev-workers.mjs",
+        );
+        installDevWorkers();
+
         const [serverPkg, stubMod, honoNode] = await Promise.all([
           server.ssrLoadModule("@notebooklm/server"),
           server.ssrLoadModule("/src/server/stub-adapter.ts"),

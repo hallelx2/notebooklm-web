@@ -92,15 +92,37 @@ async function handleEmbed(payload) {
   return { vectors: tensor.tolist() };
 }
 
-if (!process.parentPort) {
+// IPC bridge — supports both launch contexts (Electron utilityProcess
+// in prod, Node child_process.fork in dev). See tts-worker.cjs for the
+// long version of why both are needed.
+const ipc = (() => {
+  if (process.parentPort) {
+    return {
+      onMessage(handler) {
+        process.parentPort.on("message", (event) => handler(event.data));
+      },
+      postMessage(msg) {
+        process.parentPort.postMessage(msg);
+      },
+    };
+  }
+  if (typeof process.send === "function") {
+    return {
+      onMessage(handler) {
+        process.on("message", handler);
+      },
+      postMessage(msg) {
+        process.send(msg);
+      },
+    };
+  }
   console.error(
-    "[embed-worker] process.parentPort is undefined — this script must be launched via Electron utilityProcess.fork(), not bare Node.",
+    "[embed-worker] no IPC channel — must be launched via Electron utilityProcess.fork() or Node child_process.fork().",
   );
   process.exit(1);
-}
+})();
 
-process.parentPort.on("message", async (event) => {
-  const msg = event.data;
+ipc.onMessage(async (msg) => {
   if (!msg || typeof msg.id !== "number" || typeof msg.type !== "string") {
     console.warn("[embed-worker] received malformed message:", msg);
     return;
@@ -115,9 +137,9 @@ process.parentPort.on("message", async (event) => {
     } else {
       throw new Error(`unknown rpc type: ${type}`);
     }
-    process.parentPort.postMessage({ id, ok: true, result });
+    ipc.postMessage({ id, ok: true, result });
   } catch (err) {
-    process.parentPort.postMessage({
+    ipc.postMessage({
       id,
       ok: false,
       error: err instanceof Error ? err.stack || err.message : String(err),
