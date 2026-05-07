@@ -235,7 +235,7 @@ export function NotebookView({ id }: { id: string }) {
  {/* Skeleton panels */}
  <div className="flex-1 flex px-3 pb-3 gap-2 overflow-hidden">
  {/* Sources skeleton */}
- <div className="w-[320px] shrink-0 bg-surface dark:bg-surface rounded-2xl p-4 animate-pulse space-y-3">
+ <div className="w-[320px] shrink-0 bg-surface rounded-2xl p-4 animate-pulse space-y-3">
  <div className="h-5 w-20 bg-border-subtle rounded" />
  <div className="h-10 w-full bg-border-subtle rounded-full" />
  <div className="h-20 w-full bg-border-subtle rounded-xl" />
@@ -250,7 +250,7 @@ export function NotebookView({ id }: { id: string }) {
  </div>
  </div>
  {/* Chat skeleton */}
- <div className="flex-1 bg-surface dark:bg-surface rounded-2xl p-4 animate-pulse space-y-4">
+ <div className="flex-1 bg-surface rounded-2xl p-4 animate-pulse space-y-4">
  <div className="h-5 w-12 bg-border-subtle rounded" />
  <div className="flex-1 flex items-center justify-center">
  <div className="w-64 space-y-3">
@@ -262,7 +262,7 @@ export function NotebookView({ id }: { id: string }) {
  <div className="h-14 w-full bg-border-subtle rounded-3xl" />
  </div>
  {/* Studio skeleton */}
- <div className="w-[320px] shrink-0 bg-surface dark:bg-surface rounded-2xl p-4 animate-pulse space-y-3">
+ <div className="w-[320px] shrink-0 bg-surface rounded-2xl p-4 animate-pulse space-y-3">
  <div className="h-5 w-16 bg-border-subtle rounded" />
  <div className="h-32 w-full bg-border-subtle rounded-2xl" />
  <div className="grid grid-cols-2 gap-2">
@@ -311,7 +311,7 @@ export function NotebookView({ id }: { id: string }) {
  {n.title === "Untitled notebook" ? (
  <span className="inline-block w-40 h-5 bg-border-subtle rounded animate-pulse" />
  ) : (
- <span className="text-lg font-medium text-fg-secondary dark:text-fg-secondary truncate max-w-[150px] sm:max-w-none">
+ <span className="text-lg font-medium text-fg-secondary truncate max-w-[150px] sm:max-w-none">
  {n.title}
  </span>
  )}
@@ -371,7 +371,7 @@ export function NotebookView({ id }: { id: string }) {
  <div className="border-t border-gray-100 dark:border-border-strong pt-2 mt-2">
  <div className="flex items-center justify-between">
  <span className="text-xs text-fg-muted">Created</span>
- <span className="text-xs text-fg-secondary dark:text-fg-muted">
+ <span className="text-xs text-fg-muted">
  {new Date(n.createdAt).toLocaleDateString()}
  </span>
  </div>
@@ -426,7 +426,7 @@ export function NotebookView({ id }: { id: string }) {
  onKeyDown={(e) => {
  if (e.key === "Enter") handleRename();
  }}
- className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-border-subtle bg-white dark:bg-elevated text-fg-secondary outline-none focus:ring-2 focus:ring-blue-500/40"
+ className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-border-subtle bg-elevated text-fg-secondary outline-none focus:ring-2 focus:ring-blue-500/40"
  placeholder={n.title}
  />
  <button
@@ -481,7 +481,7 @@ export function NotebookView({ id }: { id: string }) {
  </div>
  <div className="p-2">
  <div className="flex items-center justify-between px-3 py-2">
- <span className="text-sm text-fg-secondary dark:text-fg-secondary">
+ <span className="text-sm text-fg-secondary">
  Theme
  </span>
  <ThemeToggle />
@@ -505,7 +505,7 @@ export function NotebookView({ id }: { id: string }) {
  {/* Desktop layout: 3-panel with resize handles */}
  <main className="flex-1 hidden md:flex px-3 pb-3 overflow-hidden">
  <aside
- className="panel-resizable bg-surface dark:bg-surface rounded-2xl flex flex-col border border-border-subtle dark:border-transparent shadow-sm shrink-0"
+ className="panel-resizable bg-surface rounded-2xl flex flex-col border border-border-subtle dark:border-transparent shadow-sm shrink-0"
  style={{ width: sourcesWidth }}
  >
  <SourcesPanel
@@ -544,7 +544,7 @@ export function NotebookView({ id }: { id: string }) {
  />
 
  <aside
- className="panel-resizable bg-surface dark:bg-surface rounded-2xl flex flex-col border border-border-subtle dark:border-transparent shadow-sm shrink-0"
+ className="panel-resizable bg-surface rounded-2xl flex flex-col border border-border-subtle dark:border-transparent shadow-sm shrink-0"
  style={{ width: studioWidth }}
  >
  <StudioPanel
@@ -558,7 +558,7 @@ export function NotebookView({ id }: { id: string }) {
  <main className="flex-1 flex flex-col md:hidden overflow-hidden">
  <div className="flex-1 overflow-hidden">
  {mobileTab === "sources" && (
- <div className="h-full bg-surface dark:bg-surface flex flex-col overflow-hidden">
+ <div className="h-full bg-surface flex flex-col overflow-hidden">
  <SourcesPanel
  notebookId={id}
  onOpenUpload={() => setUploadOpen(true)}
@@ -584,7 +584,7 @@ export function NotebookView({ id }: { id: string }) {
  />
  )}
  {mobileTab === "studio" && (
- <div className="h-full bg-surface dark:bg-surface flex flex-col overflow-hidden">
+ <div className="h-full bg-surface flex flex-col overflow-hidden">
  <StudioPanel
  notebookId={id}
  onMindmapNodeClick={handleMindmapNodeClick}
@@ -594,7 +594,7 @@ export function NotebookView({ id }: { id: string }) {
  </div>
 
  {/* Bottom tab bar */}
- <div className="shrink-0 flex border-t border-border-subtle dark:border-border-subtle bg-surface dark:bg-surface">
+ <div className="shrink-0 flex border-t border-border-subtle bg-surface">
  {(
  [
  { id: "sources" as const, icon: "description", label: "Sources" },
@@ -608,7 +608,7 @@ export function NotebookView({ id }: { id: string }) {
  onClick={() => setMobileTab(tab.id)}
  className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium transition-colors ${
  mobileTab === tab.id
- ? "text-blue-600 dark:text-fg-accent"
+ ? "text-fg-accent"
  : "text-fg-muted"
  }`}
  >
@@ -621,15 +621,20 @@ export function NotebookView({ id }: { id: string }) {
  </div>
  </main>
 
- {/* Add Note floating button + modal */}
- <div className="fixed bottom-6 left-0 right-0 hidden md:flex justify-center pointer-events-none z-40">
+ {/* Add Note floating button + modal. `bg-fg`+`text-fg-inverted` are
+ token pairs that auto-invert per pack/tone so the button stays
+ high-contrast everywhere — the previous `bg-canvas dark:bg-white
+ text-fg-inverted` collapsed in light mode (canvas IS white, so
+ the button became invisible). Lifted from bottom-6 to bottom-12
+ so it doesn't sit on the chat-input footer caption. */}
+ <div className="fixed bottom-12 left-0 right-0 hidden md:flex justify-center pointer-events-none z-40">
  <button
  type="button"
  onClick={() => {
  setNoteOpen(true);
  setTimeout(() => noteRef.current?.focus(), 100);
  }}
- className="pointer-events-auto shadow-lg flex items-center gap-2 px-5 py-3 bg-canvas dark:bg-white text-fg-inverted rounded-full font-medium hover:scale-105 transition-transform"
+ className="pointer-events-auto shadow-lg flex items-center gap-2 px-5 py-3 bg-fg text-fg-inverted rounded-full font-medium hover:bg-fg-secondary transition-colors"
  >
  <span className="material-symbols-outlined text-lg">edit_note</span>
  Add note
@@ -644,8 +649,8 @@ export function NotebookView({ id }: { id: string }) {
  className="absolute inset-0 bg-canvas/30 backdrop-blur-sm"
  onClick={() => setNoteOpen(false)}
  />
- <div className="relative w-full max-w-lg bg-surface dark:bg-surface rounded-2xl shadow-2xl border border-border-subtle dark:border-border-subtle overflow-hidden">
- <div className="p-4 border-b border-border-subtle dark:border-border-subtle flex items-center justify-between">
+ <div className="relative w-full max-w-lg bg-surface rounded-2xl shadow-2xl border border-border-subtle overflow-hidden">
+ <div className="p-4 border-b border-border-subtle flex items-center justify-between">
  <h3 className="text-sm font-semibold text-fg-secondary flex items-center gap-2">
  <span className="material-symbols-outlined text-lg text-fg-accent">
  edit_note
@@ -666,13 +671,13 @@ export function NotebookView({ id }: { id: string }) {
  value={noteText}
  onChange={(e) => setNoteText(e.target.value)}
  placeholder="Write your note here... This will be added as a source for your notebook."
- className="w-full h-32 bg-elevated dark:bg-elevated border border-border-subtle dark:border-border-subtle rounded-xl p-3 text-sm text-fg-secondary placeholder:text-fg-muted resize-none focus:outline-none focus:ring-2 focus:ring-fg-accent/40 focus:border-fg-accent"
+ className="w-full h-32 bg-elevated border border-border-subtle rounded-xl p-3 text-sm text-fg-secondary placeholder:text-fg-muted resize-none focus:outline-none focus:ring-2 focus:ring-fg-accent/40 focus:border-fg-accent"
  />
  <div className="flex items-center justify-end gap-2 mt-3">
  <button
  type="button"
  onClick={() => setNoteOpen(false)}
- className="px-4 py-2 rounded-lg text-sm font-medium text-fg-secondary dark:text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong transition-colors"
+ className="px-4 py-2 rounded-lg text-sm font-medium text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong transition-colors"
  >
  Cancel
  </button>

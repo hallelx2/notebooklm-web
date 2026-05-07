@@ -222,7 +222,7 @@ function ScriptView({ script }: { script: ScriptLine[] }) {
  <button
  type="button"
  onClick={() => setExpanded(!expanded)}
- className="flex items-center gap-2 text-sm font-medium text-fg-secondary dark:text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary transition-colors"
+ className="flex items-center gap-2 text-sm font-medium text-fg-muted hover:text-fg-secondary transition-colors"
  >
  <span
  className="material-symbols-outlined text-lg transition-transform"
@@ -241,8 +241,8 @@ function ScriptView({ script }: { script: ScriptLine[] }) {
  <div
  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
  isAlex
- ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-fg-accent"
- : "bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300"
+ ? "bg-accent-soft text-fg-accent"
+ : "bg-accent-soft text-fg-accent"
  }`}
  >
  {line.speaker.charAt(0).toUpperCase()}
@@ -251,13 +251,13 @@ function ScriptView({ script }: { script: ScriptLine[] }) {
  <p
  className={`text-xs font-semibold mb-0.5 ${
  isAlex
- ? "text-blue-600 dark:text-fg-accent"
- : "text-purple-600 dark:text-purple-400"
+ ? "text-fg-accent"
+ : "text-fg-accent"
  }`}
  >
  {line.speaker}
  </p>
- <p className="text-sm text-fg-secondary dark:text-fg-secondary leading-relaxed">
+ <p className="text-sm text-fg-secondary leading-relaxed">
  {line.text}
  </p>
  </div>
@@ -636,7 +636,7 @@ export function AudioOverviewModal({
  onClose();
  }}
  />
- <div className="relative w-full max-w-lg bg-surface dark:bg-surface rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-border-subtle/50 dark:border-border-strong/50">
+ <div className="relative w-full max-w-lg bg-surface rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-border-subtle/50 dark:border-border-strong/50">
  {/* Gradient accent bar */}
  <div className="absolute inset-x-0 top-0 h-[3px] bg-[var(--ds-accent-gradient)]" />
 
@@ -649,7 +649,7 @@ export function AudioOverviewModal({
  </span>
  </div>
  <div>
- <h2 className="text-lg font-semibold text-fg-secondary dark:text-fg">
+ <h2 className="text-lg font-semibold text-fg">
  Audio Overview
  </h2>
  <p className="text-xs text-fg-muted">
@@ -663,7 +663,7 @@ export function AudioOverviewModal({
  abortRef.current?.abort();
  onClose();
  }}
- className="p-2 rounded-full hover:bg-accent-soft dark:hover:bg-border-strong text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary transition-colors"
+ className="p-2 rounded-full hover:bg-accent-soft dark:hover:bg-border-strong text-fg-muted hover:text-fg-secondary transition-colors"
  >
  <span className="material-symbols-outlined">close</span>
  </button>
@@ -676,7 +676,7 @@ export function AudioOverviewModal({
  <div className="space-y-5">
  {/* Length selector */}
  <div>
- <label className="text-sm font-medium text-fg-secondary dark:text-fg-secondary mb-2 block">
+ <label className="text-sm font-medium text-fg-secondary mb-2 block">
  Length
  </label>
  <div className="flex gap-2">
@@ -688,7 +688,7 @@ export function AudioOverviewModal({
  className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-medium transition-all border ${
  length === opt.value
  ? "bg-accent-soft border-fg-accent/40 text-fg-accent shadow-sm"
- : "bg-elevated dark:bg-elevated border-border-subtle dark:border-border-subtle text-fg-secondary dark:text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong"
+ : "bg-elevated border-border-subtle text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong"
  }`}
  >
  {opt.label}
@@ -699,7 +699,7 @@ export function AudioOverviewModal({
 
  {/* TTS provider selector */}
  <div>
- <label className="text-sm font-medium text-fg-secondary dark:text-fg-secondary mb-2 block">
+ <label className="text-sm font-medium text-fg-secondary mb-2 block">
  Voice engine
  </label>
  <div className="flex gap-2">
@@ -714,7 +714,7 @@ export function AudioOverviewModal({
  className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-medium transition-all border flex items-center justify-center gap-2 ${
  active
  ? "bg-accent-soft border-fg-accent/40 text-fg-accent shadow-sm"
- : "bg-elevated dark:bg-elevated border-border-subtle dark:border-border-subtle text-fg-secondary dark:text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong"
+ : "bg-elevated border-border-subtle text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong"
  }`}
  >
  <span className="material-symbols-outlined text-base">
@@ -732,7 +732,7 @@ export function AudioOverviewModal({
 
  {/* Custom focus */}
  <div>
- <label className="text-sm font-medium text-fg-secondary dark:text-fg-secondary mb-2 block">
+ <label className="text-sm font-medium text-fg-secondary mb-2 block">
  Custom focus{" "}
  <span className="text-fg-muted font-normal">(optional)</span>
  </label>
@@ -741,7 +741,7 @@ export function AudioOverviewModal({
  value={focus}
  onChange={(e) => setFocus(e.target.value)}
  placeholder="Focus on a specific topic (optional)"
- className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-white dark:bg-elevated text-sm text-fg-secondary placeholder:text-fg-muted focus:ring-2 focus:ring-fg-accent/40 focus:border-fg-accent transition-shadow"
+ className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface text-sm text-fg-secondary placeholder:text-fg-muted focus:ring-2 focus:ring-fg-accent/40 focus:border-fg-accent transition-shadow"
  />
  </div>
 
@@ -790,7 +790,7 @@ export function AudioOverviewModal({
  <span
  className={`text-[10px] font-medium ${
  isCompleted
- ? "text-green-600 dark:text-green-400"
+ ? "text-success"
  : isActive
  ? "text-fg-accent"
  : "text-fg-muted"
@@ -818,7 +818,7 @@ export function AudioOverviewModal({
  <span className="material-symbols-outlined text-lg text-fg-accent animate-spin">
  progress_activity
  </span>
- <span className="text-sm font-medium text-fg-secondary dark:text-fg-muted">
+ <span className="text-sm font-medium text-fg-muted">
  {stageMsg || STAGE_LABELS[stage] || "Processing..."}
  </span>
  </div>
@@ -847,7 +847,7 @@ export function AudioOverviewModal({
  type="button"
  onClick={cancelJob}
  disabled={cancelling}
- className="w-full py-2.5 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-danger text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+ className="w-full py-2.5 rounded-xl bg-danger/10 hover:bg-danger/20 text-danger text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
  >
  <span className="material-symbols-outlined text-base">
  {cancelling ? "progress_activity" : "stop_circle"}
@@ -865,14 +865,14 @@ export function AudioOverviewModal({
  <span className="material-symbols-outlined text-4xl text-fg-muted">
  cancel
  </span>
- <p className="text-sm text-fg-secondary dark:text-fg-secondary text-center">
+ <p className="text-sm text-fg-secondary text-center">
  Generation cancelled.
  </p>
  </div>
  <button
  type="button"
  onClick={reset}
- className="w-full py-2.5 rounded-xl bg-border-subtle hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium text-fg-secondary dark:text-fg-secondary transition-colors"
+ className="w-full py-2.5 rounded-xl bg-border-subtle hover:bg-border-strong text-sm font-medium text-fg-secondary transition-colors"
  >
  Try Again
  </button>
@@ -898,7 +898,7 @@ export function AudioOverviewModal({
  <button
  type="button"
  onClick={reset}
- className="w-full py-2.5 rounded-xl bg-border-subtle hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium text-fg-secondary dark:text-fg-secondary transition-colors"
+ className="w-full py-2.5 rounded-xl bg-border-subtle hover:bg-border-strong text-sm font-medium text-fg-secondary transition-colors"
  >
  Try Again
  </button>
@@ -913,7 +913,7 @@ export function AudioOverviewModal({
  <span className="material-symbols-outlined text-lg text-green-500">
  check_circle
  </span>
- <span className="text-sm font-medium text-green-600 dark:text-green-400">
+ <span className="text-sm font-medium text-success">
  Audio overview generated!
  </span>
  </div>
@@ -930,7 +930,7 @@ export function AudioOverviewModal({
  <button
  type="button"
  onClick={onClose}
- className="w-full py-2.5 rounded-xl bg-border-subtle hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium text-fg-secondary dark:text-fg-secondary transition-colors mt-2"
+ className="w-full py-2.5 rounded-xl bg-border-subtle hover:bg-border-strong text-sm font-medium text-fg-secondary transition-colors mt-2"
  >
  Close
  </button>

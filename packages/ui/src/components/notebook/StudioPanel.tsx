@@ -31,7 +31,7 @@ const STUDIO_TOOLS: {
  label: "Study guide",
  icon: "menu_book",
  description: "Key topics & review",
- color: "text-blue-600 dark:text-fg-accent bg-accent-soft",
+ color: "text-fg-accent bg-accent-soft",
  },
  {
  kind: "briefing-doc",
@@ -105,9 +105,9 @@ const KIND_LABELS: Record<string, string> = {
 
 const KIND_BADGE_COLORS: Record<string, string> = {
  "audio-overview":
- "bg-purple-100 dark:bg-purple-500/15 text-purple-600 dark:text-purple-400",
+ "bg-purple-100 dark:bg-purple-500/15 text-fg-accent",
  "study-guide":
- "bg-accent-soft text-blue-600 dark:text-fg-accent",
+ "bg-accent-soft text-fg-accent",
  "briefing-doc":
  "bg-success/15 text-success",
  faq: "bg-warning/15 text-warning dark:text-amber-400",
@@ -225,10 +225,10 @@ export function StudioPanel({
  if (selectedOutput) {
  const badgeColor =
  KIND_BADGE_COLORS[selectedOutput.kind] ??
- "bg-accent-soft dark:bg-gray-500/15 text-fg-secondary dark:text-fg-muted";
+ "bg-accent-soft dark:bg-gray-500/15 text-fg-muted";
  return (
  <>
- <div className="p-3 border-b border-border-subtle dark:border-border-subtle shrink-0">
+ <div className="p-3 border-b border-border-subtle shrink-0">
  <div className="flex items-center gap-1.5 text-xs">
  <button
  type="button"
@@ -240,7 +240,7 @@ export function StudioPanel({
  </span>
  Studio
  </button>
- <span className="text-fg-secondary dark:text-fg-secondary">/</span>
+ <span className="text-fg-secondary">/</span>
  <span
  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${badgeColor}`}
  >
@@ -279,7 +279,7 @@ export function StudioPanel({
  // ─── Default List View ────────────────────────────────────────────
  return (
  <>
- <div className="p-4 flex items-center justify-between border-b border-border-subtle dark:border-border-subtle shrink-0">
+ <div className="p-4 flex items-center justify-between border-b border-border-subtle shrink-0">
  <div className="flex items-center gap-2">
  <span className="material-symbols-outlined text-lg text-fg-accent">
  auto_awesome
@@ -361,7 +361,7 @@ export function StudioPanel({
  ? setQuizModalOpen(true)
  : handleGenerate(tool.kind)
  }
- className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-elevated dark:bg-elevated hover:bg-accent-soft dark:hover:bg-border-strong/80 border border-transparent hover:border-border-subtle dark:hover:border-border-subtle transition-all text-left disabled:opacity-50"
+ className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-elevated hover:bg-accent-soft dark:hover:bg-border-strong/80 border border-transparent hover:border-border-subtle dark:hover:border-border-subtle transition-all text-left disabled:opacity-50"
  >
  <div
  className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${iconBg}`}
@@ -423,7 +423,7 @@ export function StudioPanel({
  ) : outputs.length === 0 ? (
  <div className="text-center py-8 px-4">
  <div className="w-12 h-12 rounded-2xl bg-accent-soft dark:bg-white/5 flex items-center justify-center mx-auto mb-3">
- <span className="material-symbols-outlined text-2xl text-fg-secondary dark:text-fg-secondary">
+ <span className="material-symbols-outlined text-2xl text-fg-secondary">
  auto_fix_high
  </span>
  </div>
@@ -439,7 +439,7 @@ export function StudioPanel({
  {outputs.map((output) => {
  const badgeColor =
  KIND_BADGE_COLORS[output.kind] ??
- "bg-accent-soft dark:bg-gray-500/15 text-fg-secondary dark:text-fg-muted";
+ "bg-accent-soft dark:bg-gray-500/15 text-fg-muted";
 
  if (output.status === "generating") {
  // Only audio overviews have a re-openable progress
@@ -570,7 +570,7 @@ export function StudioPanel({
  )}
  </div>
  </div>
- <span className="material-symbols-outlined text-[16px] text-fg-secondary dark:text-fg-secondary group-hover/item:text-fg-muted dark:group-hover/item:text-fg-muted transition-colors">
+ <span className="material-symbols-outlined text-[16px] text-fg-secondary group-hover/item:text-fg-muted dark:group-hover/item:text-fg-muted transition-colors">
  chevron_right
  </span>
  </button>

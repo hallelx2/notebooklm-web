@@ -159,7 +159,7 @@ function AssistantMessage({
  </div>
  </div>
  <div className="p-3 max-h-48 overflow-y-auto">
- <p className="text-xs text-fg-secondary dark:text-fg-muted leading-relaxed whitespace-pre-wrap">
+ <p className="text-xs text-fg-muted leading-relaxed whitespace-pre-wrap">
  {popover.snippet}
  </p>
  </div>
@@ -353,7 +353,7 @@ export function ChatPanel({
  }
 
  return (
- <section className="flex-1 bg-surface dark:bg-surface rounded-2xl flex flex-col border border-border-subtle dark:border-transparent shadow-sm overflow-hidden min-h-0">
+ <section className="flex-1 bg-surface rounded-2xl flex flex-col border border-border-subtle dark:border-transparent shadow-sm overflow-hidden min-h-0">
  <div className="p-4 flex items-center justify-between shrink-0">
  <h2 className="font-medium text-fg-secondary">Chat</h2>
  <div className="flex gap-1">
@@ -379,7 +379,7 @@ export function ChatPanel({
  >
  {messages.length === 0 && sourceCount === 0 && (
  <div className="flex-1 flex flex-col items-center justify-center p-8">
- <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-fg-accent mb-4">
+ <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-fg-accent mb-4">
  <span className="material-symbols-outlined">upload_file</span>
  </div>
  <h3 className="text-xl font-medium mb-2 text-fg-secondary dark:text-white">
@@ -388,7 +388,7 @@ export function ChatPanel({
  <button
  type="button"
  onClick={onOpenUpload}
- className="mt-4 px-6 py-2 bg-elevated dark:bg-elevated hover:bg-border-subtle dark:hover:bg-border-strong border border-border-subtle rounded-full text-sm font-medium transition-colors"
+ className="mt-4 px-6 py-2 bg-elevated hover:bg-border-subtle dark:hover:bg-border-strong border border-border-subtle rounded-full text-sm font-medium transition-colors"
  >
  Upload a source
  </button>
@@ -406,7 +406,7 @@ export function ChatPanel({
  </h3>
  )}
  {notebookDescription ? (
- <p className="text-sm text-fg-secondary dark:text-fg-muted leading-relaxed mb-6">
+ <p className="text-sm text-fg-muted leading-relaxed mb-6">
  {notebookDescription}
  </p>
  ) : (
@@ -422,7 +422,7 @@ export function ChatPanel({
  type="button"
  onClick={() => handleStarterClick(question)}
  disabled={busy}
- className="w-full text-left px-4 py-2.5 rounded-xl bg-white/70 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border border-border-subtle/60 dark:border-border-strong/50 text-sm text-fg-secondary dark:text-fg-secondary transition-colors disabled:opacity-50"
+ className="w-full text-left px-4 py-2.5 rounded-xl bg-white/70 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border border-border-subtle/60 dark:border-border-strong/50 text-sm text-fg-secondary transition-colors disabled:opacity-50"
  >
  <span className="material-symbols-outlined text-[16px] align-middle mr-2 text-blue-500 dark:text-fg-accent">
  arrow_forward
@@ -461,7 +461,7 @@ export function ChatPanel({
 
  return (
  <div key={m.id} className="max-w-[85%] group/msg">
- <div className="rounded-2xl px-4 py-3 text-sm leading-relaxed bg-elevated dark:bg-elevated text-fg-secondary">
+ <div className="rounded-2xl px-4 py-3 text-sm leading-relaxed bg-elevated text-fg-secondary">
  <AssistantMessage
  messageId={m.id}
  text={text}
@@ -476,7 +476,7 @@ export function ChatPanel({
  type="button"
  onClick={() => handleSaveAsNote(text)}
  disabled={addFromText.isPending}
- className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong hover:text-fg-secondary dark:hover:text-fg-secondary transition-colors disabled:opacity-50"
+ className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong hover:text-fg-secondary transition-colors disabled:opacity-50"
  title="Save as note"
  >
  <span className="material-symbols-outlined text-[14px]">
@@ -488,7 +488,7 @@ export function ChatPanel({
  type="button"
  onClick={() => handleAddAsSource(text)}
  disabled={addFromText.isPending}
- className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong hover:text-fg-secondary dark:hover:text-fg-secondary transition-colors disabled:opacity-50"
+ className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong hover:text-fg-secondary transition-colors disabled:opacity-50"
  title="Add as source"
  >
  <span className="material-symbols-outlined text-[14px]">
@@ -502,7 +502,7 @@ export function ChatPanel({
  navigator.clipboard.writeText(text);
  showToast("Copied to clipboard");
  }}
- className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong hover:text-fg-secondary dark:hover:text-fg-secondary transition-colors"
+ className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-fg-muted hover:bg-accent-soft dark:hover:bg-border-strong hover:text-fg-secondary transition-colors"
  title="Copy"
  >
  <span className="material-symbols-outlined text-[14px]">
@@ -517,7 +517,7 @@ export function ChatPanel({
  })}
 
  {busy && messages.length === 0 && (
- <div className="max-w-[85%] rounded-2xl px-4 py-4 bg-elevated dark:bg-elevated animate-pulse space-y-2.5">
+ <div className="max-w-[85%] rounded-2xl px-4 py-4 bg-elevated animate-pulse space-y-2.5">
  <div className="flex items-center gap-2 mb-1">
  <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
  <div className="h-3 w-24 bg-border-subtle dark:bg-gray-600 rounded" />
@@ -531,7 +531,7 @@ export function ChatPanel({
  {busy &&
  messages.length > 0 &&
  messages[messages.length - 1].role === "user" && (
- <div className="max-w-[85%] rounded-2xl px-4 py-4 bg-elevated dark:bg-elevated space-y-2.5">
+ <div className="max-w-[85%] rounded-2xl px-4 py-4 bg-elevated space-y-2.5">
  <div className="flex items-center gap-2 mb-1">
  <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
  <div className="h-3 w-24 bg-border-subtle dark:bg-gray-600 rounded animate-pulse" />
@@ -547,12 +547,12 @@ export function ChatPanel({
  onSubmit={onSubmit}
  className="p-4 shrink-0 border-t border-gray-100 dark:border-gray-800"
  >
- <div className="bg-elevated dark:bg-elevated rounded-3xl p-4 flex flex-col gap-2 border border-transparent focus-within:border-border-subtle dark:focus-within:border-gray-500 transition-colors">
+ <div className="bg-elevated rounded-3xl p-4 flex flex-col gap-2 border border-transparent focus-within:border-border-subtle dark:focus-within:border-gray-500 transition-colors">
  <input
  value={input}
  onChange={(e) => setInput(e.target.value)}
  disabled={busy}
- className="w-full bg-transparent border-none focus:ring-0 p-0 text-fg-secondary dark:text-fg placeholder:text-fg-muted dark:placeholder:text-fg-muted outline-none disabled:opacity-60"
+ className="w-full bg-transparent border-none focus:ring-0 p-0 text-fg placeholder:text-fg-muted dark:placeholder:text-fg-muted outline-none disabled:opacity-60"
  placeholder={
  sourceCount === 0
  ? "Add a source to start chatting..."

@@ -118,13 +118,13 @@ function FlashcardsContent({
  >
  {/* Front face */}
  <div
- className="absolute inset-0 rounded-2xl border-2 border-indigo-200 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-indigo-900/20 dark:via-surface-dark dark:to-purple-900/20 p-8 flex flex-col justify-center items-center text-center shadow-lg"
+ className="absolute inset-0 rounded-2xl border-2 border-fg-accent/30 bg-accent-soft p-8 flex flex-col justify-center items-center text-center shadow-lg"
  style={{ backfaceVisibility: "hidden" }}
  >
- <span className="text-[10px] font-bold uppercase tracking-widest text-fg-accent dark:text-fg-accent mb-4">
+ <span className="text-[10px] font-bold uppercase tracking-widest text-fg-accent mb-4">
  Question
  </span>
- <p className="text-lg font-medium text-fg-secondary dark:text-fg leading-relaxed">
+ <p className="text-lg font-medium text-fg leading-relaxed">
  {card.front}
  </p>
  <span className="mt-6 text-xs text-fg-muted flex items-center gap-1">
@@ -143,7 +143,7 @@ function FlashcardsContent({
  <span className="text-[10px] font-bold uppercase tracking-widest text-success dark:text-emerald-500 mb-4">
  Answer
  </span>
- <p className="text-base text-fg-secondary dark:text-fg leading-relaxed">
+ <p className="text-base text-fg leading-relaxed">
  {card.back}
  </p>
  <span className="mt-6 text-xs text-fg-muted flex items-center gap-1">
@@ -165,9 +165,9 @@ function FlashcardsContent({
  goPrev();
  }}
  disabled={current === 0}
- className="w-10 h-10 rounded-full bg-elevated dark:bg-elevated border border-border-subtle dark:border-border-subtle flex items-center justify-center transition-colors hover:bg-border-subtle dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+ className="w-10 h-10 rounded-full bg-elevated border border-border-subtle flex items-center justify-center transition-colors hover:bg-border-subtle dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
  >
- <span className="material-symbols-outlined text-fg-secondary dark:text-fg-secondary">
+ <span className="material-symbols-outlined text-fg-secondary">
  arrow_back
  </span>
  </button>
@@ -190,9 +190,9 @@ function FlashcardsContent({
  goNext();
  }}
  disabled={current === total - 1}
- className="w-10 h-10 rounded-full bg-elevated dark:bg-elevated border border-border-subtle dark:border-border-subtle flex items-center justify-center transition-colors hover:bg-border-subtle dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+ className="w-10 h-10 rounded-full bg-elevated border border-border-subtle flex items-center justify-center transition-colors hover:bg-border-subtle dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
  >
- <span className="material-symbols-outlined text-fg-secondary dark:text-fg-secondary">
+ <span className="material-symbols-outlined text-fg-secondary">
  arrow_forward
  </span>
  </button>
@@ -358,14 +358,14 @@ function QuizContent({
  </span>
  </div>
  <p className={`text-lg font-semibold mt-1 ${scoreColor}`}>{pct}%</p>
- <p className="text-sm text-fg-secondary dark:text-fg-muted mt-2">
+ <p className="text-sm text-fg-muted mt-2">
  {encouragement}
  </p>
  </div>
 
  {/* Question review list */}
- <div className="rounded-xl border border-border-subtle dark:border-border-subtle bg-elevated dark:bg-elevated overflow-hidden">
- <div className="px-4 py-2.5 border-b border-border-subtle dark:border-border-subtle">
+ <div className="rounded-xl border border-border-subtle bg-elevated overflow-hidden">
+ <div className="px-4 py-2.5 border-b border-border-subtle">
  <p className="text-xs font-semibold text-fg-muted uppercase tracking-wider">
  Question Review
  </p>
@@ -386,7 +386,7 @@ function QuizContent({
  {isCorrect ? "check_circle" : "cancel"}
  </span>
  <div className="flex-1 min-w-0">
- <p className="text-xs text-fg-secondary dark:text-fg-secondary leading-snug">
+ <p className="text-xs text-fg-secondary leading-snug">
  <span className="font-semibold text-fg-muted mr-1">
  {qIdx + 1}.
  </span>
@@ -412,12 +412,12 @@ function QuizContent({
  </div>
 
  {/* AI Summary section */}
- <div className="rounded-xl border border-border-subtle dark:border-border-subtle bg-elevated dark:bg-elevated p-4 space-y-3">
+ <div className="rounded-xl border border-border-subtle bg-elevated p-4 space-y-3">
  <div className="flex items-center gap-2">
  <span className="material-symbols-outlined text-amber-500 text-lg">
  auto_awesome
  </span>
- <p className="text-sm font-semibold text-fg-secondary dark:text-fg-secondary">
+ <p className="text-sm font-semibold text-fg-secondary">
  AI Study Summary
  </p>
  </div>
@@ -493,7 +493,7 @@ function QuizContent({
  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-500 text-white text-xs font-bold mb-3">
  {current + 1}
  </span>
- <p className="text-lg font-medium text-fg-secondary dark:text-fg leading-relaxed">
+ <p className="text-lg font-medium text-fg leading-relaxed">
  {q.question}
  </p>
  </div>
@@ -503,15 +503,15 @@ function QuizContent({
  {q.options.map((option, oIdx) => {
  const letter = String.fromCharCode(65 + oIdx);
  let optionStyle =
- "border-border-subtle dark:border-border-subtle bg-elevated dark:bg-elevated hover:bg-accent-soft dark:hover:bg-gray-600 hover:border-amber-300 dark:hover:border-warning/40";
+ "border-border-subtle bg-elevated hover:bg-accent-soft dark:hover:bg-gray-600 hover:border-amber-300 dark:hover:border-warning/40";
  let iconEl: React.ReactNode = null;
  let letterStyle =
- "border-border-subtle text-fg-muted bg-white dark:bg-elevated";
+ "border-border-subtle text-fg-muted bg-elevated";
 
  if (hasAnswered) {
  if (oIdx === q.answer) {
  optionStyle =
- "border-emerald-400 dark:border-emerald-500/50 bg-emerald-50 dark:bg-success/10";
+ "border-success/40 bg-success/10";
  letterStyle =
  "border-emerald-500 text-success bg-emerald-50 dark:bg-emerald-500/20";
  iconEl = (
@@ -531,7 +531,7 @@ function QuizContent({
  );
  } else {
  optionStyle =
- "border-border-subtle dark:border-border-subtle bg-elevated/50 dark:bg-elevated/50 opacity-60";
+ "border-border-subtle bg-elevated/50 dark:bg-elevated/50 opacity-60";
  }
  }
 
@@ -548,7 +548,7 @@ function QuizContent({
  >
  {letter}
  </span>
- <span className="text-sm text-fg-secondary dark:text-fg-secondary flex-1 leading-snug">
+ <span className="text-sm text-fg-secondary flex-1 leading-snug">
  {option}
  </span>
  {iconEl}
@@ -563,9 +563,9 @@ function QuizContent({
  type="button"
  onClick={goPrev}
  disabled={current === 0}
- className="w-10 h-10 rounded-full bg-elevated dark:bg-elevated border border-border-subtle dark:border-border-subtle flex items-center justify-center transition-colors hover:bg-border-subtle dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+ className="w-10 h-10 rounded-full bg-elevated border border-border-subtle flex items-center justify-center transition-colors hover:bg-border-subtle dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
  >
- <span className="material-symbols-outlined text-fg-secondary dark:text-fg-secondary">
+ <span className="material-symbols-outlined text-fg-secondary">
  arrow_back
  </span>
  </button>
@@ -582,7 +582,7 @@ function QuizContent({
  <button
  type="button"
  onClick={() => setShowResults(true)}
- className="px-4 py-2 rounded-full bg-elevated dark:bg-elevated border border-border-subtle dark:border-border-subtle text-xs font-medium text-fg-muted hover:bg-border-subtle dark:hover:bg-gray-600 transition-colors"
+ className="px-4 py-2 rounded-full bg-elevated border border-border-subtle text-xs font-medium text-fg-muted hover:bg-border-subtle dark:hover:bg-gray-600 transition-colors"
  >
  Skip to Results
  </button>
@@ -592,9 +592,9 @@ function QuizContent({
  type="button"
  onClick={goNext}
  disabled={current === total - 1}
- className="w-10 h-10 rounded-full bg-elevated dark:bg-elevated border border-border-subtle dark:border-border-subtle flex items-center justify-center transition-colors hover:bg-border-subtle dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+ className="w-10 h-10 rounded-full bg-elevated border border-border-subtle flex items-center justify-center transition-colors hover:bg-border-subtle dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
  >
- <span className="material-symbols-outlined text-fg-secondary dark:text-fg-secondary">
+ <span className="material-symbols-outlined text-fg-secondary">
  arrow_forward
  </span>
  </button>
@@ -738,7 +738,7 @@ function AudioOverviewPlayer({
  <button
  type="button"
  onClick={() => setShowScript(!showScript)}
- className="flex items-center gap-1.5 text-xs font-medium text-fg-secondary dark:text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary transition-colors mb-2"
+ className="flex items-center gap-1.5 text-xs font-medium text-fg-muted hover:text-fg-secondary transition-colors mb-2"
  >
  <span
  className="material-symbols-outlined text-base transition-transform"
@@ -757,8 +757,8 @@ function AudioOverviewPlayer({
  <div
  className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
  isAlex
- ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-fg-accent"
- : "bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300"
+ ? "bg-accent-soft text-fg-accent"
+ : "bg-accent-soft text-fg-accent"
  }`}
  >
  {line.speaker.charAt(0).toUpperCase()}
@@ -767,13 +767,13 @@ function AudioOverviewPlayer({
  <p
  className={`text-[10px] font-semibold ${
  isAlex
- ? "text-blue-600 dark:text-fg-accent"
- : "text-purple-600 dark:text-purple-400"
+ ? "text-fg-accent"
+ : "text-fg-accent"
  }`}
  >
  {line.speaker}
  </p>
- <p className="text-xs text-fg-secondary dark:text-fg-secondary leading-relaxed">
+ <p className="text-xs text-fg-secondary leading-relaxed">
  {line.text}
  </p>
  </div>

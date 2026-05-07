@@ -112,7 +112,7 @@ export function SourcesPanel({
  <button
  type="button"
  onClick={onOpenUpload}
- className="w-full flex items-center justify-center gap-2 py-2.5 border border-border-subtle rounded-full text-sm font-medium hover:bg-gray-50 dark:hover:bg-elevated transition-colors text-blue-600 dark:text-fg-accent"
+ className="w-full flex items-center justify-center gap-2 py-2.5 border border-border-subtle rounded-full text-sm font-medium hover:bg-gray-50 dark:hover:bg-elevated transition-colors text-fg-accent"
  >
  <span className="material-symbols-outlined">add</span>
  Add sources
@@ -145,7 +145,7 @@ export function SourcesPanel({
  onKeyDown={(e) => {
  if (e.key === "Enter") runSearch();
  }}
- className="w-full bg-elevated dark:bg-elevated border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-blue-500/50 placeholder:text-fg-muted dark:placeholder:text-fg-muted text-fg-secondary"
+ className="w-full bg-elevated border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-blue-500/50 placeholder:text-fg-muted dark:placeholder:text-fg-muted text-fg-secondary"
  placeholder={
  searchMode === "web" ? "Search the web..." : "Search my files..."
  }
@@ -153,7 +153,7 @@ export function SourcesPanel({
  />
  </div>
 
- <div className="flex items-center gap-2 p-1 bg-elevated dark:bg-elevated rounded-lg">
+ <div className="flex items-center gap-2 p-1 bg-elevated rounded-lg">
  <button
  type="button"
  onClick={() => {
@@ -163,7 +163,7 @@ export function SourcesPanel({
  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
  searchMode === "local"
  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-fg-accent"
- : "text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary"
+ : "text-fg-muted hover:text-fg-secondary "
  }`}
  >
  <span className="material-symbols-outlined text-sm">folder</span>
@@ -175,7 +175,7 @@ export function SourcesPanel({
  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
  searchMode === "web"
  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-fg-accent"
- : "text-fg-muted hover:text-fg-secondary dark:hover:text-fg-secondary"
+ : "text-fg-muted hover:text-fg-secondary "
  }`}
  >
  <span className="material-symbols-outlined text-sm">language</span>
@@ -214,9 +214,9 @@ export function SourcesPanel({
 
  {searchMode === "web" &&
  (results.length > 0 || searchWeb.isPending) && (
- <div className="mt-2 p-3 bg-white dark:bg-elevated rounded-xl border border-border-subtle flex flex-col max-h-[60vh]">
+ <div className="mt-2 p-3 bg-elevated rounded-xl border border-border-subtle flex flex-col max-h-[60vh]">
  <div className="flex items-center justify-between mb-2 shrink-0">
- <span className="text-xs font-medium text-fg-secondary dark:text-fg-secondary">
+ <span className="text-xs font-medium text-fg-secondary">
  {searchWeb.isPending
  ? "Searching..."
  : `${results.length} result(s)`}
@@ -423,7 +423,7 @@ export function SourcesPanel({
  </a>
  )}
  </div>
- <div className="text-xs text-fg-secondary dark:text-fg-muted leading-relaxed whitespace-pre-wrap">
+ <div className="text-xs text-fg-muted leading-relaxed whitespace-pre-wrap">
  {s.content.slice(0, 5000)}
  {s.content.length > 5000 && (
  <span className="text-fg-muted italic">
