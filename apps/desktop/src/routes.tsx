@@ -4,7 +4,6 @@ import { ThemeProvider } from "@notebooklm/ui/components/ThemeProvider";
 import { SignInView } from "@notebooklm/ui/views/auth/SignInView";
 import { SignUpView } from "@notebooklm/ui/views/auth/SignUpView";
 import { NotebookView } from "@notebooklm/ui/views/notebook/NotebookView";
-import { NotebooksAppChrome } from "@notebooklm/ui/views/notebooks/NotebooksAppChrome";
 import { NotebooksView } from "@notebooklm/ui/views/notebooks/NotebooksView";
 import { OnboardingView } from "@notebooklm/ui/views/onboarding/OnboardingView";
 import { AppearanceView } from "@notebooklm/ui/views/settings/AppearanceView";
@@ -128,20 +127,13 @@ const onboardingRoute = createRoute({
 // surfaces. The settings tree below uses requireOnboarding={false} so the
 // user can actually complete onboarding without being bounced out of it.
 function NotebooksShell() {
-  // /notebooks gets the top-bar chrome (logo · email · settings · theme
-  // · sign-out) instead of the side dock. Reasons:
-  //   - On viewports where the centered max-w-[1400px] content extends
-  //     close to the left edge, the dock visually overlaps notebook
-  //     cards. The top bar avoids the conflict entirely.
-  //   - The Library page is the user's "home" surface; a familiar
-  //     top-bar feels more right-place-right-time than the
-  //     dock-on-top-of-content artefact.
-  // Side dock returns on /notebooks/[id] and /settings/* where
-  // top-side real estate is already spoken for.
+  // /notebooks (Library) gets the side dock. Library link hidden — the
+  // user is already there. Settings + theme + sign-out + brand stay
+  // visible.
   return (
     <AuthGate>
-      <NotebooksAppChrome />
       <NotebooksView />
+      <AppDock showLibrary={false} />
     </AuthGate>
   );
 }
@@ -153,13 +145,13 @@ const notebooksRoute = createRoute({
 });
 
 function NotebookShell() {
+  // /notebooks/[id] has its own top tooling (back · title · analytics ·
+  // share · settings · profile) so the dock would be redundant chrome
+  // taking up space the panels need. View is left to fill the canvas.
   const { id } = notebookRoute.useParams();
   return (
     <AuthGate>
-      <div className="pl-20">
-        <NotebookView id={id} />
-      </div>
-      <AppDock />
+      <NotebookView id={id} />
     </AuthGate>
   );
 }
