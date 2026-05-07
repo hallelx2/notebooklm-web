@@ -1,3 +1,4 @@
+import { AppDock } from "@notebooklm/ui/components/AppDock";
 import { AuthGate } from "@notebooklm/ui/components/AuthGate";
 import { ThemeProvider } from "@notebooklm/ui/components/ThemeProvider";
 import { SignInView } from "@notebooklm/ui/views/auth/SignInView";
@@ -6,11 +7,14 @@ import { NotebookView } from "@notebooklm/ui/views/notebook/NotebookView";
 import { NotebooksView } from "@notebooklm/ui/views/notebooks/NotebooksView";
 import { OnboardingView } from "@notebooklm/ui/views/onboarding/OnboardingView";
 import { AppearanceView } from "@notebooklm/ui/views/settings/AppearanceView";
+import { CodingAgentsView } from "@notebooklm/ui/views/settings/CodingAgentsView";
 import { ModelsView } from "@notebooklm/ui/views/settings/ModelsView";
 import { ProfileView } from "@notebooklm/ui/views/settings/ProfileView";
 import { ProvidersView } from "@notebooklm/ui/views/settings/ProvidersView";
-import { SettingsChrome } from "@notebooklm/ui/views/settings/SettingsChrome";
-import { SettingsNav } from "@notebooklm/ui/views/settings/SettingsNav";
+import {
+  SettingsNav,
+  SettingsSidebar,
+} from "@notebooklm/ui/views/settings/SettingsNav";
 import { WebSearchView } from "@notebooklm/ui/views/settings/WebSearchView";
 import {
   createHashHistory,
@@ -26,7 +30,26 @@ import { RouterBridge } from "./providers/RouterBridge";
 import { TransportBridge } from "./providers/TransportBridge";
 import { UpdateBanner } from "./providers/UpdateBanner";
 
-const rootRoute = createRootRoute({
+/**
+ * Stable named components for every route.
+ *
+ * Why named functions instead of `component: () => <X />`:
+ *   TanStack Router's render flow re-evaluates parent routes on every
+ *   navigation. With an inline arrow assigned to `component:`, the
+ *   identity of the component changes on each render — React's strict
+ *   reconciler (especially in React 19) treats this as "different
+ *   component", unmounts the old subtree, and mounts a new one. Under
+ *   the same conditions described in ThemeProvider.tsx (raw DOM
+ *   mutations from libraries that touch the document outside React's
+ *   tree), the unmount can fail silently, leaving the previous tree
+ *   stacked underneath the new one — the symptom is a page rendered
+ *   twice top-to-bottom.
+ *
+ *   Naming the components fixes this: same identity across every
+ *   render means React reuses the existing fiber tree.
+ */
+
+function RootShell() {
   // Bridges live INSIDE the TanStack Router so RouterBridge can read its
   // hooks. ThemeProvider sits at the top; the rest are wired in the same
   // order as apps/web's layout.
@@ -36,7 +59,7 @@ const rootRoute = createRootRoute({
   // respective clients (httpBatchLink + Better Auth fetch). The gate
   // resolves the URL once via preload IPC and renders a brief
   // "Connecting…" placeholder until it's ready.
-  component: () => (
+  return (
     <ThemeProvider>
       <RouterBridge>
         <ApiBaseUrlGate>
@@ -49,7 +72,11 @@ const rootRoute = createRootRoute({
         </ApiBaseUrlGate>
       </RouterBridge>
     </ThemeProvider>
-  ),
+  );
+}
+
+const rootRoute = createRootRoute({
+  component: RootShell,
 });
 
 // Desktop apps don't have a marketing landing page — the user double-clicks
@@ -82,56 +109,94 @@ const signUpRoute = createRoute({
 // onboarded user here. We use `requireOnboarding={false}` because, by
 // definition, the user IS not onboarded yet — the wizard's job is to
 // flip that flag.
-const onboardingRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/onboarding",
-  component: () => (
+function OnboardingShell() {
+  return (
     <AuthGate requireOnboarding={false}>
       <OnboardingView />
     </AuthGate>
-  ),
+  );
+}
+
+const onboardingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/onboarding",
+  component: OnboardingShell,
 });
 
 // AuthGate enforces "must be signed in AND onboarded" before notebook
 // surfaces. The settings tree below uses requireOnboarding={false} so the
 // user can actually complete onboarding without being bounced out of it.
+function NotebooksShell() {
+  // Library is the current page — hide the redundant Library link in
+  // the dock. Settings stays visible so the user can still jump there.
+  //
+  // No left padding on the wrapper: NotebooksView's content is centered
+  // via `max-w-[1400px] mx-auto`, so the dock floats in the natural
+  // left gutter without pushing layout. Adding pl-20 here would double
+  // the gutter (visible on wide viewports as a giant blank strip).
+  return (
+    <AuthGate>
+      <NotebooksView />
+      <AppDock showLibrary={false} />
+    </AuthGate>
+  );
+}
+
 const notebooksRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/notebooks",
-  component: () => (
-    <AuthGate>
-      <NotebooksView />
-    </AuthGate>
-  ),
+  component: NotebooksShell,
 });
+
+function NotebookShell() {
+  const { id } = notebookRoute.useParams();
+  return (
+    <AuthGate>
+      <div className="pl-20">
+        <NotebookView id={id} />
+      </div>
+      <AppDock />
+    </AuthGate>
+  );
+}
 
 const notebookRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/notebooks/$id",
-  component: () => {
-    const { id } = notebookRoute.useParams();
-    return (
-      <AuthGate>
-        <NotebookView id={id} />
-      </AuthGate>
-    );
-  },
+  component: NotebookShell,
 });
+
+/**
+ * Settings layout — vertical AppDock on the left edge, settings
+ * sidebar nav next to it, content right.
+ *
+ * No pl-20 on the wrapper: the inner `max-w-[1400px] mx-auto` already
+ * centers the sidebar+content within the viewport, so the dock floats
+ * in the natural left gutter.
+ */
+function SettingsLayoutShell() {
+  // Already on /settings/* — hide the dock's Settings cog (the sidebar
+  // and the active-section dot already make it clear where you are).
+  return (
+    <AuthGate requireOnboarding={false}>
+      <div className="relative z-10 flex min-h-screen w-full flex-col bg-canvas text-fg overflow-x-hidden">
+        <SettingsNav />
+        <div className="relative z-10 flex flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 md:px-10">
+          <SettingsSidebar />
+          <main className="flex-1 min-w-0 lg:pl-10 pb-12">
+            <Outlet />
+          </main>
+        </div>
+        <AppDock showSettings={false} />
+      </div>
+    </AuthGate>
+  );
+}
 
 const settingsLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "settings-layout",
-  component: () => (
-    <AuthGate requireOnboarding={false}>
-      <div className="relative z-10 flex min-h-screen w-full flex-col bg-white dark:bg-[#050505] text-slate-900 dark:text-white overflow-x-hidden">
-        <SettingsChrome />
-        <main className="flex-grow flex flex-col relative z-10">
-          <SettingsNav />
-          <Outlet />
-        </main>
-      </div>
-    </AuthGate>
-  ),
+  component: SettingsLayoutShell,
 });
 
 // Bare `/settings` -- shared UI components (gear icon in NotebooksView,
@@ -166,6 +231,12 @@ const settingsModelsRoute = createRoute({
   component: ModelsView,
 });
 
+const settingsCodingAgentsRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/settings/coding-agents",
+  component: CodingAgentsView,
+});
+
 const settingsAppearanceRoute = createRoute({
   getParentRoute: () => settingsLayoutRoute,
   path: "/settings/appearance",
@@ -190,6 +261,7 @@ const routeTree = rootRoute.addChildren([
     settingsProfileRoute,
     settingsProvidersRoute,
     settingsModelsRoute,
+    settingsCodingAgentsRoute,
     settingsWebSearchRoute,
     settingsAppearanceRoute,
   ]),

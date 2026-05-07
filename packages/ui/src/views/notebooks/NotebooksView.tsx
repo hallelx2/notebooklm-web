@@ -1,7 +1,7 @@
 "use client";
 
+import { Button, IconButton, Spinner, Text, cn } from "@notebooklm/ui";
 import { LoadingScreen } from "@notebooklm/ui/components/LoadingScreen";
-import { ThemeToggle } from "@notebooklm/ui/components/ThemeToggle";
 import { Link, useAuth, useRouter } from "@notebooklm/ui/contexts";
 import { trpc } from "@notebooklm/ui/trpc/client";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -23,7 +23,6 @@ export function NotebooksView() {
   const listMenuRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
-  // tRPC queries are gated on auth so they don't fire before we have a user.
   const list = trpc.notebook.list.useQuery(undefined, {
     enabled: !!auth.user,
   });
@@ -38,18 +37,13 @@ export function NotebooksView() {
     },
   });
 
-  // Real-time sign-out detection
   useEffect(() => {
     if (auth.status === "unauthenticated") {
       router.replace("/auth/sign-in");
     }
   }, [auth.status, router]);
 
-  // Desktop menu bridge: Cmd/Ctrl-N (File > New Notebook) dispatches a
-  // window event that we translate into the same `create.mutate` call the
-  // header button uses. Web users never fire this event so the listener
-  // is a harmless no-op there. See apps/desktop/src/main.tsx for the
-  // dispatch side and apps/desktop/electron/menu.cjs for the menu wiring.
+  // Desktop menu bridge: Cmd/Ctrl-N (File > New Notebook).
   useEffect(() => {
     if (!auth.user) return;
     const handler = () => create.mutate({ title: "Untitled notebook" });
@@ -57,7 +51,6 @@ export function NotebooksView() {
     return () => window.removeEventListener("notebooklm:new-notebook", handler);
   }, [auth.user, create]);
 
-  // Close list-view kebab menu on outside click
   useEffect(() => {
     if (!listMenuOpenId) return;
     function handleClick(e: MouseEvent) {
@@ -93,64 +86,21 @@ export function NotebooksView() {
     return filtered;
   }, [list.data, query, sort]);
 
-  // ── Early return AFTER all hooks (Rules of Hooks: same call order every
-  // render). When the AuthGate wraps this view in routes.tsx the user is
-  // guaranteed present; the guard below is a defensive fallback for the
-  // brief window between sign-out and the redirect firing.
   if (!auth.user) {
     return <LoadingScreen message="Loading your notebooks" />;
   }
-  const user = auth.user;
 
   function handleDelete(id: string) {
     deleteMut.mutate({ id });
   }
 
   return (
-    <div className="relative z-10 flex min-h-screen w-full flex-col bg-white dark:bg-[#050505] text-slate-900 dark:text-white overflow-x-hidden">
+    <div className="relative z-10 flex min-h-screen w-full flex-col bg-canvas text-fg overflow-x-hidden">
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute left-12 top-0 bottom-0 w-[1px] bg-slate-200 dark:bg-white/5 hidden md:block" />
-        <div className="absolute right-12 top-0 bottom-0 w-[1px] bg-slate-200 dark:bg-white/5 hidden md:block" />
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[45rem] h-[45rem] bg-blue-400/15 dark:bg-blue-500/10 blur-[120px] rounded-full" />
+        <div className="absolute left-12 top-0 bottom-0 w-[1px] bg-border-subtle hidden md:block" />
+        <div className="absolute right-12 top-0 bottom-0 w-[1px] bg-border-subtle hidden md:block" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[45rem] h-[45rem] bg-accent-soft blur-[120px] rounded-full" />
       </div>
-
-      <header className="relative z-20 border-b border-slate-200 dark:border-white/10">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-10 h-14 flex items-center justify-between gap-2">
-          <Link href="/" className="flex items-center gap-2.5 min-w-0">
-            <span className="w-7 h-7 rounded-md bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-white text-sm icon-filled">
-                book_2
-              </span>
-            </span>
-            <span className="font-medium tracking-tight text-sm">
-              NotebookLM
-            </span>
-          </Link>
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <span className="hidden md:inline text-xs text-slate-500 dark:text-zinc-500 font-mono uppercase tracking-wider truncate max-w-[200px]">
-              {user.email}
-            </span>
-            <Link
-              href="/settings"
-              title="Settings"
-              aria-label="Settings"
-              className="text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center"
-            >
-              <span className="material-symbols-outlined text-[20px]">
-                settings
-              </span>
-            </Link>
-            <ThemeToggle />
-            <button
-              type="button"
-              onClick={() => auth.signOut().then(() => router.push("/"))}
-              className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors whitespace-nowrap"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
 
       <main className="flex-grow flex flex-col relative z-10">
         <NotebooksHeader
@@ -167,14 +117,12 @@ export function NotebooksView() {
 
         <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 md:px-10 pb-20">
           {list.isPending ? (
-            // Initial load: render skeletons matching the chosen view so the
-            // grid/list lays out immediately at its final dimensions.
             <div>
-              <div className="flex items-center gap-2 mb-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
-                <span className="material-symbols-outlined text-[14px] animate-spin">
-                  progress_activity
-                </span>
-                Loading notebooks
+              <div className="flex items-center gap-2 mb-4">
+                <Spinner size={14} className="text-fg-muted" />
+                <Text variant="caption" tone="muted">
+                  Loading notebooks
+                </Text>
               </div>
               {view === "grid" ? (
                 <NotebookGridSkeleton />
@@ -183,26 +131,27 @@ export function NotebooksView() {
               )}
             </div>
           ) : notebooks.length === 0 ? (
-            <div className="py-32 text-center border border-dashed border-slate-300 dark:border-white/10">
-              <span className="material-symbols-outlined text-4xl text-slate-400 dark:text-zinc-700 mb-4 block">
+            <div className="py-32 text-center border border-dashed border-border-subtle rounded-card">
+              <span className="material-symbols-outlined text-4xl text-fg-muted mb-4 block">
                 library_books
               </span>
-              <p className="text-slate-500 dark:text-zinc-400 text-sm mb-6">
+              <Text variant="body" tone="secondary" className="text-sm mb-6">
                 {query
                   ? "No notebooks match that search."
                   : "No notebooks yet. Spin one up to start researching."}
-              </p>
-              <button
-                type="button"
+              </Text>
+              <Button
+                variant="soft"
+                size="md"
                 onClick={() => create.mutate({ title: "Untitled notebook" })}
                 disabled={create.isPending}
-                className="px-6 py-3 border border-emerald-500/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white dark:hover:text-black transition-colors disabled:opacity-60"
+                className="uppercase tracking-widest text-[10px] font-bold"
               >
-                <span className="material-symbols-outlined text-[14px] align-middle mr-2">
+                <span className="material-symbols-outlined text-[14px]">
                   add
                 </span>
                 New notebook
-              </button>
+              </Button>
             </div>
           ) : view === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -218,40 +167,52 @@ export function NotebooksView() {
               ))}
             </div>
           ) : (
-            <div className="divide-y divide-slate-200 dark:divide-white/5 border border-slate-200 dark:border-white/10">
+            <div className="divide-y divide-border-subtle border border-border-subtle rounded-card overflow-hidden">
               {notebooks.map((n) => (
                 <div
                   key={n.id}
-                  className="flex items-center gap-6 p-5 hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group relative"
+                  className="flex items-center gap-6 p-5 hover:bg-accent-soft transition-colors group relative"
                 >
                   <Link
                     href={`/notebooks/${n.id}`}
                     className="absolute inset-0 z-0"
                   />
-                  <div className="w-10 h-10 rounded-md bg-gradient-to-tr from-blue-500/20 to-indigo-600/20 border border-slate-200 dark:border-white/10 flex items-center justify-center relative z-10">
-                    <span className="material-symbols-outlined text-blue-600 dark:text-blue-300 text-lg">
+                  <div className="w-10 h-10 rounded-card bg-accent-soft border border-border-subtle flex items-center justify-center relative z-10">
+                    <span className="material-symbols-outlined text-fg-accent text-lg">
                       book_2
                     </span>
                   </div>
                   <div className="flex-1 min-w-0 relative z-10">
-                    <p className="font-semibold truncate group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
+                    <p className="font-semibold truncate group-hover:text-fg-accent transition-colors">
                       {n.title}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-zinc-500 line-clamp-1">
+                    <Text
+                      variant="body"
+                      tone="muted"
+                      className="text-xs line-clamp-1"
+                    >
                       {n.description ?? "No description"}
-                    </p>
+                    </Text>
                   </div>
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 dark:text-zinc-500 shrink-0 relative z-10">
+                  <Text
+                    variant="meta"
+                    tone="muted"
+                    as="span"
+                    className="shrink-0 relative z-10"
+                  >
                     {new Date(n.createdAt).toLocaleDateString()}
-                  </span>
+                  </Text>
 
-                  {/* 3-dot menu for list view */}
                   <div
                     ref={listMenuOpenId === n.id ? listMenuRef : undefined}
                     className="relative z-20"
                   >
-                    <button
-                      type="button"
+                    <IconButton
+                      variant="ghost"
+                      size="sm"
+                      icon="more_vert"
+                      aria-label="More options"
+                      title="More options"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -259,16 +220,11 @@ export function NotebooksView() {
                           listMenuOpenId === n.id ? null : n.id,
                         );
                       }}
-                      className="p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
-                      title="More options"
-                    >
-                      <span className="material-symbols-outlined text-[18px] text-slate-500 dark:text-zinc-400">
-                        more_vert
-                      </span>
-                    </button>
+                      className="opacity-0 group-hover:opacity-100"
+                    />
 
                     {listMenuOpenId === n.id && (
-                      <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
+                      <div className="absolute right-0 top-full mt-1 w-36 bg-elevated border border-border-subtle rounded-card shadow-xl z-50 overflow-hidden">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -277,7 +233,10 @@ export function NotebooksView() {
                             setListMenuOpenId(null);
                             handleDelete(n.id);
                           }}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                          className={cn(
+                            "w-full flex items-center gap-2 px-3 py-2.5 text-sm",
+                            "text-danger hover:bg-danger/10 transition-colors",
+                          )}
                         >
                           <span className="material-symbols-outlined text-[18px]">
                             delete
@@ -288,7 +247,7 @@ export function NotebooksView() {
                     )}
                   </div>
 
-                  <span className="material-symbols-outlined text-slate-400 dark:text-zinc-600 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors relative z-10">
+                  <span className="material-symbols-outlined text-fg-muted group-hover:text-fg-accent transition-colors relative z-10">
                     arrow_forward
                   </span>
                 </div>
