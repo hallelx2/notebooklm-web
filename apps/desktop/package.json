@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "concurrently -k -n vite,electron -c \"cyan,magenta\" \"bun run dev:vite\" \"wait-on -t 180000 -i 500 http-get://localhost:5173 && bun run dev:electron\"",
     "dev:vite": "vite",
-    "dev:electron": "electron .",
+    "dev:electron": "node scripts/dev-electron.mjs",
     "dev:browser": "vite",
     "build": "vite build && bun run build:api-server",
     "build:icon": "node scripts/build-icon.mjs",
