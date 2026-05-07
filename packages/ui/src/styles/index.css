@@ -1,0 +1,9 @@
+/* Design system style barrel — globals.css (web) and main.css (desktop)
+ * import this one file. Order matters: tokens first (defaults), then
+ * packs (override based on data-ds), then landing (most specific
+ * override scoped to data-surface="landing"). */
+
+@import "./tokens.css";
+@import "./packs/saigon.css";
+@import "./packs/render.css";
+@import "./landing-saigon.css";

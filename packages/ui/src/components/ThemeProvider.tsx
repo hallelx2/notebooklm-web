@@ -11,8 +11,9 @@ import {
 } from "react";
 
 /**
- * Custom theme provider — drop-in replacement for `next-themes`'
- * <ThemeProvider> + useTheme() with the same API surface.
+ * Theme provider — drop-in replacement for `next-themes`'
+ * <ThemeProvider> + useTheme(), extended with a second axis for
+ * design-system pack selection ("saigon" | "render").
  *
  * Why we ship our own:
  *   `next-themes` (with `disableTransitionOnChange`) appends a temporary
@@ -26,17 +27,22 @@ import {
  *   visible symptom is the entire page rendering N times stacked.
  *
  * This provider never touches the DOM outside a useEffect that only
- * sets/unsets a class on <html>. No node insertion or removal that
- * React doesn't see. The FOUC fix moves to an inline <script> in each
- * app's HTML root (apps/desktop/index.html, apps/web/src/app/layout.tsx)
- * which runs before React mounts.
+ * sets/unsets a class on <html> and toggles the data-ds attribute. No
+ * node insertion or removal that React doesn't see. The FOUC fix lives
+ * in an inline <script> in each app's HTML root
+ * (apps/desktop/index.html, apps/web/src/app/layout.tsx) which runs
+ * before React mounts.
  */
 
 export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
+export type DesignSystem = "saigon" | "render";
 
-const STORAGE_KEY = "notebooklm-theme";
+const THEME_STORAGE_KEY = "notebooklm-theme";
+const DS_STORAGE_KEY = "notebooklm-ds";
 const THEMES = ["light", "dark", "system"] as const;
+const DESIGN_SYSTEMS = ["saigon", "render"] as const;
+const DEFAULT_DS: DesignSystem = "saigon";
 
 type ThemeContextValue = {
   /** What the user picked (`"system"` is allowed). */
@@ -46,14 +52,25 @@ type ThemeContextValue = {
   resolvedTheme: ResolvedTheme;
   /** Always `["light", "dark", "system"]`. Matches next-themes' shape. */
   themes: readonly Theme[];
+  /** Active design-system pack. */
+  designSystem: DesignSystem;
+  setDesignSystem: (next: DesignSystem) => void;
+  /** Always `["saigon", "render"]`. */
+  designSystems: readonly DesignSystem[];
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function readStoredTheme(): Theme {
   if (typeof window === "undefined") return "system";
-  const v = window.localStorage.getItem(STORAGE_KEY);
+  const v = window.localStorage.getItem(THEME_STORAGE_KEY);
   return v === "light" || v === "dark" || v === "system" ? v : "system";
+}
+
+function readStoredDS(): DesignSystem {
+  if (typeof window === "undefined") return DEFAULT_DS;
+  const v = window.localStorage.getItem(DS_STORAGE_KEY);
+  return v === "saigon" || v === "render" ? v : DEFAULT_DS;
 }
 
 function getSystemPreference(): ResolvedTheme {
@@ -63,7 +80,7 @@ function getSystemPreference(): ResolvedTheme {
     : "light";
 }
 
-function applyClass(resolved: ResolvedTheme) {
+function applyTheme(resolved: ResolvedTheme, ds: DesignSystem) {
   const html = document.documentElement;
   if (resolved === "dark") {
     html.classList.add("dark");
@@ -74,6 +91,9 @@ function applyClass(resolved: ResolvedTheme) {
   }
   // Native form controls / scrollbars pick this up.
   html.style.colorScheme = resolved;
+  if (html.getAttribute("data-ds") !== ds) {
+    html.setAttribute("data-ds", ds);
+  }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -81,10 +101,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // `theme` and `systemPref` start with safe defaults, then get
   // corrected on the first client effect — that's fine because the
   // inline FOUC script in the document head has already painted with
-  // the correct class.
+  // the correct class and data-ds.
   const [theme, setThemeState] = useState<Theme>(() => readStoredTheme());
   const [systemPref, setSystemPref] = useState<ResolvedTheme>(() =>
     getSystemPreference(),
+  );
+  const [designSystem, setDesignSystemState] = useState<DesignSystem>(() =>
+    readStoredDS(),
   );
 
   // Track OS-level preference flips ("system" mode follows along).
@@ -100,26 +123,43 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const resolvedTheme: ResolvedTheme =
     theme === "system" ? systemPref : theme;
 
-  // Apply class to <html>. Idempotent — the inline FOUC script already
-  // set the same class before React mounted. We just keep it in sync
-  // when the user toggles or system preference changes.
+  // Apply class + attribute to <html>. Idempotent — the inline FOUC
+  // script already set them before React mounted; we just keep them in
+  // sync when the user toggles or system preference changes.
   useEffect(() => {
-    applyClass(resolvedTheme);
-  }, [resolvedTheme]);
+    applyTheme(resolvedTheme, designSystem);
+  }, [resolvedTheme, designSystem]);
 
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);
     try {
-      window.localStorage.setItem(STORAGE_KEY, next);
+      window.localStorage.setItem(THEME_STORAGE_KEY, next);
     } catch {
       // Quota / private mode — non-fatal. The class still flips for
       // this session, just won't persist.
     }
   }, []);
 
+  const setDesignSystem = useCallback((next: DesignSystem) => {
+    setDesignSystemState(next);
+    try {
+      window.localStorage.setItem(DS_STORAGE_KEY, next);
+    } catch {
+      // Same story — session-only flip is acceptable.
+    }
+  }, []);
+
   const value = useMemo<ThemeContextValue>(
-    () => ({ theme, setTheme, resolvedTheme, themes: THEMES }),
-    [theme, setTheme, resolvedTheme],
+    () => ({
+      theme,
+      setTheme,
+      resolvedTheme,
+      themes: THEMES,
+      designSystem,
+      setDesignSystem,
+      designSystems: DESIGN_SYSTEMS,
+    }),
+    [theme, setTheme, resolvedTheme, designSystem, setDesignSystem],
   );
 
   return (
@@ -141,6 +181,9 @@ export function useTheme(): ThemeContextValue {
       setTheme: () => {},
       resolvedTheme: "light",
       themes: THEMES,
+      designSystem: DEFAULT_DS,
+      setDesignSystem: () => {},
+      designSystems: DESIGN_SYSTEMS,
     };
   }
   return ctx;
@@ -152,17 +195,21 @@ export function useTheme(): ThemeContextValue {
  * their HTML root (apps/desktop/index.html for Vite,
  * apps/web/src/app/layout.tsx for Next.js).
  *
- * Kept here so the storage key + class names stay in lock-step with
- * the provider above — change one, change both.
+ * Kept here so the storage keys + class names + default pack stay in
+ * lock-step with the provider above — change one, change both.
  */
 export const FOUC_PREVENTION_SCRIPT = `
 (function(){try{
-  var k='${STORAGE_KEY}';
-  var s=localStorage.getItem(k);
+  var tk='${THEME_STORAGE_KEY}';
+  var dk='${DS_STORAGE_KEY}';
+  var s=localStorage.getItem(tk);
   var sysDark=window.matchMedia('(prefers-color-scheme: dark)').matches;
   var r=s==='light'?'light':s==='dark'?'dark':(sysDark?'dark':'light');
+  var d=localStorage.getItem(dk);
+  d=(d==='saigon'||d==='render')?d:'${DEFAULT_DS}';
   var h=document.documentElement;
   h.classList.add(r);
   h.classList.remove(r==='dark'?'light':'dark');
   h.style.colorScheme=r;
+  h.setAttribute('data-ds',d);
 }catch(_){}})();`.trim();

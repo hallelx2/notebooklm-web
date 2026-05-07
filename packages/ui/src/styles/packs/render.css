@@ -1,0 +1,115 @@
+/* Render — light, crisp white canvas, sharp 0px buttons, vibrant gradient
+ * accents (purple → orange).
+ *
+ * Native tone is light. Dark is best-effort tonal inversion. */
+
+[data-ds="render"] {
+  /* Surfaces */
+  --ds-bg-canvas: #ffffff;
+  --ds-bg-surface: #ffffff;
+  --ds-bg-elevated: #ffffff;
+  --ds-bg-overlay: rgba(255, 255, 255, 0.88);
+  --ds-bg-accent-soft: #f6f0ff;
+
+  /* Foreground */
+  --ds-fg-primary: #0d0d0d;
+  --ds-fg-secondary: #4d4d4d;
+  --ds-fg-muted: #6b6b6b;
+  --ds-fg-inverted: #ffffff;
+  --ds-fg-accent: #8a05ff;
+  --ds-fg-on-accent: #ffffff;
+
+  /* Borders */
+  --ds-border-subtle: #e3e3e3;
+  --ds-border-strong: #272727;
+  --ds-border-accent: #c89bff;
+
+  /* Accent — render's signature purple → sunset gradient */
+  --ds-accent: #8a05ff;
+  --ds-accent-hover: #7704dd;
+  --ds-accent-active: #6203b8;
+  --ds-accent-secondary: #d67f2e;
+  --ds-accent-gradient: linear-gradient(to right, #8a05ff, #d67f2e);
+
+  /* Status */
+  --ds-success: #009e7a;
+  --ds-success-fg: #ffffff;
+  --ds-warning: #d97706;
+  --ds-warning-fg: #ffffff;
+  --ds-danger: #e96770;
+  --ds-danger-fg: #ffffff;
+  --ds-info: #33acff;
+  --ds-info-fg: #ffffff;
+
+  /* Radii — render's signature sharp aesthetic */
+  --ds-radius-button: 0px;
+  --ds-radius-card: 0px;
+  --ds-radius-input: 2px;
+  --ds-radius-pill: 937px;
+  --ds-radius-modal: 2px;
+
+  /* Type — render scale (negative tracking on display, comfortable body) */
+  --ds-text-display: 64px;
+  --ds-leading-display: 1.08;
+  --ds-tracking-display: -1.6px;
+  --ds-text-h1: 48px;
+  --ds-leading-h1: 1.08;
+  --ds-tracking-h1: -1.2px;
+  --ds-text-h2: 32px;
+  --ds-leading-h2: 1.15;
+  --ds-tracking-h2: -0.48px;
+  --ds-text-h3: 24px;
+  --ds-leading-h3: 1.25;
+  --ds-tracking-h3: normal;
+  --ds-text-body: 16px;
+  --ds-leading-body: 1.5;
+  --ds-tracking-body: 0.08px;
+  --ds-text-caption: 12px;
+  --ds-leading-caption: 1.43;
+  --ds-tracking-caption: 0.24px;
+
+  --ds-weight-display: 300;
+  --ds-weight-heading: 400;
+  --ds-weight-body: 400;
+  --ds-weight-emphasis: 500;
+
+  /* Spacing — comfortable */
+  --ds-space-2xs: 4px;
+  --ds-space-xs: 8px;
+  --ds-space-sm: 12px;
+  --ds-space-md: 16px;
+  --ds-space-lg: 24px;
+  --ds-space-xl: 32px;
+  --ds-space-2xl: 48px;
+  --ds-space-3xl: 80px;
+
+  --ds-section-gap: 40px;
+  --ds-card-padding: 20px;
+  --ds-element-gap: 8px;
+  --ds-layout-max-width: 1280px;
+}
+
+[data-ds="render"].dark {
+  /* Render-dark — best-effort tonal inversion. */
+  --ds-bg-canvas: #0d0d0d;
+  --ds-bg-surface: #181818;
+  --ds-bg-elevated: #272727;
+  --ds-bg-overlay: rgba(13, 13, 13, 0.88);
+  --ds-bg-accent-soft: rgba(138, 5, 255, 0.14);
+
+  --ds-fg-primary: #fafafa;
+  --ds-fg-secondary: #c8c8c8;
+  --ds-fg-muted: #8b8b8b;
+  --ds-fg-inverted: #0d0d0d;
+  --ds-fg-accent: #b770ff;
+  --ds-fg-on-accent: #ffffff;
+
+  --ds-border-subtle: #272727;
+  --ds-border-strong: #4d4d4d;
+  --ds-border-accent: rgba(183, 112, 255, 0.45);
+
+  --ds-accent: #b770ff;
+  --ds-accent-hover: #c386ff;
+  --ds-accent-active: #a052f5;
+  --ds-accent-gradient: linear-gradient(to right, #b770ff, #f3a563);
+}

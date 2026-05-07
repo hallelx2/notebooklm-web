@@ -1,0 +1,133 @@
+/* Semantic design tokens — single vocabulary every primitive consumes.
+ * Pack files (packs/saigon.css, packs/render.css) override these by
+ * selecting on [data-ds="..."]. Defaults below are saigon-dark so an
+ * unthemed page still renders coherently.
+ *
+ * Component contract: never reference raw colors / radii / sizes.
+ * Always reach for --ds-* tokens. */
+
+:root {
+  /* ---- Surfaces ---- */
+  --ds-bg-canvas: #000000;
+  --ds-bg-surface: #0a0a0a;
+  --ds-bg-elevated: #181818;
+  --ds-bg-overlay: rgba(0, 0, 0, 0.72);
+  --ds-bg-accent-soft: rgba(255, 255, 255, 0.04);
+
+  /* ---- Foreground ---- */
+  --ds-fg-primary: #ffffff;
+  --ds-fg-secondary: #c8c8c8;
+  --ds-fg-muted: #6d6d6d;
+  --ds-fg-inverted: #000000;
+  --ds-fg-accent: #a0e0ab;
+  --ds-fg-on-accent: #000000;
+
+  /* ---- Borders ---- */
+  --ds-border-subtle: rgba(255, 255, 255, 0.08);
+  --ds-border-strong: rgba(255, 255, 255, 0.18);
+  --ds-border-accent: rgba(160, 224, 171, 0.45);
+
+  /* ---- Accent ---- */
+  --ds-accent: #a0e0ab;
+  --ds-accent-hover: #b3e8bc;
+  --ds-accent-active: #8ad296;
+  --ds-accent-secondary: #ffac2e;
+  --ds-accent-gradient: linear-gradient(
+    90deg,
+    #a0e0ab 0%,
+    #ffac2e 50%,
+    #a52d25 100%
+  );
+
+  /* ---- Status ---- */
+  --ds-success: #4ade80;
+  --ds-success-fg: #052e10;
+  --ds-warning: #fbbf24;
+  --ds-warning-fg: #2b1700;
+  --ds-danger: #f87171;
+  --ds-danger-fg: #2b0000;
+  --ds-info: #60a5fa;
+  --ds-info-fg: #00112b;
+
+  /* ---- Radii ---- */
+  --ds-radius-button: 75.024px;
+  --ds-radius-card: 10px;
+  --ds-radius-input: 8px;
+  --ds-radius-pill: 9999px;
+  --ds-radius-modal: 16px;
+
+  /* ---- Type — families ---- */
+  /* next/font sets --font-inter / --font-jbm on <html>. Fallback chain
+     keeps things sane if those aren't present (e.g. early SSR). */
+  --ds-font-display: var(--font-inter, "Inter"), ui-sans-serif, system-ui,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --ds-font-body: var(--font-inter, "Inter"), ui-sans-serif, system-ui,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --ds-font-mono: var(--font-jbm, "JetBrains Mono"), ui-monospace, SFMono-Regular,
+    Menlo, Monaco, Consolas, monospace;
+
+  /* ---- Type — scale ---- */
+  --ds-text-display: 78px;
+  --ds-leading-display: 1.1;
+  --ds-tracking-display: -0.02em;
+
+  --ds-text-h1: 54px;
+  --ds-leading-h1: 1.15;
+  --ds-tracking-h1: normal;
+
+  --ds-text-h2: 39px;
+  --ds-leading-h2: 1.21;
+  --ds-tracking-h2: normal;
+
+  --ds-text-h3: 29px;
+  --ds-leading-h3: 1.21;
+  --ds-tracking-h3: normal;
+
+  --ds-text-body: 16px;
+  --ds-leading-body: 1.5;
+  --ds-tracking-body: normal;
+
+  --ds-text-caption: 11px;
+  --ds-leading-caption: 1.45;
+  --ds-tracking-caption: normal;
+
+  /* ---- Type — weights ---- */
+  --ds-weight-display: 400;
+  --ds-weight-heading: 400;
+  --ds-weight-body: 400;
+  --ds-weight-emphasis: 600;
+
+  /* ---- Spacing — t-shirt scale ---- */
+  --ds-space-2xs: 4px;
+  --ds-space-xs: 8px;
+  --ds-space-sm: 12px;
+  --ds-space-md: 16px;
+  --ds-space-lg: 24px;
+  --ds-space-xl: 32px;
+  --ds-space-2xl: 48px;
+  --ds-space-3xl: 80px;
+
+  /* ---- Layout ---- */
+  --ds-section-gap: 46px;
+  --ds-card-padding: 28px;
+  --ds-element-gap: 14px;
+  --ds-layout-max-width: 1078px;
+
+  /* ---- Motion ---- */
+  --ds-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ds-duration-fast: 120ms;
+  --ds-duration-normal: 220ms;
+  --ds-duration-slow: 420ms;
+
+  /* ---- Atmospheric / decorative (saigon-style mesh, optional) ---- */
+  --ds-mesh-orb-1: radial-gradient(
+    circle at 20% 30%,
+    rgba(160, 224, 171, 0.18),
+    transparent 50%
+  );
+  --ds-mesh-orb-2: radial-gradient(
+    circle at 80% 70%,
+    rgba(255, 172, 46, 0.12),
+    transparent 60%
+  );
+}
