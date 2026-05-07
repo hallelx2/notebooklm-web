@@ -293,7 +293,7 @@ export function StudioPanel({
  <div className="flex-1 overflow-y-auto">
  {/* ── Audio Overview — Featured Hero ─────────────────────── */}
  <div className="p-4">
- <div className="relative overflow-hidden rounded-2xl bg-[var(--ds-accent-gradient)] p-5 shadow-lg shadow-indigo-500/10">
+ <div className="relative overflow-hidden rounded-2xl bg-[image:var(--ds-accent-gradient)] p-5 shadow-lg shadow-indigo-500/10">
  {/* Glow effects */}
  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
  <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-purple-400/20 rounded-full blur-2xl pointer-events-none" />

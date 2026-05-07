@@ -39,7 +39,7 @@ export function QuizConfigModal({ open, onClose, notebookId }: Props) {
 
  <div className="relative w-full max-w-md bg-surface rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-border-subtle/50 dark:border-border-strong/50">
  {/* Gradient accent bar */}
- <div className="absolute inset-x-0 top-0 h-[3px] bg-[var(--ds-accent-gradient)]" />
+ <div className="absolute inset-x-0 top-0 h-[3px] bg-[image:var(--ds-accent-gradient)]" />
 
  {/* Header */}
  <div className="flex items-center justify-between px-6 py-4 shrink-0">
