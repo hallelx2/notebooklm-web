@@ -577,6 +577,15 @@ export function NotebookView({ id }: { id: string }) {
  </div>
  )}
  {mobileTab === "chat" && (
+ // NOTE: externalPrompt is INTENTIONALLY not passed here.
+ // The desktop ChatPanel above (md:flex) and this mobile one
+ // both stay mounted in the React tree on desktop (they're
+ // hidden via Tailwind's md: visibility, not unmounted), so
+ // wiring externalPrompt to both made every mindmap-driven
+ // chat submission fire twice — duplicating the user message
+ // and racing the response stream. Mindmap shift+click is a
+ // pointer gesture without a touch equivalent, so the mobile
+ // ChatPanel never needs the externalPrompt path.
  <ChatPanel
  notebookId={id}
  sourceIds={selectedSourceIds}
@@ -584,8 +593,6 @@ export function NotebookView({ id }: { id: string }) {
  notebookTitle={n.title}
  notebookDescription={n.description}
  onOpenUpload={() => setUploadOpen(true)}
- externalPrompt={chatPrompt}
- onExternalPromptConsumed={() => setChatPrompt(null)}
  />
  )}
  {mobileTab === "studio" && (
