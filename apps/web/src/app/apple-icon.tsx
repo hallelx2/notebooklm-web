@@ -3,6 +3,10 @@ import { ImageResponse } from "next/og";
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
+/**
+ * Apple Touch Icon — matches the in-app brand mark and the desktop
+ * app icon. Saigon-accent green plate, black stack-of-books glyph.
+ */
 export default function AppleIcon() {
   return new ImageResponse(
     <div
@@ -12,33 +16,34 @@ export default function AppleIcon() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: 40,
+        borderRadius: 36,
         background:
-          "linear-gradient(135deg, #3b82f6 0%, #4f46e5 50%, #7c3aed 100%)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2)",
+          "linear-gradient(135deg, #b3e8bc 0%, #a0e0ab 55%, #8ad296 100%)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22)",
       }}
     >
       <svg
-        width="110"
-        height="110"
+        width="120"
+        height="120"
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Left page */}
-        <path
-          d="M4 4.5C4 3.67 4.67 3 5.5 3C7.5 3 11 3.5 12 5V20C11 18.5 7.5 18 5.5 18C4.67 18 4 17.33 4 16.5V4.5Z"
-          fill="rgba(255,255,255,0.95)"
-        />
-        {/* Right page */}
-        <path
-          d="M20 4.5C20 3.67 19.33 3 18.5 3C16.5 3 13 3.5 12 5V20C13 18.5 16.5 18 18.5 18C19.33 18 20 17.33 20 16.5V4.5Z"
-          fill="rgba(255,255,255,0.7)"
-        />
-        {/* Sparkle accents */}
-        <circle cx="16" cy="8" r="1.2" fill="#fbbf24" />
-        <circle cx="17.5" cy="6" r="0.7" fill="#fbbf24" opacity="0.7" />
-        <circle cx="14.5" cy="10" r="0.5" fill="#fbbf24" opacity="0.5" />
+        {/* Same stack-of-books composition as the favicon, scaled up
+            and with the spine bands (subtle green accents) the desktop
+            icon has at 1024×1024. */}
+        <rect x="3.5" y="3.5" width="14" height="3" rx="1" fill="#0a0a0a" />
+        <rect x="3.5" y="3.5" width="14" height="0.8" fill="#a0e0ab" opacity="0.6" />
+
+        <rect x="3.5" y="7.5" width="6.5" height="13" rx="1.4" fill="#0a0a0a" />
+        <rect x="3.5" y="7.5" width="1.2" height="13" fill="#a0e0ab" opacity="0.55" />
+        <rect x="5.5" y="10" width="3.5" height="0.8" rx="0.4" fill="#a0e0ab" opacity="0.85" />
+        <rect x="5.5" y="12" width="2.5" height="0.6" rx="0.3" fill="#a0e0ab" opacity="0.6" />
+
+        <rect x="11" y="9" width="6.5" height="11.5" rx="1.4" fill="#0a0a0a" />
+        <rect x="11" y="9" width="1.2" height="11.5" fill="#a0e0ab" opacity="0.55" />
+        <rect x="13" y="11.5" width="3.5" height="0.8" rx="0.4" fill="#a0e0ab" opacity="0.85" />
+        <rect x="13" y="13.5" width="2" height="0.6" rx="0.3" fill="#a0e0ab" opacity="0.6" />
       </svg>
     </div>,
     { ...size },
