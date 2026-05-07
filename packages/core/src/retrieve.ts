@@ -12,6 +12,50 @@ export type RetrievedChunk = {
   similarity: number;
 };
 
+/**
+ * Pull the actual postgres reason out of a drizzle / postgres-driver
+ * error. Drizzle wraps every DB error with a "Failed query: <SQL>
+ * params: [...]" template at the top, then nests the original error
+ * (including postgres-style fields like `code`, `severity`, `detail`,
+ * `hint`) on `.cause`. Postgres.js / pglite expose those fields
+ * directly. This helper:
+ *   1. Walks the cause chain (cycle-safe).
+ *   2. Picks the first frame that ISN'T the drizzle wrapper.
+ *   3. Combines `code`, `message`, `detail`, `hint` into one string
+ *      so callers / users see something actionable rather than
+ *      "Failed query: ..." with the actual reason hidden underneath.
+ */
+function extractPgErrorReason(err: unknown): string {
+  // biome-ignore lint/suspicious/noExplicitAny: walking unknown error chain
+  let cur: any = err;
+  const seen = new Set<unknown>();
+  while (cur && !seen.has(cur)) {
+    seen.add(cur);
+    const message: string =
+      typeof cur === "string" ? cur : (cur.message ?? String(cur));
+    const isDrizzleWrapper =
+      typeof message === "string" && message.startsWith("Failed query:");
+    if (!isDrizzleWrapper) {
+      const parts: string[] = [];
+      if (cur.code) parts.push(`[${cur.code}]`);
+      parts.push(message);
+      if (cur.detail) parts.push(`-- ${cur.detail}`);
+      if (cur.hint) parts.push(`(hint: ${cur.hint})`);
+      return parts.join(" ").trim();
+    }
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  // Whole chain was wrappers — return the topmost one stripped of its
+  // SQL/params garbage so the user at least sees "the query failed"
+  // rather than 768 floats.
+  const top =
+    err && typeof err === "object" && "message" in err
+      ? String((err as { message: unknown }).message)
+      : String(err);
+  const stripped = top.split(" params: ")[0]?.replace(/^Failed query:\s*/, "");
+  return stripped || top;
+}
+
 /* ---------- Query Expansion ---------- */
 /* Routes through `runAgent({ kind: "rerank" }, ...)` with empty
  * candidates — see `packages/core/src/agent/runtimes/ai-sdk/index.ts`
@@ -100,21 +144,44 @@ export async function retrieveForQuery(params: {
 
   const distance = sql<number>`${embTable.embedding} <=> ${queryVecJson}::vector`;
 
-  const newResults = await db
-    .select({
-      chunkId: sourceChunks.id,
-      sourceId: sourceChunks.sourceId,
-      content: sourceChunks.content,
-      metadata: sourceChunks.metadata,
-      similarity: sql<number>`1 - (${distance})`,
-      sourceTitle: sources.title,
-    })
-    .from(embTable)
-    .innerJoin(sourceChunks, eq(sourceChunks.id, embTable.chunkId))
-    .leftJoin(sources, eq(sources.id, sourceChunks.sourceId))
-    .where(and(baseWhere, eq(embTable.model, embedded.model)))
-    .orderBy(distance)
-    .limit(topK * 2);
+  // Wrap the vector query so the actual postgres reason — which drizzle
+  // hides inside its "Failed query: <SQL>" wrapper — surfaces in both
+  // the server log and the error that bubbles to the client. Without
+  // this, the client banner shows pages of vector params but no reason.
+  let newResults: Awaited<ReturnType<typeof runVectorQuery>>;
+  try {
+    newResults = await runVectorQuery();
+  } catch (err) {
+    const reason = extractPgErrorReason(err);
+    // biome-ignore lint/suspicious/noConsole: surface the real DB
+    // error in the api-server's stderr so it shows up in the dev
+    // terminal / desktop.log alongside the failing query.
+    console.error(
+      `[retrieve] vector query failed (dim=${embedded.dim}, model=${embedded.model}, sources=${params.sourceIds?.length ?? "all"}): ${reason}`,
+    );
+    // Repack with the postgres reason in the top-level message so the
+    // client's chat-error banner can show it without having to walk
+    // a cause chain that doesn't always survive serialization.
+    throw new Error(`Retrieval failed: ${reason}`, { cause: err });
+  }
+
+  function runVectorQuery() {
+    return db
+      .select({
+        chunkId: sourceChunks.id,
+        sourceId: sourceChunks.sourceId,
+        content: sourceChunks.content,
+        metadata: sourceChunks.metadata,
+        similarity: sql<number>`1 - (${distance})`,
+        sourceTitle: sources.title,
+      })
+      .from(embTable)
+      .innerJoin(sourceChunks, eq(sourceChunks.id, embTable.chunkId))
+      .leftJoin(sources, eq(sources.id, sourceChunks.sourceId))
+      .where(and(baseWhere, eq(embTable.model, embedded.model)))
+      .orderBy(distance)
+      .limit(topK * 2);
+  }
 
   // Step 3b: Legacy fallback (dual-write window). For chunks that have not
   // yet been migrated -- `embedding_dim IS NULL` and `embedding` populated --
