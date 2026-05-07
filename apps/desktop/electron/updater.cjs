@@ -20,13 +20,19 @@
  * auto-install an unsigned binary.
  */
 
-const { autoUpdater } = require("electron-updater");
 const { BrowserWindow } = require("electron");
 
 const RELEASE_URL_BASE =
   "https://github.com/hallelx2/notebooklm-web/releases/tag";
 
 function setupAutoUpdater({ dialog }) {
+  // Defer-load: `electron-updater`'s top-level access of `app.getVersion()`
+  // crashes when destructured before Electron's main process has fully
+  // initialised the `app` global (Electron 33 + bun + dev). Requiring it
+  // inside the function is harmless in production and makes the module
+  // safe to import unconditionally from main.cjs.
+  const { autoUpdater } = require("electron-updater");
+
   // Quiet mode by default — we do our own dialog UX.
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
