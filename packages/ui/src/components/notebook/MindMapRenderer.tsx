@@ -6,8 +6,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * Interactive mind map rendered with markmap.
  *
  * - Generates an SVG tree from markdown headings.
- * - Each node is clickable and triggers `onNodeClick` with the node text,
- * which pastes a prompt into the chat asking to explain that concept.
+ * - Plain click on a node uses markmap's default behavior:
+ *   expand/collapse the subtree.
+ * - Shift+click on a node fires `onNodeClick` with the node text,
+ *   which pastes a prompt into the chat asking to explain that concept.
+ *   Requiring the modifier was added because plain click was hijacking
+ *   markmap's own click → expand/collapse handler, making the tree
+ *   flicker and silently send to chat instead of expanding the node.
  * - Custom themed CSS to match the app's design system.
  * - Toolbar with fit-to-view and fullscreen controls.
  */
@@ -31,6 +36,12 @@ export function MindMapRenderer({ markdown, onNodeClick }: Props) {
 
  const handleNodeClick = useCallback(
  (e: MouseEvent) => {
+ // Only intercept Shift+Click — plain click is reserved for
+ // markmap's native expand/collapse. Without this gate every
+ // click was being eaten by our chat-prompt handler and the
+ // tree would flicker as both handlers raced.
+ if (!e.shiftKey) return;
+
  const target = e.target as SVGElement;
  // Walk up to find the nearest g.markmap-node and grab its text
  let node: SVGElement | null = target;
@@ -44,6 +55,11 @@ export function MindMapRenderer({ markdown, onNodeClick }: Props) {
  );
  const text = textEl?.textContent?.trim();
  if (text && onNodeClick) {
+ // Stop propagation so markmap doesn't ALSO toggle the node
+ // for the same click — when the user explicitly Shift-clicks
+ // they don't expect the tree to fold underneath them.
+ e.stopPropagation();
+ e.preventDefault();
  onNodeClick(text);
  }
  },
@@ -120,9 +136,12 @@ export function MindMapRenderer({ markdown, onNodeClick }: Props) {
  mmRef.current = mm as unknown as MarkmapInstance;
  setLoading(false);
 
- // Add click listeners to all nodes
+ // Add the chat-send click listener in CAPTURE phase so it runs
+ // BEFORE markmap's own delegated click handlers — that way when
+ // the user Shift-clicks we can stopPropagation() and markmap
+ // never sees the event, so the node doesn't also toggle.
  const svgEl = svgRef.current;
- svgEl.addEventListener("click", handleNodeClick);
+ svgEl.addEventListener("click", handleNodeClick, { capture: true });
  }
 
  render();
@@ -130,7 +149,9 @@ export function MindMapRenderer({ markdown, onNodeClick }: Props) {
  return () => {
  disposed = true;
  if (svgRef.current) {
- svgRef.current.removeEventListener("click", handleNodeClick);
+ svgRef.current.removeEventListener("click", handleNodeClick, {
+ capture: true,
+ });
  }
  };
  }, [markdown, handleNodeClick]);
@@ -138,16 +159,14 @@ export function MindMapRenderer({ markdown, onNodeClick }: Props) {
  return (
  <div
  className={`mindmap-container relative ${
- isFullscreen
- ? "fixed inset-0 z-50 bg-white dark:bg-canvas"
- : "w-full h-full"
+ isFullscreen ? "fixed inset-0 z-50 bg-canvas" : "w-full h-full"
  }`}
  >
  {/* ---------- Loading overlay ---------- */}
  {loading && (
- <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-canvas/50 backdrop-blur-sm">
- <div className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-elevated shadow-lg border border-gray-100 dark:border-border-strong">
- <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-accent-soft0/20 flex items-center justify-center">
+ <div className="absolute inset-0 flex items-center justify-center z-10 bg-canvas/50 backdrop-blur-sm">
+ <div className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-elevated shadow-lg border border-border-subtle">
+ <div className="w-12 h-12 rounded-xl bg-accent-soft flex items-center justify-center">
  <span className="material-symbols-outlined text-2xl text-fg-accent animate-spin">
  progress_activity
  </span>
@@ -167,7 +186,7 @@ export function MindMapRenderer({ markdown, onNodeClick }: Props) {
  <div className="absolute top-3 right-3 flex items-center gap-1 z-20">
  <button
  onClick={() => mmRef.current?.fit?.()}
- className="p-1.5 rounded-lg bg-white/80 dark:bg-elevated/80 backdrop-blur-sm border border-border-subtle hover:bg-white dark:hover:bg-border-strong transition-colors shadow-sm"
+ className="p-1.5 rounded-lg bg-elevated/80 backdrop-blur-sm border border-border-subtle hover:bg-border-strong transition-colors shadow-sm"
  title="Fit to view"
  >
  <span className="material-symbols-outlined text-[18px] text-fg-secondary">
@@ -176,7 +195,7 @@ export function MindMapRenderer({ markdown, onNodeClick }: Props) {
  </button>
  <button
  onClick={toggleFullscreen}
- className="p-1.5 rounded-lg bg-white/80 dark:bg-elevated/80 backdrop-blur-sm border border-border-subtle hover:bg-white dark:hover:bg-border-strong transition-colors shadow-sm"
+ className="p-1.5 rounded-lg bg-elevated/80 backdrop-blur-sm border border-border-subtle hover:bg-border-strong transition-colors shadow-sm"
  title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
  >
  <span className="material-symbols-outlined text-[18px] text-fg-secondary">
@@ -205,7 +224,7 @@ export function MindMapRenderer({ markdown, onNodeClick }: Props) {
  touch_app
  </span>
  <span className="text-xs text-fg-accent font-medium">
- Click any node to explore in chat
+ Click to expand · Shift+click to explore in chat
  </span>
  </div>
  )}
