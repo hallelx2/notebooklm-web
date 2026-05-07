@@ -4,6 +4,7 @@ import { ThemeProvider } from "@notebooklm/ui/components/ThemeProvider";
 import { SignInView } from "@notebooklm/ui/views/auth/SignInView";
 import { SignUpView } from "@notebooklm/ui/views/auth/SignUpView";
 import { NotebookView } from "@notebooklm/ui/views/notebook/NotebookView";
+import { NotebooksAppChrome } from "@notebooklm/ui/views/notebooks/NotebooksAppChrome";
 import { NotebooksView } from "@notebooklm/ui/views/notebooks/NotebooksView";
 import { OnboardingView } from "@notebooklm/ui/views/onboarding/OnboardingView";
 import { AppearanceView } from "@notebooklm/ui/views/settings/AppearanceView";
@@ -127,17 +128,20 @@ const onboardingRoute = createRoute({
 // surfaces. The settings tree below uses requireOnboarding={false} so the
 // user can actually complete onboarding without being bounced out of it.
 function NotebooksShell() {
-  // Library is the current page — hide the redundant Library link in
-  // the dock. Settings stays visible so the user can still jump there.
-  //
-  // No left padding on the wrapper: NotebooksView's content is centered
-  // via `max-w-[1400px] mx-auto`, so the dock floats in the natural
-  // left gutter without pushing layout. Adding pl-20 here would double
-  // the gutter (visible on wide viewports as a giant blank strip).
+  // /notebooks gets the top-bar chrome (logo · email · settings · theme
+  // · sign-out) instead of the side dock. Reasons:
+  //   - On viewports where the centered max-w-[1400px] content extends
+  //     close to the left edge, the dock visually overlaps notebook
+  //     cards. The top bar avoids the conflict entirely.
+  //   - The Library page is the user's "home" surface; a familiar
+  //     top-bar feels more right-place-right-time than the
+  //     dock-on-top-of-content artefact.
+  // Side dock returns on /notebooks/[id] and /settings/* where
+  // top-side real estate is already spoken for.
   return (
     <AuthGate>
+      <NotebooksAppChrome />
       <NotebooksView />
-      <AppDock showLibrary={false} />
     </AuthGate>
   );
 }
