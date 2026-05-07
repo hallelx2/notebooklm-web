@@ -136,15 +136,43 @@ async function handleSpeak(payload) {
   return { wav, samplingRate: out.sampling_rate };
 }
 
-if (!process.parentPort) {
+// IPC bridge — supports both launch contexts:
+//   - Electron utilityProcess.fork (production): messages arrive on
+//     process.parentPort.on("message", event => event.data); replies
+//     via process.parentPort.postMessage(reply).
+//   - Node child_process.fork (dev — Vite middleware spawns workers):
+//     messages arrive on process.on("message", msg); replies via
+//     process.send(reply). No `event.data` wrapping.
+//
+// Detect at startup so the rest of the code uses one interface.
+const ipc = (() => {
+  if (process.parentPort) {
+    return {
+      onMessage(handler) {
+        process.parentPort.on("message", (event) => handler(event.data));
+      },
+      postMessage(msg) {
+        process.parentPort.postMessage(msg);
+      },
+    };
+  }
+  if (typeof process.send === "function") {
+    return {
+      onMessage(handler) {
+        process.on("message", handler);
+      },
+      postMessage(msg) {
+        process.send(msg);
+      },
+    };
+  }
   console.error(
-    "[tts-worker] process.parentPort is undefined — this script must be launched via Electron utilityProcess.fork(), not bare Node.",
+    "[tts-worker] no IPC channel — must be launched via Electron utilityProcess.fork() or Node child_process.fork().",
   );
   process.exit(1);
-}
+})();
 
-process.parentPort.on("message", async (event) => {
-  const msg = event.data;
+ipc.onMessage(async (msg) => {
   if (!msg || typeof msg.id !== "number" || typeof msg.type !== "string") {
     // Don't reply to malformed messages — the sender has no id to
     // correlate against. Surface a log so we can tell from desktop.log
@@ -162,9 +190,9 @@ process.parentPort.on("message", async (event) => {
     } else {
       throw new Error(`unknown rpc type: ${type}`);
     }
-    process.parentPort.postMessage({ id, ok: true, result });
+    ipc.postMessage({ id, ok: true, result });
   } catch (err) {
-    process.parentPort.postMessage({
+    ipc.postMessage({
       id,
       ok: false,
       error: err instanceof Error ? err.stack || err.message : String(err),
