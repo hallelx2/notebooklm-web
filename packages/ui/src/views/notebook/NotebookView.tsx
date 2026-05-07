@@ -418,7 +418,7 @@ export function NotebookView({ id }: { id: string }) {
  <label className="text-xs text-fg-muted mb-1 block">
  Notebook title
  </label>
- <div className="flex gap-2">
+ <div className="flex gap-2 items-stretch min-w-0">
  <input
  type="text"
  value={editTitle}
@@ -426,13 +426,17 @@ export function NotebookView({ id }: { id: string }) {
  onKeyDown={(e) => {
  if (e.key === "Enter") handleRename();
  }}
- className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-border-subtle bg-elevated text-fg-secondary outline-none focus:ring-2 focus:ring-blue-500/40"
+ // min-w-0 lets the input shrink below its intrinsic
+ // placeholder width — without it, a long notebook title
+ // pushes the Save button past the popover's right edge.
+ className="flex-1 min-w-0 text-sm px-3 py-1.5 rounded-lg border border-border-subtle bg-surface text-fg outline-none focus:ring-2 focus:ring-fg-accent/40"
  placeholder={n.title}
  />
  <button
+ type="button"
  onClick={handleRename}
  disabled={!editTitle.trim() || updateNotebook.isPending}
- className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+ className="shrink-0 px-3 py-1.5 text-xs font-medium bg-fg text-fg-inverted rounded-lg hover:bg-fg-secondary disabled:opacity-50 transition-colors"
  >
  {updateNotebook.isPending ? "..." : "Save"}
  </button>
@@ -440,11 +444,12 @@ export function NotebookView({ id }: { id: string }) {
  </div>
 
  {/* Divider + Delete */}
- <div className="border-t border-gray-100 dark:border-border-strong pt-3">
+ <div className="border-t border-border-subtle pt-3">
  <button
+ type="button"
  onClick={handleDeleteNotebook}
  disabled={deleteNotebook.isPending}
- className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-danger/10 transition-colors disabled:opacity-50"
+ className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
  >
  <span className="material-symbols-outlined text-[16px]">
  delete
