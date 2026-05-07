@@ -47,6 +47,73 @@ function preprocessMarkdown(text: string): string {
  return expanded;
 }
 
+/* ── ChatErrorBanner ───────────────────────────────────────────
+ *
+ * Surfaces useChat errors with the postgres / drizzle reason
+ * actually visible. Drizzle wraps DB errors with a `Failed query:
+ * <SQL>` template that, on its own, hides the actual postgres
+ * message in `cause`. Walk the cause chain to surface the real
+ * reason at the top, and stash the SQL behind a collapsible
+ * <details> so the page isn't dominated by 768-dim vector dumps.
+ */
+function ChatErrorBanner({ err }: { err: unknown }) {
+ // Walk the cause chain (Error.cause is standard since ES2022).
+ // Stop at the first frame whose message DOESN'T look like a
+ // drizzle "Failed query:" wrapper — that's the actual reason.
+ const chain: { message: string; isWrapper: boolean }[] = [];
+ // biome-ignore lint/suspicious/noExplicitAny: walking unknown error chain
+ let cur: any = err;
+ const seen = new Set<unknown>();
+ while (cur && !seen.has(cur)) {
+ seen.add(cur);
+ const message = typeof cur === "string" ? cur : (cur.message ?? String(cur));
+ const isWrapper =
+ typeof message === "string" && message.startsWith("Failed query:");
+ chain.push({ message, isWrapper });
+ cur = (cur as { cause?: unknown }).cause;
+ }
+
+ // Headline = first non-wrapper message, or the top-level message
+ // if the chain is wrappers all the way down.
+ const headline =
+ chain.find((c) => !c.isWrapper)?.message ?? chain[0]?.message ?? String(err);
+ // Diagnostic = anything else worth showing — the SQL, deeper causes, etc.
+ const diagnostics = chain
+ .filter((c, i) => c.message !== headline || i > 0)
+ .map((c) => c.message);
+
+ return (
+ <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-danger/10 border border-danger/40">
+ <div className="flex items-center gap-2 mb-1.5">
+ <span className="material-symbols-outlined text-[16px] text-danger">
+ error
+ </span>
+ <span className="text-xs font-bold uppercase tracking-widest text-danger">
+ Chat error
+ </span>
+ </div>
+ <p className="text-sm text-danger leading-relaxed break-words">
+ {headline}
+ </p>
+ <p className="text-[11px] text-fg-muted mt-2">
+ If this persists, open Settings → Providers and re-test the chat
+ provider, or Settings → Models to confirm the embedding model
+ matches the chunks already stored.
+ </p>
+ {diagnostics.length > 0 && (
+ <details className="mt-2">
+ <summary className="text-[11px] font-bold uppercase tracking-widest text-fg-muted cursor-pointer hover:text-fg-secondary">
+ Technical details
+ </summary>
+ <pre className="mt-2 max-h-48 overflow-y-auto text-[10px] text-fg-muted whitespace-pre-wrap break-words font-mono leading-relaxed bg-elevated rounded-lg p-2 border border-border-subtle">
+ {diagnostics.join("\n\n")}
+ </pre>
+ </details>
+ )}
+ </div>
+ );
+}
+
 /* ── AssistantMessage with clickable citation popovers ─────── */
 function AssistantMessage({
  messageId,
@@ -545,26 +612,11 @@ export function ChatPanel({
  {/* Surface chat-stream errors so silent failures don't read as
      "no output" — until this was added a misconfigured AI provider
      (or a chat-endpoint 5xx in dev) just left the user staring
-     at an empty assistant slot with no way to know what went wrong. */}
- {error && !busy && (
- <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-danger/10 border border-danger/40">
- <div className="flex items-center gap-2 mb-1.5">
- <span className="material-symbols-outlined text-[16px] text-danger">
- error
- </span>
- <span className="text-xs font-bold uppercase tracking-widest text-danger">
- Chat error
- </span>
- </div>
- <p className="text-sm text-danger leading-relaxed break-words">
- {error.message || String(error)}
- </p>
- <p className="text-[11px] text-fg-muted mt-2">
- If this persists, open Settings → Providers and re-test the
- chat provider, then try again.
- </p>
- </div>
- )}
+     at an empty assistant slot with no way to know what went wrong.
+     Walk the error-cause chain because drizzle wraps postgres
+     errors with a `Failed query: ...` template that hides the
+     actual postgres reason in `cause`. */}
+ {error && !busy && <ChatErrorBanner err={error} />}
  </div>
 
  <form
