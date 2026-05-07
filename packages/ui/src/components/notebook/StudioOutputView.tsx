@@ -698,7 +698,7 @@ function AudioOverviewPlayer({
 
  return (
  <div className="space-y-4">
- <div className="relative overflow-hidden rounded-2xl bg-[var(--ds-accent-gradient)] p-5 shadow-lg">
+ <div className="relative overflow-hidden rounded-2xl bg-[image:var(--ds-accent-gradient)] p-5 shadow-lg">
  <audio ref={audioRef} src={assetUrl} preload="auto" />
  <div className="relative z-10 flex flex-col items-center gap-3">
  <button

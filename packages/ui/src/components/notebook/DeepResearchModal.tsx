@@ -249,7 +249,7 @@ export function DeepResearchModal({
  <div className="relative w-full max-w-6xl bg-surface sm:rounded-2xl rounded-none shadow-2xl flex flex-col max-h-full sm:max-h-[92vh] h-full sm:h-auto overflow-hidden border border-border-subtle/50 dark:border-border-strong/50">
  {/* Header with gradient accent */}
  <div className="relative shrink-0">
- <div className="absolute inset-x-0 top-0 h-1 bg-[var(--ds-accent-gradient)]" />
+ <div className="absolute inset-x-0 top-0 h-1 bg-[image:var(--ds-accent-gradient)]" />
  <div className="flex items-center justify-between px-6 py-4">
  <div className="flex items-center gap-3">
  <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shadow-lg shadow-accent/25">

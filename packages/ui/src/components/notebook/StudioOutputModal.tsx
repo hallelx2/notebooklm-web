@@ -304,7 +304,7 @@ function AudioOverviewPlayer({
  return (
  <div className="space-y-5">
  {/* Audio player card */}
- <div className="relative overflow-hidden rounded-2xl bg-[var(--ds-accent-gradient)] p-6 shadow-lg">
+ <div className="relative overflow-hidden rounded-2xl bg-[image:var(--ds-accent-gradient)] p-6 shadow-lg">
  <audio ref={audioRef} src={assetUrl} preload="metadata" />
  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_60%)] pointer-events-none" />
 

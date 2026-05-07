@@ -163,7 +163,7 @@ function AudioPlayer({ src }: { src: string }) {
  }
 
  return (
- <div className="relative rounded-2xl bg-[var(--ds-accent-gradient)] p-6 shadow-lg overflow-hidden">
+ <div className="relative rounded-2xl bg-[image:var(--ds-accent-gradient)] p-6 shadow-lg overflow-hidden">
  <audio ref={audioRef} src={src} preload="auto" />
  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_60%)] pointer-events-none" />
 
@@ -638,7 +638,7 @@ export function AudioOverviewModal({
  />
  <div className="relative w-full max-w-lg bg-surface rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-border-subtle/50 dark:border-border-strong/50">
  {/* Gradient accent bar */}
- <div className="absolute inset-x-0 top-0 h-[3px] bg-[var(--ds-accent-gradient)]" />
+ <div className="absolute inset-x-0 top-0 h-[3px] bg-[image:var(--ds-accent-gradient)]" />
 
  {/* Header */}
  <div className="flex items-center justify-between px-6 py-4 shrink-0">
