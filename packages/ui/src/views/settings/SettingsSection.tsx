@@ -1,6 +1,10 @@
+import { Heading, Text } from "@notebooklm/ui";
+
 /**
- * Standardised hero block for each settings section. Matches the headline
- * proportions of the notebooks dashboard (`Your\nNotebooks`).
+ * Standardised hero block for each settings pane. The outer width is
+ * controlled by the surrounding settings layout (sidebar + content), so
+ * this component only owns the heading composition + bottom padding —
+ * no max-width / horizontal padding of its own.
  */
 export function SettingsSection({
   tagline,
@@ -14,24 +18,30 @@ export function SettingsSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative z-10 max-w-[1400px] w-full mx-auto px-4 sm:px-6 md:px-10 pb-20">
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 lg:gap-8 pb-6 sm:pb-8 mb-10 border-b border-slate-200 dark:border-white/10">
+    <div className="relative z-10 pt-10 sm:pt-14 pb-20">
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 xl:gap-8 pb-6 sm:pb-8 mb-10 border-b border-border-subtle">
         <div>
           <div className="flex items-center gap-3 mb-3 sm:mb-4">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+            <Text variant="caption" tone="muted">
               {tagline}
-            </span>
+            </Text>
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-medium tracking-tighter text-slate-900 dark:text-white">
+          <Heading
+            level="h1"
+            weight="medium"
+            className="text-3xl sm:text-4xl md:text-5xl tracking-tighter"
+          >
             {title}
-          </h1>
+          </Heading>
         </div>
-        <div className="max-w-md lg:text-left">
-          <p className="text-slate-500 dark:text-zinc-400 font-light text-base sm:text-lg leading-relaxed">
-            {description}
-          </p>
-        </div>
+        <Text
+          variant="lead"
+          tone="secondary"
+          className="max-w-md xl:text-left"
+        >
+          {description}
+        </Text>
       </div>
       {children}
     </div>
