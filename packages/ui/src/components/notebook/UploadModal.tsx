@@ -227,11 +227,16 @@ export function UploadModal({
  file: f,
  status: "queued",
  }));
- setPending((prev) => {
- const next = [...prev, ...added];
- added.forEach((_, i) => uploadOne(added[i], prev.length + i));
- return next;
- });
+ // Side effects MUST live outside the setPending updater. React 19 may
+ // invoke the updater twice (StrictMode in dev, plus concurrent-mode
+ // replay in prod) and any non-pure work — like firing a fetch — runs
+ // for each invocation. Symptom: the `/api/upload` POST fires twice per
+ // file, the server ingests both, the notebook ends up with duplicate
+ // sources. Capture the start index from the current `pending` length
+ // and run uploads after enqueueing into state.
+ const startIdx = pending.length;
+ setPending((prev) => [...prev, ...added]);
+ added.forEach((p, i) => uploadOne(p, startIdx + i));
  if (fileInputRef.current) fileInputRef.current.value = "";
  }
 
@@ -243,11 +248,9 @@ export function UploadModal({
  file: f,
  status: "queued",
  }));
- setPending((prev) => {
- const next = [...prev, ...added];
- added.forEach((_, i) => uploadOne(added[i], prev.length + i));
- return next;
- });
+ const startIdx = pending.length;
+ setPending((prev) => [...prev, ...added]);
+ added.forEach((p, i) => uploadOne(p, startIdx + i));
  }
 
  if (!open) return null;
