@@ -1,3 +1,18 @@
+// `unpdf@1.6.0` bundles a pdfjs build that calls `Promise.try(...)` during
+// PDF processing. Promise.try is a Stage 4 proposal that only landed in
+// V8 13.0 → Node 23+; on Node 22 (current LTS, what users actually run)
+// the call throws `TypeError: Promise.try is not a function` and the dev
+// server / api-server dies. Polyfill it once, here, before any
+// `await import("unpdf")` evaluates.
+if (typeof (Promise as unknown as { try?: unknown }).try !== "function") {
+  (Promise as unknown as { try: typeof Promise.resolve }).try = function tryShim<
+    T,
+    A extends unknown[],
+  >(fn: (...args: A) => T | PromiseLike<T>, ...args: A): Promise<T> {
+    return new Promise<T>((resolve) => resolve(fn(...args)));
+  } as typeof Promise.resolve;
+}
+
 export type Parsed = {
   text: string;
   title?: string;
@@ -141,23 +156,47 @@ export async function parseLink(url: string): Promise<Parsed> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 
-  let html: string;
+  let buf: Buffer;
+  let contentType: string;
   try {
     const res = await fetch(url, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (compatible; NotebookLM/1.0; +https://notebooklm-web.vercel.app)",
         Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "text/html,application/xhtml+xml,application/xml;q=0.9,application/pdf;q=0.9,*/*;q=0.8",
       },
       signal: controller.signal,
       redirect: "follow",
     });
     if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-    html = await res.text();
+    contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
+    buf = Buffer.from(await res.arrayBuffer());
   } finally {
     clearTimeout(timeout);
   }
+
+  // Detect PDFs by the four-byte `%PDF` magic header. We don't trust
+  // content-type alone: deep-research / arxiv / academic CDNs routinely
+  // serve PDFs with `application/octet-stream`, `application/binary`,
+  // or even `text/html`, and URLs don't always end in `.pdf`. The magic
+  // bytes are unambiguous regardless of how the response is labelled.
+  // Without this gate, `parseLink` was feeding raw PDF bytes through
+  // Readability + stripHtml and storing `%PDF-1.7\n38 0 obj\nendobj\nxref…`
+  // as the source content, which then surfaced in the chat panel as
+  // garbage and poisoned every retrieval that included that source.
+  const isPdf =
+    (buf.length >= 4 && buf.subarray(0, 4).toString("ascii") === "%PDF") ||
+    contentType.startsWith("application/pdf");
+  if (isPdf) {
+    const parsed = await parsePdf(buf);
+    return {
+      ...parsed,
+      title: parsed.title ?? url,
+    };
+  }
+
+  const html = buf.toString("utf-8");
 
   // Try jsdom + Readability first
   try {
