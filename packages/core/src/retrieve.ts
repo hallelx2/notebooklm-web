@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { loadRuntimesForTask, runAgent } from "./agent";
 import { sourceChunks, sources } from "./db/schema";
 import { embeddingTableForDim, embedQueryFor } from "./ingest/embed";
@@ -134,11 +134,17 @@ export async function retrieveForQuery(params: {
 
   // Step 3a: Vector search through the per-dim embedding table, restricted
   // to chunks embedded with the user's currently-active model.
+  // Use drizzle's `inArray` instead of raw `sql\`= ANY(...)\``: with
+  // PGlite, drizzle interpolates a JS array as a tuple `($3, $4, ...)`
+  // rather than a real postgres array literal, and the planner rejects
+  // the query with `42809: op ANY/ALL (array) requires array on right
+  // side`. `inArray` generates `IN (...)` which works the same way in
+  // PGlite + postgres.js + standard postgres.
   const baseWhere =
     params.sourceIds && params.sourceIds.length > 0
       ? and(
           eq(sourceChunks.notebookId, params.notebookId),
-          sql`${sourceChunks.sourceId} = ANY(${params.sourceIds})`,
+          inArray(sourceChunks.sourceId, params.sourceIds),
         )
       : eq(sourceChunks.notebookId, params.notebookId);
 
