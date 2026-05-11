@@ -13,6 +13,11 @@ export {
   autoTitleSystem,
 } from "./auto-title";
 export { chatSystemPrompt } from "./chat";
+export {
+  notebookReconPlanPrompt,
+  notebookReflectPrompt,
+  notebookSynthesizePrompt,
+} from "./notebook-research";
 export { expandQueryPrompt, rerankPrompt } from "./rerank";
 export {
   researchAugmentPrompt,
