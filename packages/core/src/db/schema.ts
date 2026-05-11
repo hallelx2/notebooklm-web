@@ -272,6 +272,45 @@ export const studioOutputs = pgTable(
   (table) => [index("studio_outputs_notebook_idx").on(table.notebookId)],
 );
 
+/**
+ * Cached research artifacts produced by `runNotebookResearch`. One row
+ * per `(notebookFingerprint, chatProvider, chatModel, normalizedUserQuery)`
+ * tuple, hashed into `cacheKey`. Studio kinds (mind-map, briefing, FAQ,
+ * timeline, study-guide, flashcards, quiz, audio-script) generate from
+ * the artifact instead of raw source text — different kinds with the
+ * same scope share an artifact, a different query regenerates it, any
+ * source change shifts the fingerprint and invalidates everything.
+ *
+ * Stale rows survive (their fingerprints simply stop matching). A
+ * future TTL job uses `lastAccessedAt` to prune.
+ */
+export const notebookResearchReports = pgTable(
+  "notebook_research_reports",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    notebookId: uuid("notebook_id")
+      .notNull()
+      .references(() => notebooks.id, { onDelete: "cascade" }),
+    cacheKey: text("cache_key").notNull(),
+    notebookFingerprint: text("notebook_fingerprint").notNull(),
+    /** Raw query the artifact was scoped to. NULL = default scope. */
+    userQuery: text("user_query"),
+    chatProvider: text("chat_provider").notNull(),
+    chatModel: text("chat_model").notNull(),
+    artifact: jsonb("artifact").notNull(),
+    totalLlmCalls: integer("total_llm_calls"),
+    durationMs: integer("duration_ms"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    /** Bumped on cache hit; drives the future TTL eviction job. */
+    lastAccessedAt: timestamp("last_accessed_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("nrr_cache_key_uniq").on(table.cacheKey),
+    index("nrr_notebook_idx").on(table.notebookId),
+    index("nrr_last_accessed_idx").on(table.lastAccessedAt),
+  ],
+);
+
 /* ------------------------------------------------------------------ */
 /*  AI provider settings (multi-provider, per-user, encrypted-at-rest)  */
 /* ------------------------------------------------------------------ */
