@@ -20,6 +20,7 @@
     "./ingest/reembed": "./src/ingest/reembed.ts",
     "./ingest/autotitle": "./src/ingest/autotitle.ts",
     "./retrieve": "./src/retrieve.ts",
+    "./notebook-text": "./src/notebook-text.ts",
     "./search": "./src/search/index.ts",
     "./storage": "./src/storage/index.ts",
     "./storage/local": "./src/storage/local.ts",
