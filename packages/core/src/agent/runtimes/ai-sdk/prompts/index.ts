@@ -5,6 +5,13 @@
  * router, autotitle helper) so commit 3 can route those call sites
  * through the harness without changing wire output.
  */
+
+export {
+  autoSummaryPrompt,
+  autoSummarySystem,
+  autoTitlePrompt,
+  autoTitleSystem,
+} from "./auto-title";
 export { chatSystemPrompt } from "./chat";
 export { expandQueryPrompt, rerankPrompt } from "./rerank";
 export {
@@ -25,9 +32,4 @@ export {
   type QuizGradedResult,
   quizSummaryPrompt,
 } from "./studio-quiz-summary";
-export {
-  autoSummaryPrompt,
-  autoSummarySystem,
-  autoTitlePrompt,
-  autoTitleSystem,
-} from "./auto-title";
+export { studioSummarizePrompt } from "./studio-summarize";
