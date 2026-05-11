@@ -596,6 +596,33 @@ async function initSchema(db: ReturnType<typeof drizzle>) {
     sql`CREATE INDEX IF NOT EXISTS "studio_outputs_notebook_idx" ON "studio_outputs" ("notebook_id")`,
   );
 
+  // ── Notebook research artifacts (cached for studio kinds) ──────
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "notebook_research_reports" (
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+      "notebook_id" uuid NOT NULL REFERENCES "notebooks"("id") ON DELETE CASCADE,
+      "cache_key" text NOT NULL,
+      "notebook_fingerprint" text NOT NULL,
+      "user_query" text,
+      "chat_provider" text NOT NULL,
+      "chat_model" text NOT NULL,
+      "artifact" jsonb NOT NULL,
+      "total_llm_calls" integer,
+      "duration_ms" integer,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      "last_accessed_at" timestamp DEFAULT now() NOT NULL
+    )
+  `);
+  await db.execute(
+    sql`CREATE UNIQUE INDEX IF NOT EXISTS "nrr_cache_key_uniq" ON "notebook_research_reports" ("cache_key")`,
+  );
+  await db.execute(
+    sql`CREATE INDEX IF NOT EXISTS "nrr_notebook_idx" ON "notebook_research_reports" ("notebook_id")`,
+  );
+  await db.execute(
+    sql`CREATE INDEX IF NOT EXISTS "nrr_last_accessed_idx" ON "notebook_research_reports" ("last_accessed_at")`,
+  );
+
   // ── AI provider settings ───────────────────────────────────────
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS "user_provider_credentials" (
