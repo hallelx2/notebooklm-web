@@ -1,12 +1,18 @@
 import { loadRuntimesForTask, runAgent } from "@notebooklm/core/agent";
-import { NoAiConfigError } from "@notebooklm/core/ai/factory";
+import { getChatModel, NoAiConfigError } from "@notebooklm/core/ai/factory";
 import { pMap, withRetry } from "@notebooklm/core/concurrency";
-import { notebooks, sources, studioOutputs } from "@notebooklm/core/db/schema";
+import { notebooks, studioOutputs } from "@notebooklm/core/db/schema";
 import {
   isCancellation,
   registerJob,
   unregisterJob,
 } from "@notebooklm/core/jobs";
+import {
+  type ResearchEvent,
+  renderArtifactForKind,
+  runNotebookResearch,
+} from "@notebooklm/core/notebook-research";
+import { assembleStudioSourceContent } from "@notebooklm/core/notebook-text";
 import {
   audioFileExtension,
   availableTtsProviders,
@@ -265,29 +271,88 @@ export async function audioOverviewHandler(
       });
 
       try {
-        const readySources = await adapter.db
-          .select({ content: sources.content })
-          .from(sources)
-          .where(
-            and(
-              eq(sources.notebookId, body.notebookId),
-              eq(sources.status, "ready"),
-            ),
-          );
-
-        let sourceContent = "";
-        for (const s of readySources) {
-          if (s.content) sourceContent += s.content + "\n\n";
-          if (sourceContent.length >= 20000) break;
+        // Resolve the chat model up front: the research pipeline needs
+        // it (and so does the audio-script generation downstream); we
+        // want to surface NO_AI_CONFIG as a clean 4xx-shaped event
+        // before we touch any sources or burn cycles on research.
+        let chatModel: Awaited<ReturnType<typeof getChatModel>>;
+        try {
+          chatModel = await getChatModel(session.user.id);
+        } catch (err) {
+          if (err instanceof NoAiConfigError) {
+            send("error", {
+              message: `Configure a chat provider in Settings before generating studio outputs. (${err.role})`,
+            });
+            await adapter.db
+              .update(studioOutputs)
+              .set({ status: "error", content: { error: "NO_AI_CONFIG" } })
+              .where(eq(studioOutputs.id, row.id));
+            controller.close();
+            return;
+          }
+          throw err;
         }
-        sourceContent = sourceContent.slice(0, 20000);
 
-        if (!sourceContent.trim()) {
-          throw new Error(
-            "No source content available. Add sources to the notebook first.",
+        // Phase A: structured notebook research over `source_chunks`.
+        // `body.focus` doubles as the research userQuery (cache-key
+        // input). Emit each phase event onto the SSE stream as a
+        // `research` event AND mirror to studio_outputs.progress so
+        // a re-attached modal sees the same phase cycle.
+        const onResearchEvent = (ev: ResearchEvent) => {
+          send("research", ev);
+          void updateProgress({
+            stage: ev.stage,
+            message: ev.message,
+            provider: ttsProvider.name,
+            concurrency,
+          });
+        };
+        const userQuery = body.focus?.trim() ? body.focus.trim() : null;
+        const research = await runNotebookResearch({
+          userId: session.user.id,
+          notebookId: body.notebookId,
+          notebookTitle: nb.title,
+          notebookDescription: nb.description,
+          userQuery,
+          chatModel,
+          onEvent: onResearchEvent,
+        });
+        log(
+          `research done — fromCache=${research.fromCache} fallback=${research.fallback ?? "none"} llmCalls=${research.totalLlmCalls} durationMs=${research.durationMs}`,
+        );
+
+        // Phase B: render the artifact for the audio-script prompt.
+        // Falls back to the legacy direct-assembly path when research
+        // bailed (no embedded chunks yet, or embeddings mid-flight).
+        let sourceContent: string;
+        if (research.artifact) {
+          sourceContent = renderArtifactForKind(
+            research.artifact,
+            "audio-script",
+          );
+          log(
+            `artifact rendered for audio-script — ${sourceContent.length} chars`,
+          );
+        } else {
+          const fallback = await assembleStudioSourceContent({
+            userId: session.user.id,
+            notebookId: body.notebookId,
+            kind: "audio-script",
+            topic: nb.title,
+            chatModel,
+          });
+          if (!fallback.content.trim()) {
+            throw new Error(
+              fallback.skippedSourceCount > 0
+                ? `No readable source content available. ${fallback.skippedSourceCount} source${fallback.skippedSourceCount === 1 ? " was" : "s were"} skipped because text extraction produced unreadable content. Try re-ingesting with OCR, or add a different source.`
+                : "No source content available. Add sources to the notebook first.",
+            );
+          }
+          sourceContent = fallback.content;
+          log(
+            `fallback assembly used — strategy=${fallback.strategy} ${sourceContent.length} chars (skipped ${fallback.skippedSourceCount})`,
           );
         }
-        log(`source content prepared — ${sourceContent.length} chars`);
 
         send("stage", {
           stage: "script",
@@ -299,10 +364,7 @@ export async function audioOverviewHandler(
         });
         log("loading agent runtimes for studio task");
 
-        const runtimes = await loadRuntimesForTask(
-          session.user.id,
-          "studio",
-        );
+        const runtimes = await loadRuntimesForTask(session.user.id, "studio");
 
         let rawScript = "";
         let scriptDeltaCount = 0;

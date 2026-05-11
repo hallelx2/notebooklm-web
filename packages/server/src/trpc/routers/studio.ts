@@ -1,6 +1,11 @@
 import { getChatModel, NoAiConfigError } from "@notebooklm/core/ai/factory";
-import { notebooks, sources, studioOutputs } from "@notebooklm/core/db/schema";
-import { isReadable } from "@notebooklm/core/ingest/parse";
+import { notebooks, studioOutputs } from "@notebooklm/core/db/schema";
+import {
+  type ResearchEvent,
+  renderArtifactForKind,
+  runNotebookResearch,
+} from "@notebooklm/core/notebook-research";
+import { assembleStudioSourceContent } from "@notebooklm/core/notebook-text";
 import { generateText } from "ai";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -48,18 +53,21 @@ function buildPrompt(
   const description = opts.description?.trim();
 
   // Topic-grounded preamble. Anchors the model to what the notebook is
-  // ABOUT — not just whatever happens to fill the first 20 KB of source
-  // text. Without this, mind-maps over heterogeneous sources (or sources
-  // containing generic boilerplate) drift into off-topic structures
-  // (e.g. summarising the PDF *file format* when the notebook is about
-  // metaheuristic optimisation).
-  const base = `You are an expert content creator helping a user produce study artefacts about a specific topic.
+  // ABOUT and frames the input as a research artifact — not raw text
+  // for the model to summarise. The artifact is the output of a
+  // structured research pass over the notebook (recon → plan →
+  // retrieve → synthesise → reflect → augment) so the kind generation
+  // step is shaping curated findings, not extracting from raw source
+  // material. The "Notebook research artifact" wording matters: when
+  // we said "Source Material" the model occasionally tried to report
+  // ON the artifact instead of generating from it.
+  const base = `You are an expert content creator producing a study artefact about a specific topic, grounded in a notebook research artifact.
 
 Topic: ${topic}${description ? `\nTopic context: ${description}` : ""}
 
-Stay anchored to the topic above. Treat the source material as evidence for the topic, not as a subject in itself. Skip incidental content that isn't relevant to the topic — file-format boilerplate, document-structure metadata, page footers, references sections, or anything else that's about HOW the source is presented rather than what it teaches.
+The artifact below is the output of a structured research pass over the user's notebook sources — sub-questions, findings, citations, and gaps. Treat it as your source of truth. Do NOT invent facts that aren't in it. Do NOT report on the artifact itself ("the research covers...") — generate the requested study artefact directly from the findings. Where the artifact contains \`(chunk:UUID)\` markers, preserve them in any prose-style output (briefing-doc, study-guide, FAQ, timeline) so the UI can resolve them to source citations; OMIT them from structured outputs (mind-map, flashcards, quiz) and from spoken outputs (audio-script).
 
-Source Material:
+Notebook research artifact:
 ${sourceContent}
 
 `;
@@ -152,6 +160,7 @@ async function runGeneration(args: {
   topic: string;
   description: string | null;
   questionCount: number | undefined;
+  userQuery: string | null;
 }): Promise<void> {
   const { adapter, userId, rowId, kind, notebookId } = args;
   try {
@@ -167,39 +176,83 @@ async function runGeneration(args: {
       throw err;
     }
 
-    const readySources = await adapter.db
-      .select({ content: sources.content })
-      .from(sources)
-      .where(
-        and(eq(sources.notebookId, notebookId), eq(sources.status, "ready")),
-      );
-
-    // Defense-in-depth: even rows marked status="ready" can carry
-    // mojibake if they were ingested before the parse-time guard
-    // landed (or by a parallel path that bypassed it). Filter those
-    // out HERE so they can't poison the studio prompt with binary
-    // junk and steer the model toward off-topic output.
-    let skipped = 0;
-    let combinedContent = "";
-    for (const s of readySources) {
-      if (!s.content) continue;
-      const check = isReadable(s.content);
-      if (!check.ok) {
-        skipped++;
-        continue;
+    // Mirror research-pipeline phase events to the row's `progress`
+    // jsonb so the UI's polling on `studio.list` can surface a live
+    // spinner-cycle through recon → plan → retrieve → synthesise →
+    // reflect → augment → assemble → generate. Best-effort writes —
+    // a transient DB hiccup shouldn't fail the generation.
+    const updateProgress = async (snapshot: {
+      stage: string;
+      message: string;
+      current?: number;
+      total?: number;
+    }) => {
+      try {
+        await adapter.db
+          .update(studioOutputs)
+          .set({
+            progress: { ...snapshot, updatedAt: new Date().toISOString() },
+          })
+          .where(eq(studioOutputs.id, rowId));
+      } catch {
+        // swallow: next phase's update will supersede the missed one
       }
-      combinedContent += s.content + "\n\n";
-      if (combinedContent.length >= 20000) break;
-    }
-    combinedContent = combinedContent.slice(0, 20000);
+    };
+    const onResearchEvent = (ev: ResearchEvent) => {
+      void updateProgress(ev);
+    };
 
-    if (!combinedContent.trim()) {
-      throw new Error(
-        skipped > 0
-          ? `No readable source content available. ${skipped} source${skipped === 1 ? " was" : "s were"} skipped because text extraction produced unreadable content (likely image-only PDFs or encrypted streams). Try re-ingesting with OCR, or add a different source.`
-          : "No source content available. Add sources to the notebook first.",
+    // Phase A: structured notebook research over `source_chunks`.
+    // Cache hit (same notebook fingerprint + chat model + userQuery)
+    // skips the pipeline; otherwise we run the full plan/retrieve/
+    // synthesise/reflect/augment loop and persist the artifact.
+    const research = await runNotebookResearch({
+      userId,
+      notebookId,
+      notebookTitle: args.topic,
+      notebookDescription: args.description,
+      userQuery: args.userQuery,
+      chatModel,
+      onEvent: onResearchEvent,
+    });
+
+    // biome-ignore lint/suspicious/noConsole: visible signal in dev logs
+    console.info(
+      `[studio.generate] ${kind} (${rowId}) research fromCache=${research.fromCache} fallback=${research.fallback ?? "none"} llmCalls=${research.totalLlmCalls} durationMs=${research.durationMs}`,
+    );
+
+    // Phase B: render the artifact for the kind's prompt. Falls back
+    // to the legacy direct source-assembly path when research bailed
+    // (notebook has no embedded chunks, or embeddings are mid-flight).
+    let combinedContent: string;
+    if (research.artifact) {
+      combinedContent = renderArtifactForKind(research.artifact, kind);
+    } else {
+      const fallback = await assembleStudioSourceContent({
+        userId,
+        notebookId,
+        kind,
+        topic: args.topic,
+        chatModel,
+      });
+      // biome-ignore lint/suspicious/noConsole: visible signal in dev logs
+      console.info(
+        `[studio.generate] ${kind} (${rowId}) fallback assembly strategy=${fallback.strategy} totalChars=${fallback.totalChars} skipped=${fallback.skippedSourceCount}`,
       );
+      if (!fallback.content.trim()) {
+        throw new Error(
+          fallback.skippedSourceCount > 0
+            ? `No readable source content available. ${fallback.skippedSourceCount} source${fallback.skippedSourceCount === 1 ? " was" : "s were"} skipped because text extraction produced unreadable content (likely image-only PDFs or encrypted streams). Try re-ingesting with OCR, or add a different source.`
+            : "No source content available. Add sources to the notebook first.",
+        );
+      }
+      combinedContent = fallback.content;
     }
+
+    void updateProgress({
+      stage: "generate",
+      message: `Generating ${kind}...`,
+    });
 
     const prompt = buildPrompt(kind, combinedContent, {
       topic: args.topic,
@@ -236,7 +289,7 @@ async function runGeneration(args: {
 
     await adapter.db
       .update(studioOutputs)
-      .set({ content, status: "ready" })
+      .set({ content, status: "ready", progress: null })
       .where(eq(studioOutputs.id, rowId));
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
@@ -248,7 +301,11 @@ async function runGeneration(args: {
     try {
       await adapter.db
         .update(studioOutputs)
-        .set({ status: "error", content: { error: errorMessage } })
+        .set({
+          status: "error",
+          content: { error: errorMessage },
+          progress: null,
+        })
         .where(eq(studioOutputs.id, rowId));
     } catch (writeErr) {
       // Last-ditch — if even the error write fails, the launch-time
@@ -295,6 +352,14 @@ export const studioRouter = router({
         notebookId: z.string().uuid(),
         kind: z.string(),
         questionCount: z.number().int().min(5).max(30).optional(),
+        /**
+         * Optional free-text scope for the underlying notebook research
+         * pass. Empty/undefined → "default scope" key (artifacts shared
+         * across kinds on the same notebook). Different non-empty values
+         * regenerate the artifact — different research paths require
+         * different content.
+         */
+        userQuery: z.string().max(500).optional(),
       }),
     )
     .output(StudioOutputSchema)
@@ -342,6 +407,7 @@ export const studioRouter = router({
         topic: nb.title,
         description: nb.description,
         questionCount: input.questionCount,
+        userQuery: input.userQuery?.trim() ? input.userQuery.trim() : null,
       });
 
       return row;
@@ -358,7 +424,9 @@ export const studioRouter = router({
         .limit(1);
       if (!row) return null;
       await assertOwnsNotebook(ctx.adapter, row.notebookId, ctx.user.id);
-      await ctx.adapter.db.delete(studioOutputs).where(eq(studioOutputs.id, input.id));
+      await ctx.adapter.db
+        .delete(studioOutputs)
+        .where(eq(studioOutputs.id, input.id));
       return { id: input.id };
     }),
 });

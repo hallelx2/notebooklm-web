@@ -17,13 +17,13 @@ export function audioScriptPrompt(opts: {
   sourceContent: string;
 }): string {
   const lengthGuide = LENGTH_GUIDE[opts.length] ?? LENGTH_GUIDE.medium;
-  return `Generate a podcast-style conversation between two hosts discussing the source material.
+  return `Generate a podcast-style conversation between two hosts grounded strictly in the notebook research artifact below.
 
 Host A ("Alex") is the main explainer who presents key ideas clearly.
 Host B ("Sam") asks insightful questions, adds reactions, and provides alternative perspectives.
 
 Length guideline: ${lengthGuide}
-${opts.focus ? `Focus area: ${opts.focus}` : "Cover the main topics comprehensively."}
+${opts.focus ? `Focus area: ${opts.focus}` : "Cover the topic comprehensively, drawing on findings across the artifact."}
 
 Return ONLY valid JSON array: [{ "speaker": "Alex" | "Sam", "text": "..." }, ...]
 
@@ -33,6 +33,8 @@ Make it natural, conversational, engaging. Include:
 - Sam occasionally saying "That's fascinating" or "Wait, so you're saying..."
 - A brief conclusion/summary
 
-Source material:
+Treat the artifact as your source of truth — do not invent facts that aren't in it. The artifact already represents a thorough research pass over the user's notebook; speak from the findings, not from outside knowledge.
+
+Notebook research artifact:
 ${opts.sourceContent}`;
 }
