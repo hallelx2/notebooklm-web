@@ -1,8 +1,22 @@
 # NotebookLM Desktop
 
-Native shell around the same Hono server, tRPC routers, retrieval pipeline, and UI components the web app uses — but with **PGlite** in place of Neon Postgres and **local-FS storage** in place of S3/R2/Supabase. Runs entirely offline with a BYOK chat provider (or fully offline against [Ollama](https://ollama.com)).
+Native shell around the same Hono server, tRPC routers, retrieval pipeline, and UI components the web app uses — but with **PGlite** in place of Neon Postgres, **local-FS storage** in place of S3/R2/Supabase, **Kokoro TTS** + **local sentence-transformer embeddings** in utility processes, and an embedded api-server bundled by esbuild. BYOK with any of 13 chat providers, or fully offline against [Ollama](https://ollama.com) or the bundled `local` embedding provider that needs no credentials.
 
-## Quick start
+For the per-release history (what landed in each `v0.1.x` → `v0.3.0` bump) see the root [`CHANGELOG.md`](../../CHANGELOG.md).
+
+## Install a prebuilt binary
+
+Grab the latest installer from [the GitHub releases page](https://github.com/hallelx2/notebooklm-web/releases/latest):
+
+| Platform | Asset |
+|---|---|
+| Windows | `NotebookLM-Setup-<version>.exe` (NSIS) |
+| macOS (Apple Silicon) | `NotebookLM-<version>-arm64.dmg` |
+| Linux | `NotebookLM-<version>-amd64.deb` or `NotebookLM-<version>-x86_64.AppImage` |
+
+The installers are currently **unsigned** — macOS will warn "developer cannot be verified" and Windows SmartScreen will prompt before letting you run them. Code signing + notarization is deferred (see Phase 5 in the [root ROADMAP](../../ROADMAP.md)). Auto-updates land via `electron-updater` reading the `latest*.yml` manifests on each release.
+
+## Build from source
 
 ```bash
 # from the repo root
@@ -103,7 +117,7 @@ bun --filter @notebooklm/desktop build:electron   # Full packaged binary -> apps
 bun --filter @notebooklm/desktop typecheck
 ```
 
-The packaged binary is unsigned. macOS will show "developer cannot be verified"; Windows SmartScreen will prompt. Code signing + notarization is on the Phase 4c roadmap.
+The packaged binary is unsigned. macOS will show "developer cannot be verified"; Windows SmartScreen will prompt. Code signing + notarization is on the [Phase 5 deferred list](../../ROADMAP.md#phase-5--beyond-).
 
 ## Architecture
 
